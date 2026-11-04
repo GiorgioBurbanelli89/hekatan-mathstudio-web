@@ -204,6 +204,18 @@
   function cuadricula() { document.body.classList.toggle('cuad'); $('m-cuadricula').classList.toggle('activa', document.body.classList.contains('cuad')); }
   $('m-cuadricula').onclick = cuadricula;
   $('m-compartir').onclick = () => { capturaPng('hoja', true); };
+  // Script de Hekatan LISP: la hoja como texto (se copia, se descarga como .lisp, se edita y se vuelve a aplicar con la misma importación del WPF)
+  $('m-hlisp').onclick = () => {
+    let v = document.getElementById('hlisp-modal'); if (v) { v.remove(); return; }
+    v = document.createElement('div'); v.id = 'hlisp-modal';
+    v.innerHTML = '<div class="hl-caja"><div class="hl-bar"><b>Script Hekatan LISP</b><span class="hl-sp"></span><button data-a="cp">Copiar</button><button data-a="dl">Descargar .lisp</button><button data-a="ap">Aplicar a la hoja</button><button data-a="x">✕</button></div><textarea spellcheck="false" wrap="off"></textarea></div>';
+    document.body.appendChild(v); const ta = v.querySelector('textarea'); ta.value = HK.hlisp.exporta(H().guarda());
+    v.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b && e.target === v) return v.remove(); if (!b) return; const q = b.dataset.a;
+      if (q === 'x') v.remove();
+      else if (q === 'cp') { ta.select(); (navigator.clipboard ? navigator.clipboard.writeText(ta.value) : Promise.resolve(document.execCommand('copy'))).then(() => estado('Script copiado'), () => estado('No se pudo copiar: selecciónalo y usa Ctrl+C')); }
+      else if (q === 'dl') { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([ta.value], { type: 'text/plain;charset=utf-8' })); a.download = 'hoja.lisp'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); estado('Descargado: hoja.lisp'); }
+      else if (q === 'ap') { H().abre(JSON.stringify(HK.hlisp.importa(ta.value))); v.remove(); estado('Script aplicado a la hoja'); setTimeout(pagina, 50); } });
+  };
   $('m-lisp').onclick = () => { G.open('https://giorgioburbanelli89.github.io/hekatan-lisp/', '_blank'); estado('Vista completa Hekatan LISP: se abre en una pestaña nueva'); };          // siempre a la vista, en la barra de arriba
   // Ejemplos de Hekatan LISP: la MISMA lista que la web de Hekatan LISP (ejemplos/hlisp/lista.json), un botón por hoja
   fetch('ejemplos/hlisp/lista.json').then((r) => r.json()).then((L) => {
@@ -405,6 +417,7 @@
     { ic: '▤', t: 'Hoja con páginas', tip: 'Hoja con páginas delimitadas o hoja continua sin límites', acc: hojaConPaginas },
     'sep',
     { ic: '◫', t: 'Ocultar bloque', tip: 'Oculta la región donde está el cursor (Ctrl+H); Ctrl+Mayús+H muestra u oculta los bloques ocultos', acc: () => { const o = H().ocultaBloque(); estado(o ? 'Bloque oculto (Ctrl+Mayús+H para verlos)' : 'Bloque visible'); } }, { ic: '＋', t: 'Código', tip: 'Región nueva escrita como script (for / while / if … end)', acc: () => H().bloque('prog') },
+    { ic: '＋‹›', t: 'Código', tip: 'Región nueva escrita directamente como script estilo MATLAB (for / while / if / function … end); Ctrl+K la pasa a nodos', acc: () => { H().nuevoCodigo(); estado('Región de código: script estilo MATLAB (Ctrl+K lo pasa a nodos)'); } },
     { ic: '⇄', t: 'Código ⇄ Nodos', tip: 'Ver la región como código o como ecuación dibujada (Ctrl+K)', acc: () => { H().alternaCodigo(); } }, off('⌀', 'Ocultar unidades de conversión'),
   ];
   CINTA['Formato matemático'] = [

@@ -191,3 +191,27 @@ body.lisp .fila > .txt.lado { margin-left:12px; flex:0 1 auto; }
 .eq.conGraf { position:relative; }
 .ghov { position:absolute; pointer-events:none; z-index:2; }
 .eq.conGraf > canvas:not(.ghov) { cursor:crosshair; }
+
+#hlisp-modal{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:9999;display:flex;align-items:center;justify-content:center}
+#hlisp-modal .hl-caja{width:min(900px,92vw);height:80vh;background:#fff;border:1px solid #888;box-shadow:0 8px 30px rgba(0,0,0,.4);display:flex;flex-direction:column}
+#hlisp-modal .hl-bar{display:flex;gap:6px;align-items:center;padding:6px 8px;border-bottom:1px solid #ccc;background:#f3f3f3}
+#hlisp-modal .hl-sp{flex:1}
+#hlisp-modal textarea{flex:1;border:0;outline:0;resize:none;padding:10px;font:13px/1.5 Consolas,monospace;white-space:pre;tab-size:2}
+
+.cod-res{font:12px/1.4 Consolas,monospace;color:#1d4e89;padding:2px 6px;white-space:pre-wrap}
+.cod-res.err{color:#b00020}
+
+/* ---- desplazar regiones (como MoverRegiones.cs): asa azul a la izquierda, contorno punteado, ⠿ al medio ---- */
+#hoja .fila > * { position:relative; }
+#hoja .fila > .mv-asa { outline:1px dashed #2D7DD2; outline-offset:-1px; }
+#hoja .fila > .mv-asa::before { content:''; position:absolute; left:0; top:0; bottom:0; width:10px; z-index:4; pointer-events:none; background:
+  radial-gradient(circle at 2.5px calc(50% - 7px), #2D7DD2 1.2px, #0000 1.6px), radial-gradient(circle at 6.5px calc(50% - 7px), #2D7DD2 1.2px, #0000 1.6px),
+  radial-gradient(circle at 2.5px 50%, #2D7DD2 1.2px, #0000 1.6px), radial-gradient(circle at 6.5px 50%, #2D7DD2 1.2px, #0000 1.6px),
+  radial-gradient(circle at 2.5px calc(50% + 7px), #2D7DD2 1.2px, #0000 1.6px), radial-gradient(circle at 6.5px calc(50% + 7px), #2D7DD2 1.2px, #0000 1.6px), rgba(45,125,210,.11); }
+.mv-agarre, .mv-agarre * { cursor:move !important; }
+#hoja .fila > .mv-sel { background:rgba(45,125,210,.18) !important; }
+#hoja .fila > .mv-vuelo { opacity:.85; z-index:50; box-shadow:0 4px 14px #0005; background:rgba(251,246,234,.92); pointer-events:none; }
+body.mv-arrastrando { user-select:none; cursor:move; }
+.mv-guia { position:fixed; z-index:90; background:#2D7DD2; border-radius:2px; pointer-events:none; display:none; }
+.mv-banda { position:fixed; z-index:90; border:1px dashed #2D7DD2; background:rgba(45,125,210,.12); pointer-events:none; }
+#hoja .fila > .eq:not(.conGraf), #hoja .fila > .grupo { padding-left:10px; }          /* la franja izquierda (10 px) queda libre para agarrar, como el WPF (Padding.Left = 10) */

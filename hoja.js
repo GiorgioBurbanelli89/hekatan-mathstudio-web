@@ -8,7 +8,7 @@
   function ptr(e, cv) { const b = cv.getBoundingClientRect(), k = b.width ? cv.offsetWidth / b.width : 1; return { x: (e.clientX - b.left) * k, y: (e.clientY - b.top) * k }; }
   function fila() { const d = document.createElement('div'); d.className = 'fila'; hoja.appendChild(d); return d; }
   function contenedor(mismaLinea) {
-    if (mismaLinea && ultimaFila) return ultimaFila;
+    if (mismaLinea && ultimaFila && ultimaFila.isConnected) return ultimaFila;
     ultimaFila = fila(); return ultimaFila;
   }
   function agregaTxt(texto, titulo, nivel, mismo) {
@@ -71,8 +71,8 @@
     ed.alVaciar = () => quita(r);
     reg.push(r); return r;
   }
-  function agregaSlider(nombre, min, max, valor, inc) {
-    const c = contenedor(false), d = document.createElement('div'); d.className = 'slider';
+  function agregaSlider(nombre, min, max, valor, inc, mismo) {
+    const c = contenedor(!!mismo), d = document.createElement('div'); d.className = 'slider';
     d.innerHTML = '<span class="nom"></span><button>▶</button><input type="range"><span class="val"></span>';
     const nom = d.children[0], bt = d.children[1], rg = d.children[2], vl = d.children[3];
     nom.textContent = nombre; rg.min = min; rg.max = max; rg.step = inc || (max - min) / 100; rg.value = valor; vl.textContent = valor;
@@ -90,15 +90,15 @@
     c.appendChild(d); reg.push(r); return r;
   }
   // bloque CAD: código AutoLISP del motor (linea, rect, circulo…) arriba, el dibujo (SVG) abajo; se baja como .lsp (AutoCAD) o DXF
-  function agregaRaw(texto, oculto) {          // bloque de Hekatan LISP guardado TAL CUAL (directivas que los nodos no dibujan): se edita como texto
-    const c = contenedor(false), d = document.createElement('div'); d.className = 'raw' + (oculto ? ' oculto' : '');
+  function agregaRaw(texto, oculto, mismo) {          // bloque de Hekatan LISP guardado TAL CUAL (directivas que los nodos no dibujan): se edita como texto
+    const c = contenedor(!!mismo), d = document.createElement('div'); d.className = 'raw' + (oculto ? ' oculto' : '');
     d.innerHTML = '<div class="raw-bar"><b>Bloque Hekatan LISP</b><span>se dibuja con el motor de Hekatan LISP (WPF o Hekatan LISP web); aquí se conserva y se guarda igual</span></div>';
     const ta = document.createElement('textarea'); ta.spellcheck = false; ta.value = texto; ta.rows = Math.min(14, Math.max(2, texto.split('\n').length)); d.appendChild(ta); c.appendChild(d);
     const r = { t: 'raw', el: d, ta, oculto: !!oculto }; reg.push(r); return r;
   }
   const CAD_CAB = ';; Dibujo AutoLISP (Hekatan Math Studio): cada línea agrega una entidad; abajo se dibuja.';
-  function agregaCad(codigo, titulo) {
-    const c = contenedor(false), d = document.createElement('div'); d.className = 'cad';
+  function agregaCad(codigo, titulo, mismo) {
+    const c = contenedor(!!mismo), d = document.createElement('div'); d.className = 'cad';
     d.innerHTML = '<div class="cad-bar"><b class="cad-tit"></b><span class="cad-msg"></span><button data-a="hcad" title="Editar este dibujo en «Dibujar» (la misma ventana de Hekatan LISP)">✏ Dibujar</button><button data-a="hcad0" title="Editor simple anterior (respaldo)">✏ simple</button><button data-a="cod" title="Mostrar / ocultar el código">‹›</button><button data-a="lsp" title="Bajar como AutoLISP (.lsp) para AutoCAD">.lsp</button><button data-a="dxf" title="Bajar como DXF">DXF</button></div><textarea spellcheck="false"></textarea><div class="cad-vista"></div><div class="cad-pie">Guardar dibujo como <button data-a="dwg" title="Guardar como DWG (AutoCAD 2018), igual que el WPF">DWG</button></div>';
     d.querySelector('.cad-tit').textContent = titulo || 'CAD · AutoLISP';
     const ta = d.querySelector('textarea'), vista = d.querySelector('.cad-vista'), msg = d.querySelector('.cad-msg');
@@ -491,9 +491,23 @@
     const r = activaEq(); if (!r) return false;
     if (r.cod) { r.ed.cargar(HK.codigoAFilas(r.cod.value)); r.editado = true; r.cod.remove(); r.cod = null; r.ed.canvas.style.display = ''; activo = r.ed; resolver(); redibuja(); return true; }
     const ta = document.createElement('textarea'); ta.className = 'cod'; ta.spellcheck = false; ta.value = codigoLimpio(r.ed.texto()); ta.rows = Math.max(1, ta.value.split('\n').length);
-    ta.addEventListener('input', () => { r.ed.cargar(HK.codigoAFilas(ta.value)); r.editado = true; resolver(); });
+    const res = document.createElement('div'); res.className = 'cod-res';          // como el WPF: debajo del código, el resultado de cada línea
+    const muestra = () => {
+      const out = []; let err = false;
+      ta.value.replace(/\r/g, '').split('\n').forEach((l, i) => {
+        const t = l.split('%')[0].trim(); if (!t || /^(for|while|if|else|elseif|end|function|prog)\b/.test(t) || /;\s*$/.test(t)) return;
+        try { const u = HK.M.programa([t], HK.entorno || { v: {}, f: {}, l: {} }); if (u && u.v !== undefined && u.v !== null) { const v = valorRes(u.v); out.push('línea ' + (i + 1) + ':  ' + (v.kind === 'mat' ? 'matriz ' + v.mat.r + '×' + v.mat.c : v.texto)); } } catch (e) { out.push('⚠ línea ' + (i + 1) + ': ' + e.message); err = true; }
+      });
+      res.textContent = out.join('\n'); res.classList.toggle('err', err);
+    };
+    r.codRes = res; r.codMuestra = muestra;
+    ta.addEventListener('input', () => { ta.rows = Math.max(1, ta.value.split('\n').length); try { r.ed.cargar(HK.codigoAFilas(ta.value)); r.editado = true; resolver(); muestra(); } catch (e) { res.textContent = '⚠ ' + e.message; res.classList.add('err'); } if (HK.sug) HK.sug.enTextarea(ta); });
     ta.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.ctrlKey && e.key.toLowerCase() === 'k') { e.preventDefault(); alternaCodigo(); } });
-    r.ed.canvas.style.display = 'none'; r.el.appendChild(ta); r.cod = ta; ta.focus(); return true;
+    r.ed.canvas.style.display = 'none'; r.el.appendChild(ta); r.el.appendChild(res); r.cod = ta; muestra(); ta.focus(); return true;
+  }
+  function nuevoCodigo(plantilla) {          // «＋ Código» (WPF): región nueva escrita directamente como script estilo MATLAB (for / while / if / function … end)
+    const r = agregaEq('', {}); activo = r.ed; r.ed.cargar([]); alternaCodigo(); if (r.cod) { r.cod.value = plantilla || '% escribe aquí un script (for / while / if / function … end)\n'; r.cod.rows = Math.max(2, r.cod.value.split('\n').length); r.cod.focus(); r.cod.setSelectionRange(r.cod.value.length, r.cod.value.length); }
+    r.el.scrollIntoView({ block: 'nearest' }); return r;
   }
   function ocultaBloque() {          // Ocultar bloque (Ctrl+H): la región con el cursor se esconde; Ctrl+Mayús+H muestra u oculta los bloques ocultos
     const r = activaEq(); if (!r) return false;
@@ -569,9 +583,9 @@
           r.el.appendChild(nodo);
         }
       }
-      else if (it.t === 'slider') agregaSlider(it.nombre, it.min, it.max, it.valor, it.inc);
-      else if (it.t === 'cad') agregaCad(it.codigo || CAD_CAB, it.titulo);
-      else if (it.t === 'raw') agregaRaw(it.text, it.oculto);
+      else if (it.t === 'slider') agregaSlider(it.nombre, it.min, it.max, it.valor, it.inc, it.mismaLinea);
+      else if (it.t === 'cad') agregaCad(it.codigo || CAD_CAB, it.titulo, it.mismaLinea);
+      else if (it.t === 'raw') agregaRaw(it.text, it.oculto, it.mismaLinea);
       else if (it.t === 'eq') {
         if (it.teclas != null && it.codigo == null) { const tc = HK.teclasACodigo(it.ini, it.teclas); it = Object.assign({}, it, { codigo: tc.codigo, modo: tc.notacion ? 2 : it.modo }); }          // formato nuevo del WPF: lo tecleado
         const todas = String(it.codigo || '').split(String.fromCharCode(10)).map((l) => l.split(String.fromCharCode(13)).join('')).filter((l) => l.trim());
@@ -613,6 +627,11 @@
     if (ix < 1) return cuerpo;          // «expr =»  →  «expr» (en el WPF una línea con solo la expresión muestra su valor)
     return enTexto ? cuerpo : cuerpo + '\n' + cuerpo.slice(0, ix).trim();          // «a = expr =»  →  «a = expr» y debajo «a»
   }
+  function mismaLineaDe(r) {          // ¿va en la misma línea que la región anterior? (lugar en su fila; una pieza de un grupo de varias líneas solo cuenta la primera)
+    const g = r.el.parentElement; if (!g) return false;
+    if (g.classList.contains('grupo')) return g.firstElementChild === r.el && g.parentElement.firstElementChild !== g;
+    return g.firstElementChild !== r.el && g.classList.contains('fila');
+  }
   function guarda() {
     const items = [];
     for (const r of reg) {
@@ -623,14 +642,14 @@
             else if (c.classList && c.classList.contains('ifx')) { const q = reg.find((x) => x.enTexto && x.spanTxt === c); if (q) seg.push({ eq: codigoWpf(q.editado || !q.codigo ? q.ed.texto() : q.codigo, true), m: q.modo }); }
             else if (c.tagName === 'BR') seg.push({ s: '\n' }); else if (c.tagName === 'IMG' && /^data:image\//i.test(c.getAttribute('src') || '')) seg.push({ img: c.getAttribute('src') }); else rec(c);
           }
-        })(r.el); const o = { t: 'parrafo', seg }; if (r.titulo) { o.titulo = true; o.nivel = r.nivel; } if (r.mismo) o.mismaLinea = true; items.push(o);
+        })(r.el); const o = { t: 'parrafo', seg }; if (r.titulo) { o.titulo = true; o.nivel = r.nivel; } if (mismaLineaDe(r)) o.mismaLinea = true; items.push(o);
       }
-      else if (r.t === 'txt') { const o = { t: 'texto', text: r.el.textContent }; if (r.titulo) { o.titulo = true; o.nivel = r.nivel; } if (r.mismo) o.mismaLinea = true; if (r.el.querySelector('*') || r.el.getAttribute('style')) o.html = r.el.innerHTML; items.push(o); }
-      else if (r.t === 'slider') items.push({ t: 'slider', nombre: r.nombre, min: r.min, max: r.max, valor: r.valor, inc: r.inc });
-      else if (r.t === 'cad') items.push({ t: 'cad', codigo: r.ta.value, ...(r.titulo ? { titulo: r.titulo } : {}) });
-      else if (r.t === 'raw') items.push({ t: 'raw', text: r.ta.value, ...(r.oculto ? { oculto: true } : {}) });
+      else if (r.t === 'txt') { const o = { t: 'texto', text: r.el.textContent }; if (r.titulo) { o.titulo = true; o.nivel = r.nivel; } if (mismaLineaDe(r)) o.mismaLinea = true; if (r.el.querySelector('*') || r.el.getAttribute('style')) o.html = r.el.innerHTML; items.push(o); }
+      else if (r.t === 'slider') items.push({ t: 'slider', nombre: r.nombre, min: r.min, max: r.max, valor: r.valor, inc: r.inc, ...(mismaLineaDe(r) ? { mismaLinea: true } : {}) });
+      else if (r.t === 'cad') items.push({ t: 'cad', codigo: r.ta.value, ...(r.titulo ? { titulo: r.titulo } : {}), ...(mismaLineaDe(r) ? { mismaLinea: true } : {}) });
+      else if (r.t === 'raw') items.push({ t: 'raw', text: r.ta.value, ...(r.oculto ? { oculto: true } : {}), ...(mismaLineaDe(r) ? { mismaLinea: true } : {}) });
       else if (r.enTexto) continue;          // ya va dentro de su párrafo
-      else items.push({ t: 'eq', codigo: codigoWpf(r.editado || !r.codigo ? r.ed.texto() : r.codigo), modo: r.modo, ...(r.oculto ? { oculto: true } : {}) });
+      else items.push({ t: 'eq', codigo: codigoWpf(r.editado || !r.codigo ? r.ed.texto() : r.codigo), modo: r.modo, ...(r.oculto ? { oculto: true } : {}), ...(mismaLineaDe(r) ? { mismaLinea: true } : {}) });
     }
     return JSON.stringify({ formato: 'hmath 1', eq: 14, txt: 16, gap: 6, fmt: 0, items }, null, 1);
   }
@@ -655,6 +674,6 @@
   function cadExporta(tipo) { const r = reg.filter((x) => x.t === 'cad').pop(); if (!r) return false; if (tipo === 'dwg') { HK.cad.bajaDwg(r.ents).then((n) => HK.app.estado('DWG guardado: dibujo.dwg (' + n + ' bytes)')).catch((x) => HK.app.estado('No se pudo guardar el DWG: ' + x.message)); return true; } HK.cad.baja(tipo === 'lsp' ? 'dibujo.lsp' : 'dibujo.dxf', tipo === 'lsp' ? HK.cad.aLsp(r.ents, 'dibujo') : HK.cad.aDxf(r.ents), 'text/plain'); return true; }
   function siguienteEq() { const l = reg.filter((r) => r.t === 'eq' && !r.oculto), i = l.findIndex((r) => r.ed === activo); const n = l[i + 1] || l[0]; if (n) { activo = n.ed; n.ed.cur = { fila: n.ed.fila, i: n.ed.fila.length }; redibuja(); n.el.scrollIntoView({ block: 'nearest' }); } }
   function fracVar() { if (!activo) nuevaEq(''); escribe('/'); const p = activo.cur.fila._p; if (p && p.it.t === 'frac') { p.it.diag = true; activo.cambio(); } }          // «Var. fracción»: fracción diagonal a⁄b
-  HK.hoja = { fracVar, modoManual: (f) => { calcManual = !!f; if (!f) resolver(true); }, siguienteEq, nuevoCad, cadAgrega, cadExporta, abre, guarda, resolver, agregaEq, agregaTxt, agregaSlider, reg, limpia, activar: (r) => { activo = r.ed; redibuja(); }, nuevaEq, eqEnTexto, setModo, bloque, insertaMat, nuevoTxt, nuevoSlider, escribe, tam, descarga, hayActivo: () => !!activo, activa: () => activo, alternaCodigo, ocultaBloque, redibuja: () => { redibuja(); } };
+  HK.hoja = { nuevoCodigo, fracVar, modoManual: (f) => { calcManual = !!f; if (!f) resolver(true); }, siguienteEq, nuevoCad, cadAgrega, cadExporta, abre, guarda, resolver, agregaEq, agregaTxt, agregaSlider, reg, limpia, activar: (r) => { activo = r.ed; redibuja(); }, nuevaEq, eqEnTexto, setModo, bloque, insertaMat, nuevoTxt, nuevoSlider, escribe, tam, descarga, hayActivo: () => !!activo, desactiva: () => { activo = null; if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); redibuja(); }, quitaRegs: (u) => { for (let i = reg.length - 1; i >= 0; i--) if (u.contains(reg[i].el)) { if (reg[i].ed && reg[i].ed === activo) activo = null; reg.splice(i, 1); } }, activa: () => activo, alternaCodigo, ocultaBloque, redibuja: () => { redibuja(); } };
   if (!/[?&]vacia/.test(location.search)) { agregaTxt('Hekatan Math Studio', true, 1); agregaTxt('Pulsa «Ecuación» en la cinta, o haz clic en la hoja, y teclea: «/» fracción, «^» exponente, «_» subíndice, «\\» raíz, «(» paréntesis; Espacio sale del hueco. El resultado solo aparece cuando terminas con «=».', false); resolver(); nuevaEq(''); }
 })(window);

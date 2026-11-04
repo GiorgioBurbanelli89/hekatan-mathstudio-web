@@ -116,5 +116,27 @@
     vacia();
     return { formato: 'hmath 1', estilo: 'lisp', eq: 15.33, txt: 15, gap: 0, items };
   }
-  HK.hlisp = { importa, omitidas, esHlisp: (nombre, texto) => /\.(lisp|hlisp)$/i.test(nombre || '') || (!/^\s*[{\[]/.test(texto || '') && /^\s*#/m.test(texto || '')) };
+  // ---------------------------------------------------------------- hoja → texto de Hekatan LISP (lo inverso de importa): «# título» «## sección» «#: párrafo» · cálculo tal cual · #fplot · bloques LISP tal cual
+  function exporta(json) {
+    const d = typeof json === 'string' ? JSON.parse(json) : json, o = []; let oc = false;
+    const ocultar = (x) => { if (!!x.oculto !== oc) { o.push(x.oculto ? '#hide' : '#show'); oc = !!x.oculto; } };
+    const prm = (seg) => seg.map((g) => g.eq !== undefined ? g.eq : g.s !== undefined ? g.s : '').join('');
+    const unaLinea = (s) => String(s).replace(/\s*\n\s*/g, ' ').trim();
+    (d.items || []).forEach((x) => {
+      ocultar(x);
+      if (x.t === 'texto' || x.t === 'parrafo') {
+        const t = unaLinea(x.t === 'texto' ? x.text : prm(x.seg || [])); if (!t) return;
+        if (x.titulo) o.push('#'.repeat(Math.min(3, x.nivel || 1)) + ' ' + t); else o.push('#: ' + t);
+      } else if (x.t === 'eq') {
+        let ls = String(x.codigo || '').replace(/\r/g, '').split('\n'); if (!ls.length || !ls.join('').trim()) return;
+        ls = ls.filter((l, i) => !(l.trim() === '' && (i === 0 || i === ls.length - 1))); { let q = ls.length - 1; while (q > 0 && ls[q].trim() === '') q--; const m = q > 0 ? /^([\p{L}_][\p{L}\p{N}_]*)\s*=/u.exec(ls[q - 1]) : null; if (m && ls[q].trim() === m[1]) ls = ls.slice(0, q).concat(ls.slice(q + 1)); }          // «x = expr» + «x»: el eco lo pone la importación
+        o.push(ls.map((l) => { l = l.replace(/^(\s*)fplot\s*\((.*)\[\s*([^\],]+?)\s*[, ]\s*([^\],]+?)\s*\]\s*\)\s*$/, '$1#fplot($2[$3 $4])'); return l.replace(/\s+%\s*(.*)$/, " '$1"); }).join('\n'));
+      } else if (x.t === 'slider') o.push(x.nombre + ' = ' + x.valor + " 'deslizador " + x.min + ' … ' + x.max);
+      else if (x.t === 'cad') o.push('#autolisp\n' + String(x.codigo || '').replace(/\s+$/, '') + '\n#fin');
+      else if (x.t === 'raw') o.push(String(x.text || '').replace(/\s+$/, ''));
+    });
+    if (oc) o.push('#show');
+    return o.join('\n\n') + '\n';
+  }
+  HK.hlisp = { importa, exporta, omitidas, esHlisp: (nombre, texto) => /\.(lisp|hlisp)$/i.test(nombre || '') || (!/^\s*[{\[]/.test(texto || '') && /^\s*#/m.test(texto || '')) };
 })(window);
