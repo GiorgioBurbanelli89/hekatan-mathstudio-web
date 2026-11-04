@@ -205,6 +205,11 @@
   $('m-cuadricula').onclick = cuadricula;
   $('m-compartir').onclick = () => { capturaPng('hoja', true); };
   $('m-lisp').onclick = () => { G.open('https://giorgioburbanelli89.github.io/hekatan-lisp/', '_blank'); estado('Vista completa Hekatan LISP: se abre en una pestaña nueva'); };          // siempre a la vista, en la barra de arriba
+  // Ejemplos de Hekatan LISP: la MISMA lista que la web de Hekatan LISP (ejemplos/hlisp/lista.json), un botón por hoja
+  fetch('ejemplos/hlisp/lista.json').then((r) => r.json()).then((L) => {
+    const g = $('grp-lisp'); if (!g) return; g.textContent = 'Hekatan LISP (.lisp) · ' + L.length + ' ejemplos'; let ant = g;
+    L.forEach((n) => { const b = document.createElement('button'); b.textContent = n.replace(/\.lisp$/, ''); b.title = n; b.addEventListener('click', () => { abreEjemplo('ejemplos/hlisp/' + n); document.querySelectorAll('.mi.abierto').forEach((m) => m.classList.remove('abierto')); }); ant.after(b); ant = b; });
+  }).catch(() => { const g = $('grp-lisp'); if (g) g.textContent = 'Hekatan LISP (.lisp) · no se pudo leer la lista'; });
   document.querySelectorAll('.sub button').forEach((b) => b.addEventListener('click', () => {
     const a = b.dataset.a, ej = b.dataset.ej;
     if (ej) abreEjemplo(ej); else if (a === 'nuevo') nuevo(); else if (a === 'abrir') $('archivo').click(); else if (a === 'guardar') guarda(); else if (a === 'guardarcomo') guardaComo();
