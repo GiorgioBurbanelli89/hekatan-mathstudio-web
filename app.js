@@ -80,7 +80,8 @@
       { ic: '𝑥', t: 'Deslizador', acc: () => H().nuevoSlider() },
     ],
     'CAD': [
-      { ic: '✏️', t: 'Hekatan CAD', tip: 'Ventana de dibujo con el ratón (línea, polilínea, rectángulo, círculo, arco, texto, cota, grosores); «Guardar en la hoja» crea el bloque CAD', acc: () => HK.cadEditor.abre() },
+      { ic: '✏️', t: 'Dibujar', tip: 'La MISMA ventana de dibujo de Hekatan LISP (Línea/Polilínea/…/Mover/Recortar/3DPol/SCP, línea Orden:, refent); «Guardar en la hoja» crea el bloque CAD', acc: () => HK.cadReal.abre() },
+      { ic: '✏️', t: 'Dibujar (simple)', tip: 'Editor simplificado anterior (respaldo)', acc: () => HK.cadEditor.abre() },
       { ic: '✎', t: 'Dibujo nuevo', tip: 'Bloque CAD con código AutoLISP: cada botón de al lado le agrega una entidad', acc: () => H().nuevoCad() },
       'sep',
       { ic: '／', t: 'Línea', tip: HK.cad.PRIM['Línea'], acc: () => H().cadAgrega(HK.cad.PRIM['Línea']) },
@@ -100,7 +101,8 @@
       { ic: 'LSP', t: 'Exportar AutoLISP', tip: 'Baja el último dibujo como dibujo.lsp (entmake): en AutoCAD, APPLOAD y escribir HKDIBUJO', acc: () => { if (!H().cadExporta('lsp')) estado('No hay ningún dibujo CAD en la hoja'); } },
       { ic: 'DWG', t: 'Exportar DWG', tip: 'Guarda el último dibujo como dibujo.dwg (AutoCAD 2018), igual que el botón DWG del WPF', acc: () => { if (!H().cadExporta('dwg')) estado('No hay ningún dibujo CAD en la hoja'); } },
       { ic: 'DXF', t: 'Exportar DXF', tip: 'Baja el último dibujo como dibujo.dxf', acc: () => { if (!H().cadExporta('dxf')) estado('No hay ningún dibujo CAD en la hoja'); } },
-      { ic: '🗂', t: 'Visor CAD (DWG)', tip: 'Abre Hekatan CAD Viewer (tu visor de DWG: orbitar, medir, cotas, compartir) en una pestaña nueva. Baja antes el dibujo con «Exportar DWG» y ábrelo allí', acc: () => { G.open('https://dwg-web-viewer.pages.dev/', '_blank'); estado('Visor CAD abierto en otra pestaña'); } },
+      { ic: '🗂', t: 'Hekatan CAD', tip: 'Tu CAD viewer (abrir y revisar DWG, medir, órbita 3D, compartir) en una pestaña nueva. Si hay un dibujo en la hoja, antes baja su DWG para abrirlo allí', acc: () => { if (H().cadExporta('dwg')) estado('DWG del dibujo bajado: ábrelo en Hekatan CAD (pestaña nueva)'); else estado('Hekatan CAD abierto en otra pestaña'); G.open('https://dwg-web-viewer.pages.dev/', '_blank'); } },
+      { ic: 'DXF', t: 'Importar DXF', tip: 'Trae a un bloque «Dibujar» de la hoja un .dxf de Hekatan CAD (el visor lo baja con «Exportar DXF»): LINE, CIRCLE, ARC, LWPOLYLINE, TEXT, POINT', acc: () => HK.cadImporta.elige() },
     ],
     'Símbolos': 'simbolos',
     'Vista': [

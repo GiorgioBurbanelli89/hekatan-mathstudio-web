@@ -99,7 +99,7 @@
   const CAD_CAB = ';; Dibujo AutoLISP (Hekatan Math Studio): cada línea agrega una entidad; abajo se dibuja.';
   function agregaCad(codigo, titulo) {
     const c = contenedor(false), d = document.createElement('div'); d.className = 'cad';
-    d.innerHTML = '<div class="cad-bar"><b class="cad-tit"></b><span class="cad-msg"></span><button data-a="hcad" title="Editar este dibujo en Hekatan CAD (con el ratón)">✏ Hekatan CAD</button><button data-a="cod" title="Mostrar / ocultar el código">‹›</button><button data-a="lsp" title="Bajar como AutoLISP (.lsp) para AutoCAD">.lsp</button><button data-a="dxf" title="Bajar como DXF">DXF</button></div><textarea spellcheck="false"></textarea><div class="cad-vista"></div><div class="cad-pie">Guardar dibujo como <button data-a="dwg" title="Guardar como DWG (AutoCAD 2018), igual que el WPF">DWG</button></div>';
+    d.innerHTML = '<div class="cad-bar"><b class="cad-tit"></b><span class="cad-msg"></span><button data-a="hcad" title="Editar este dibujo en «Dibujar» (la misma ventana de Hekatan LISP)">✏ Dibujar</button><button data-a="hcad0" title="Editor simple anterior (respaldo)">✏ simple</button><button data-a="cod" title="Mostrar / ocultar el código">‹›</button><button data-a="lsp" title="Bajar como AutoLISP (.lsp) para AutoCAD">.lsp</button><button data-a="dxf" title="Bajar como DXF">DXF</button></div><textarea spellcheck="false"></textarea><div class="cad-vista"></div><div class="cad-pie">Guardar dibujo como <button data-a="dwg" title="Guardar como DWG (AutoCAD 2018), igual que el WPF">DWG</button></div>';
     d.querySelector('.cad-tit').textContent = titulo || 'CAD · AutoLISP';
     const ta = d.querySelector('textarea'), vista = d.querySelector('.cad-vista'), msg = d.querySelector('.cad-msg');
     const r = { t: 'cad', el: d, ta, ents: [], titulo: titulo || '' };
@@ -150,7 +150,8 @@
     ta.addEventListener('focus', () => { activo = null; redibuja(); });
     d.addEventListener('click', (e) => {
       const a = e.target.dataset && e.target.dataset.a; if (!a) return;
-      if (a === 'hcad') HK.cadEditor.abre(r);
+      if (a === 'hcad') HK.cadReal.abre(r);
+      else if (a === 'hcad0') HK.cadEditor.abre(r);
       else if (a === 'cod') ta.style.display = ta.style.display === 'none' ? '' : 'none';
       else if (a === 'lsp') HK.cad.baja('dibujo.lsp', HK.cad.aLsp(r.ents, 'dibujo'), 'text/plain');
       else if (a === 'dwg') HK.cad.bajaDwg(r.ents).then((n) => { const m = d.querySelector('.cad-msg'); if (m) m.textContent = 'DWG guardado (' + n + ' bytes)'; }).catch((x) => { const m = d.querySelector('.cad-msg'); if (m) m.textContent = 'DWG: ' + x.message; });
