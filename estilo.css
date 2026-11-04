@@ -11,6 +11,7 @@ html, body { height:100%; margin:0; overflow:hidden; font:12.5px "Segoe UI", sys
 .mi:hover > span, .mi.abierto > span { background:var(--hover); }
 .mi .sub { display:none; position:absolute; top:100%; left:0; background:#fff; border:1px solid var(--borde); box-shadow:0 4px 14px #0003; min-width:290px; padding:3px 0; }
 .mi.abierto .sub { display:block; }
+.sub.larga { max-height:78vh; overflow-y:auto; min-width:430px; }
 .sub button { display:flex; justify-content:space-between; gap:24px; width:100%; text-align:left; border:0; background:none; padding:5px 22px; font:inherit; cursor:pointer; }
 .sub button:hover { background:var(--sel); }
 .sub kbd { color:#777; font:inherit; font-size:11.5px; }
