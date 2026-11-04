@@ -100,6 +100,7 @@
       { ic: 'LSP', t: 'Exportar AutoLISP', tip: 'Baja el último dibujo como dibujo.lsp (entmake): en AutoCAD, APPLOAD y escribir HKDIBUJO', acc: () => { if (!H().cadExporta('lsp')) estado('No hay ningún dibujo CAD en la hoja'); } },
       { ic: 'DWG', t: 'Exportar DWG', tip: 'Guarda el último dibujo como dibujo.dwg (AutoCAD 2018), igual que el botón DWG del WPF', acc: () => { if (!H().cadExporta('dwg')) estado('No hay ningún dibujo CAD en la hoja'); } },
       { ic: 'DXF', t: 'Exportar DXF', tip: 'Baja el último dibujo como dibujo.dxf', acc: () => { if (!H().cadExporta('dxf')) estado('No hay ningún dibujo CAD en la hoja'); } },
+      { ic: '🗂', t: 'Visor CAD (DWG)', tip: 'Abre Hekatan CAD Viewer (tu visor de DWG: orbitar, medir, cotas, compartir) en una pestaña nueva. Baja antes el dibujo con «Exportar DWG» y ábrelo allí', acc: () => { G.open('https://dwg-web-viewer.pages.dev/', '_blank'); estado('Visor CAD abierto en otra pestaña'); } },
     ],
     'Símbolos': 'simbolos',
     'Vista': [
