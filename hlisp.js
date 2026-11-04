@@ -6,7 +6,7 @@
   const HK = G.HK;
   const RxUnidad = /(?<=[\w)\]])\s+\[[A-Za-zµ°][^\]\[\s,;]*\]/g, RxBloque = /^(for|while|if|function)\b/;
   const Cierres = { dibujo: '#fin', autolisp: '#fin', dibujar: '#fin', fila: '#finfila', noc: '#equ', sust: '#nosust', triple: '#nosust' };
-  const RxLlave = /(?<![A-Za-z])(Simplify|Diff|Slope|Derivate|Partial|Limit|Taylor|Sum|Suma|Integral|Area)\{/g;
+  const RxLlave = /(?<![A-Za-z])(Simplify|Expand|Diff|Slope|Derivate|Partial|Limit|Taylor|Sum|Suma|Integral|Area)\{/g;
   const omitidas = {};
   function partesAt(s, sep) {
     const r = []; let prof = 0, ini = 0;
@@ -19,7 +19,7 @@
       const a = m.index + m[0].length; let prof = 1, z = a; while (z < s.length && prof > 0) { if (s[z] === '{') prof++; else if (s[z] === '}') prof--; z++; }
       if (prof !== 0) return s; const interior = s.slice(a, z - 1), arr = partesAt(interior, '@'), cuerpo = arr[0], resto = arr.length > 1 ? arr[1] : null; let rep = null;
       switch (m[1]) {
-        case 'Simplify': rep = 'simplify(' + cuerpo + ')'; break;
+        case 'Simplify': case 'Expand': rep = cuerpo; break;          // como Hekatan LISP: se dibuja solo la expresión y su resultado («→»), sin el nombre de la función en texto plano
         case 'Diff': case 'Slope': case 'Derivate': if (resto !== null) rep = 'diff(' + cuerpo + ', ' + resto.split(',')[0].trim() + ')'; break;
         case 'Partial': if (resto !== null) rep = 'pdiff(' + cuerpo + ', ' + resto.split(',')[0].trim() + ')'; break;
         case 'Limit': { const q = resto ? resto.split('=') : null; if (q && q.length === 2) rep = 'limit(' + cuerpo + ', ' + q[0].trim() + ', ' + q[1].trim() + ')'; break; }
