@@ -1,0 +1,192 @@
+/* Hekatan Math Studio Web — misma estructura que la ventana de WPF: barra azul, menú, cinta con pestañas, hoja de papel y barra de estado */
+:root { --azul:#1F3864; --menu:#F3F4F6; --cinta:#FAFAFA; --borde:#C8CCD2; --area:#9AA5B5; --papel:#FBF6EA; --tinta:#1B1B1B; --var:#1A4FA3; --hover:#E3EAF5; --sel:#D6E4F7; }
+* { box-sizing:border-box; }
+html, body { height:100%; margin:0; overflow:hidden; font:12.5px "Segoe UI", system-ui, sans-serif; color:var(--tinta); background:#fff; }
+#app { height:100%; display:flex; flex-direction:column; }
+#titulo { background:var(--azul); color:#fff; font-weight:600; font-size:13px; padding:8px 14px; flex:none; display:flex; align-items:center; gap:8px; }
+#titulo img { display:block; border-radius:50%; }
+#menu { background:var(--menu); display:flex; gap:2px; padding:0 4px; flex:none; border-bottom:1px solid #E5E7EB; position:relative; z-index:20; }
+.mi { position:relative; }
+.mi > span { display:block; padding:4px 7px; cursor:default; }
+.mi:hover > span, .mi.abierto > span { background:var(--hover); }
+.mi .sub { display:none; position:absolute; top:100%; left:0; background:#fff; border:1px solid var(--borde); box-shadow:0 4px 14px #0003; min-width:290px; padding:3px 0; }
+.mi.abierto .sub { display:block; }
+.sub button { display:flex; justify-content:space-between; gap:24px; width:100%; text-align:left; border:0; background:none; padding:5px 22px; font:inherit; cursor:pointer; }
+.sub button:hover { background:var(--sel); }
+.sub kbd { color:#777; font:inherit; font-size:11.5px; }
+.sub hr { border:0; border-top:1px solid #E1E3E8; margin:3px 0; }
+.sub .lbl { padding:3px 22px; color:#777; font-size:11.5px; }
+.mi.sola.activa > span { background:var(--sel); }
+#pestanas { display:flex; flex:none; background:#fff; padding:0 0 0 2px; border-bottom:1px solid var(--borde); flex-wrap:wrap; }
+#pestanas button { border:1px solid var(--borde); border-bottom:0; background:#F5F5F5; padding:3px 7px; margin:3px 0 -1px -1px; font:inherit; cursor:pointer; color:#222; }
+#pestanas button.sel { background:var(--cinta); border-bottom:1px solid var(--cinta); position:relative; }
+#cinta { flex:none; height:92px; background:var(--cinta); border-bottom:1px solid var(--borde); display:flex; align-items:stretch; padding:6px 8px; gap:2px; overflow-x:auto; overflow-y:hidden; }
+.bt { flex:none; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:4px; min-width:56px; padding:5px 8px 2px; border:1px solid transparent; background:none; font:inherit; cursor:pointer; color:#222; white-space:nowrap; }
+.bt:hover { background:var(--hover); border-color:#B7C8E2; }
+.bt:active { background:var(--sel); }
+.bt .ic { font:22px "Cambria Math","Segoe UI Symbol","Segoe UI",serif; height:34px; display:flex; align-items:center; color:#222; }
+.bt .ic i { font-size:14px; }
+.bt[disabled] { opacity:.45; cursor:default; }
+.sep { width:1px; background:#DADDE3; margin:4px 6px; flex:none; }
+.grupo-t { display:flex; flex-direction:column; align-items:center; font-size:12px; margin:0 8px; }
+.grupo-t .fil { display:flex; gap:3px; margin-top:4px; }
+.grupo-t button, .grupo-t select { height:28px; min-width:34px; border:1px solid #AAB0BA; background:#EEE; font:inherit; cursor:pointer; }
+.grupo-t select { background:#fff; padding:0 4px; min-width:50px; }
+#cinta .aviso-t { align-self:center; color:#6a7280; padding:0 14px; font-size:12.5px; }
+#area { flex:1; overflow:auto; background:var(--area); padding:24px 0 60px; position:relative; }
+#papel { position:relative; width:816px; margin:0 auto; background:var(--papel); box-shadow:0 2px 10px #0004; padding:96px 96px 96px; min-height:1056px; }
+#papel .pg { position:absolute; right:96px; font-size:12.5px; color:#222; }
+/* entre hoja y hoja: un ESPACIO (franja del color del escritorio, con la sombra de cada hoja), centrado en el corte; cae en los márgenes, donde nunca hay contenido */
+#papel .corte { position:absolute; left:-14px; right:-14px; height:24px; margin-top:-12px; pointer-events:none; z-index:3; background:linear-gradient(#0008,#0000) 14px 0/calc(100% - 28px) 8px no-repeat, linear-gradient(#0000,#0008) 14px 100%/calc(100% - 28px) 8px no-repeat, var(--area); }          /* la sombra solo bajo el ancho del papel */
+#hoja { min-height:300px; }
+/* marco de cada página (como el WPF): un rectángulo punteado por página, justo en los márgenes, y entre páginas la franja del margen inferior + superior */
+#papel .marco { position:absolute; box-sizing:border-box; border:1px dashed #B4C6E4; pointer-events:none; }
+/* sin páginas (hoja continua, vista web/borrador/esquema, hoja LISP): un solo marco alrededor de la hoja */
+body.sinpag #hoja, body[data-vista=web] #hoja, body[data-vista=borrador] #hoja, body[data-vista=esquema] #hoja, body.lisp #hoja { outline:1px dashed #B4C6E4; outline-offset:12px; }
+body.sinpag #papel .marco, body[data-vista=web] #papel .marco, body[data-vista=borrador] #papel .marco, body[data-vista=esquema] #papel .marco, body.lisp #papel .marco { display:none; }
+body.cuad #hoja { background-image:linear-gradient(#0000000d 1px, transparent 1px), linear-gradient(90deg, #0000000d 1px, transparent 1px); background-size:20px 20px; }
+.fila { display:flex; gap:12px; align-items:flex-start; margin:2px 0; padding-bottom:14px; flex-wrap:wrap; }          /* 16 px de aire debajo de cada bloque como el «gap» del WPF; en el relleno (no en el margen) para que el paginado lo cuente y no se solape con el margen del siguiente */          /* la línea respeta el margen: al llegar a él, sigue en la fila de abajo */
+.eq { flex:0 0 auto; max-width:100%; border-radius:2px; }
+.grupo { flex:0 0 auto; max-width:100%; display:flex; flex-direction:column; }
+.eq canvas { display:block; cursor:text; }
+.txt { flex:1; font-size:var(--txtpx,13px); line-height:var(--txtlh,2); padding:2px 0 2px 10px; outline:none; border-radius:2px; min-height:1.7em; }
+.txt:focus { background:#1a4fa312; }
+.txt:not(.titulo):not(.lado) { padding-right:20px; }          /* el WPF corta el párrafo ~20 px antes del marco derecho */
+.txt.titulo { margin-bottom:9px; font-weight:700; text-align:center; font-size:calc(var(--txtpx,13px) * 1.12); margin-top:25px; }
+#hoja > .fila:first-child > .txt.titulo { margin-top:-4px; }          /* el primer título queda a 9 px del marco, como en el WPF */
+.txt.titulo.n2 { font-size:calc(var(--txtpx,13px) * 1.04); }
+.slider { flex:1; display:flex; align-items:center; gap:10px; background:#fff; border:1px solid #B9BEC6; padding:3px 10px; margin:4px 0; font-style:italic; }
+.slider .nom { min-width:46px; }
+.slider input { flex:1; }
+.slider .val { background:#000; color:#fff; padding:1px 10px; min-width:34px; text-align:center; font-style:normal; font-size:12.5px; }
+.slider button { border:1px solid #B9BEC6; background:#EEE; cursor:pointer; }
+#estado { flex:none; display:flex; justify-content:space-between; background:#F0F0F0; border-top:1px solid #DDD; padding:3px 10px; font-size:12px; color:#333; }
+#estado #motor { color:#777; }
+#estado #motor.ok { color:#1d8a3a; }
+
+.ctx { position:fixed; z-index:50; background:#fff; border:1px solid #B9BEC6; box-shadow:0 4px 14px #0003; padding:3px 0; min-width:170px; }
+.ctx button { display:block; width:100%; text-align:left; border:0; background:none; padding:6px 18px; font:inherit; cursor:pointer; }
+.ctx button:hover { background:#D6E4F7; }
+
+/* bloque CAD (AutoLISP) */
+.cad { flex:1; background:#fff; border:1px solid #B9BEC6; margin:4px 0; max-width:100%; }
+.cad-bar { display:flex; align-items:center; gap:8px; background:#EEF1F6; padding:2px 8px; font-size:12px; }
+.cad-bar b { font-weight:600; }
+.cad-msg { flex:1; color:#555; }
+.cad-msg.mal { color:#b3261e; }
+.cad-bar button { border:1px solid #B9BEC6; background:#fff; cursor:pointer; font:inherit; font-size:11.5px; padding:1px 8px; }
+.cad textarea { display:block; width:100%; border:0; border-top:1px solid #E1E3E8; border-bottom:1px solid #E1E3E8; padding:4px 8px; font:12px Consolas,monospace; background:#FAFAF5; color:#3a3a2a; resize:vertical; outline:none; white-space:pre; overflow:auto; }
+.cad-vista { overflow:auto; padding:4px 6px; }
+.cad-vista svg { display:block; max-width:100%; margin:0 auto; }
+
+/* autocompletar */
+.sug { position:fixed; z-index:60; display:flex; background:#fff; border:1px solid #9AA3B2; box-shadow:0 4px 14px #0004; font:12.5px "Segoe UI", sans-serif; }
+.sug ul { list-style:none; margin:0; padding:2px 0; min-width:150px; }
+.sug li { display:flex; gap:8px; align-items:center; padding:2px 10px 2px 6px; cursor:pointer; white-space:nowrap; }
+.sug li.sel { background:#1A4FA3; color:#fff; }
+.sug .ic { width:34px; text-align:center; font:15px "Cambria Math","Segoe UI Symbol",serif; opacity:.85; }
+.sug .det { width:250px; padding:6px 10px; border-left:1px solid #D7DBE2; background:#F6F7F9; }
+.sug .det i { color:#666; font-size:11.5px; margin-left:6px; }
+.sug .det div { margin:3px 0 5px; line-height:1.35; }
+.sug .det small { color:#777; }
+.bt.activa { background:#DCE6F5; border-color:#9DB4DC; }
+
+/* vistas (pestaña Vista, como en WPF) */
+body[data-vista=web] #papel, body[data-vista=borrador] #papel { width:auto; max-width:none; margin:0; box-shadow:none; padding:24px 48px; min-height:0; }
+body[data-vista=web] #papel .pg, body[data-vista=web] #papel .corte, body[data-vista=borrador] #papel .pg, body[data-vista=borrador] #papel .corte { display:none; }
+body[data-vista=borrador] .eq, body[data-vista=borrador] .cad, body[data-vista=borrador] .slider { display:none; }
+body[data-vista=esquema] .eq, body[data-vista=esquema] .cad, body[data-vista=esquema] .slider, body[data-vista=esquema] .txt:not(.titulo) { display:none; }
+body[data-vista=enfoque] #titulo, body[data-vista=enfoque] #menu, body[data-vista=enfoque] #pestanas, body[data-vista=enfoque] #cinta, body[data-vista=enfoque] #estado { display:none; }
+
+.txt { font-family: var(--txtfont, inherit); }
+body.sinpag #papel .pg, body.sinpag #papel .corte { display:none; }
+body.sinpag #papel { min-height:0; }
+.txt table td { min-width:40px; padding:2px 6px; }
+
+/* «Ec. (n)»: texto en la misma línea que la ecuación, pegado al margen derecho (como en el WPF) */
+.fila > .txt.lado { flex:0 0 auto; margin-left:auto; color:#666; font-size:calc(var(--txtpx,13px) * 0.8); align-self:center; white-space:nowrap; }
+.eq.oculto { display:none; }          /* bloques «oculto» del WPF (ayudas de cálculo) */
+
+/* Código ⇄ Nodos, bloques ocultos y marcas de párrafo (como el WPF) */
+.eq textarea.cod { display:block; width:100%; min-width:260px; font:14px/1.45 Consolas,'Cascadia Mono',monospace; color:#1b1b1b; background:#fffdf5; border:1px dashed #9db2cf; border-radius:3px; padding:3px 6px; resize:vertical; outline:none; }
+.ver-ocultos .eq.oculto { display:block; opacity:.45; outline:1px dashed #999; }
+.marcas .fila::after, .marcas .txt::after { content:'¶'; color:#6b8fbf; font:14px/1 sans-serif; margin-left:6px; align-self:center; }
+
+body.sinnum #papel .pg { display:none; }
+
+/* ecuaciones dentro de un párrafo (como el WPF) */
+.txt .ifx { display:inline-block; margin:0 2px; vertical-align:baseline; }
+.txt .ifx .eq { display:inline-block; max-width:none; }
+.txt .ifx canvas { display:block; }
+
+/* estilos de párrafo (Word) y títulos de nivel 3 */
+.txt.titulo.n3 { font-size:var(--txtpx,13px); font-style:italic; }
+.txt.est-titulo { font-size:calc(var(--txtpx,13px) * 1.6); }
+.txt.est-subtitulo { text-align:center; font-style:italic; color:#5a6b7d; }
+.txt.est-sinesp { line-height:1.15; }
+.txt.est-cita { font-style:italic; margin:6px 40px; color:#444; }
+.txt.est-citad { font-style:italic; margin:8px 30px; padding-left:12px; border-left:3px solid #1a4fa3; }
+.txt.est-lista { padding-left:28px; }
+.txt.est-leyenda { font-size:calc(var(--txtpx,13px) * .85); color:#555; text-align:center; }
+/* regla y panel de navegación */
+#regla { position:sticky; top:0; z-index:5; margin:0 auto; height:22px; box-shadow:0 1px 3px #0003; }
+#nav { position:fixed; left:0; top:150px; bottom:24px; width:210px; background:#f4f6fa; border-right:1px solid #c5ccd8; overflow:auto; padding:8px 10px; z-index:20; font-size:13px; }
+#nav b { display:block; margin-bottom:6px; color:#1f3864; }
+#nav a { display:block; padding:3px 4px; cursor:pointer; color:#222; border-radius:3px; }
+#nav a:hover { background:#dde5f3; } #nav a.n2 { padding-left:16px; } #nav a.n3 { padding-left:28px; font-style:italic; }
+body.connav #area { margin-left:210px; }
+
+/* comentarios, notas, encabezado y pie */
+.coment { background:#fff3a3; border-bottom:2px solid #e0b400; cursor:help; }
+sup.nota { color:#1a4fa3; font-weight:700; cursor:help; }
+#papel .pg.encab, #papel .pg.pie { left:96px; right:96px; font-size:12px; color:#555; text-align:center; }
+#coment { position:fixed; right:0; top:150px; bottom:24px; width:240px; background:#fff8dc; border-left:1px solid #d9c98a; overflow:auto; padding:8px 10px; z-index:20; font-size:13px; }
+#coment b { display:block; margin-bottom:6px; color:#7a5c00; } #coment a { display:block; padding:4px; cursor:pointer; border-bottom:1px solid #eadfae; } #coment a:hover { background:#fff0b3; }
+body:has(#coment) #area { margin-right:240px; }
+
+/* bloque de Hekatan LISP guardado tal cual (como el WPF) */
+.raw { border:1px solid #cdd5e3; border-left:4px solid #7c3aed; background:#f6f3ff; border-radius:3px; margin:4px 0; width:100%; }
+.raw-bar { display:flex; gap:10px; align-items:baseline; padding:3px 8px; font-size:12px; background:#ece6fb; color:#4c2a9a; } .raw-bar span { color:#7a6aa8; font-size:11px; }
+.raw textarea { display:block; width:100%; box-sizing:border-box; border:0; background:transparent; font:12px/1.4 Consolas,'Cascadia Mono',monospace; padding:4px 8px; resize:vertical; outline:none; color:#2b2144; }
+.raw.oculto { display:none; } .ver-ocultos .raw.oculto { display:block; opacity:.55; }
+
+/* hoja de Hekatan LISP (estilo «lisp» del WPF): continua, sin marco de página y con poco aire */
+body.lisp #papel { width:auto; max-width:900px; padding:24px 40px; min-height:0; box-shadow:none; }
+body.lisp .fila { margin:0; padding-bottom:0; }
+body.lisp .txt { line-height:1.45; }
+body.lisp .txt.titulo { margin-top:10px; }
+
+body.lisp .fila > .txt.lado { margin-left:12px; flex:0 1 auto; }
+
+/* el marco del dibujo ocupa solo el ancho del dibujo (como el WPF), no toda la línea */
+.fila > .cad { flex:0 0 auto; width:fit-content; max-width:100%; }
+.cad .cad-vista { display:block; }
+
+.cad-tit { font-size:13px; }
+.cad-pie { text-align:center; font:12px 'Segoe UI',sans-serif; color:#666; padding:3px 0 5px; } .cad-pie button { margin-left:6px; padding:2px 10px; cursor:pointer; }
+
+.fila > .cad { width:min(100%, 466px); }
+.cad .cad-bar { flex-wrap:wrap; }
+.cad .cad-tit { flex:1 1 60%; font-size:12px; }
+.cad .cad-msg { order:3; flex:0 0 100%; white-space:nowrap; font-size:11px; color:#667; }
+
+.hk-cota .h { fill:#1a4fa3; opacity:0; cursor:move; } .cad-vista:hover .hk-cota .h { opacity:.28; } .hk-cota .h:hover { opacity:.9; }
+.hk-cota .cota-t { cursor:text; } .hk-cota .cota-t:hover { fill:#1a4fa3; font-weight:600; }
+.cota-inp { position:absolute; width:68px; font:12px 'Segoe UI',sans-serif; padding:1px 4px; border:1px solid #1a4fa3; border-radius:3px; text-align:center; z-index:5; }
+
+.hcad { position:fixed; inset:0; z-index:9000; background:#f4f4f4; display:flex; flex-direction:column; font:13px 'Segoe UI',sans-serif; }
+.hcad-bar { display:flex; align-items:center; gap:4px; padding:6px 10px; background:#1f3864; color:#fff; flex-wrap:wrap; } .hcad-bar b { margin-right:10px; }
+.hcad-bar button { background:#2d4a85; color:#fff; border:1px solid #4a6aa8; border-radius:4px; padding:3px 9px; cursor:pointer; font-size:14px; min-width:30px; } .hcad-bar button:hover { background:#3c5ea8; } .hcad-bar button.on { background:#1a73e8; border-color:#9cc3ff; }
+.hcad-bar button.ok { background:#2e7d32; border-color:#6fbf73; font-size:13px; } .hcad-bar .sp { flex:1; } .hcad-bar select, .hcad-bar label { font-size:12px; color:#fff; } .hcad-bar select { color:#000; }
+.hcad-msg { padding:3px 12px; background:#e8eefc; color:#1f3864; font-size:12px; min-height:18px; } .hcad-lienzo { position:relative; flex:1; overflow:hidden; background:#fff; cursor:crosshair; }
+.hcad-lienzo svg { display:block; } .hcad-inp { position:absolute; width:140px; padding:2px 5px; border:1px solid #1a73e8; border-radius:3px; z-index:3; font:13px 'Segoe UI',sans-serif; } .hc-cota { cursor:text; }
+.hcad-svg { position:absolute; inset:0; }
+
+/* hipótesis con su gráfica AL LADO: un fplot/fsuperficie/fmapa en la misma línea que otras piezas ocupa una columna a la derecha (solo la gráfica; el código sigue en Ctrl+K) */
+.fila > .eq.conGraf:not(:only-child) { flex:0 0 330px; margin-left:auto; }
+.fila > .eq.conGraf:not(:only-child) > canvas:first-child { display:none; }
+
+.fila.ini-pag > .txt.titulo { margin-top:-4px; }          /* un título al comienzo de una página queda a 9 px del marco, como en el WPF */
+.eq.conGraf { position:relative; }
+.ghov { position:absolute; pointer-events:none; z-index:2; }
+.eq.conGraf > canvas:not(.ghov) { cursor:crosshair; }

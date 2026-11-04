@@ -1,0 +1,99 @@
+{
+ "formato": "hmath 1",
+ "eq": 14,
+ "txt": 11,
+ "gap": 6,
+ "fmt": 0,
+ "items": [
+  {
+   "t": "texto",
+   "text": "Coordenadas del triangulo:",
+   "titulo": true
+  },
+  {
+   "t": "texto",
+   "text": "Funciones de interpolación",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "codigo": "N_1(ξ,η) = 1 - ξ - η",
+   "modo": 2
+  },
+  {
+   "t": "eq",
+   "codigo": "N_2(ξ,η) = ξ",
+   "modo": 2
+  },
+  {
+   "t": "eq",
+   "codigo": "N_3(ξ,η) = η",
+   "modo": 2
+  },
+  {
+   "t": "texto",
+   "text": "Interpolación de coordenadas:",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "codigo": "x(ξ,η) = N_1(ξ,η)*X_1 + N_2(ξ,η)*X_2 + N_3(ξ,η)*X_3",
+   "modo": 2
+  },
+  {
+   "t": "eq",
+   "codigo": "y(ξ,η) = N_1(ξ,η)*Y_1 + N_2(ξ,η)*Y_2 + N_3(ξ,η)*Y_3",
+   "modo": 2
+  },
+  {
+   "t": "texto",
+   "text": "Jacobiano:",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "codigo": "J(ξ,η) = [pdiff(x(ξ,η),ξ), pdiff(x(ξ,η),η); pdiff(y(ξ,η),ξ), pdiff(y(ξ,η),η)]",
+   "modo": 2
+  },
+  {
+   "t": "texto",
+   "text": "Puntos de integración:",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "codigo": "ξ_p = 0",
+   "modo": 2
+  },
+  {
+   "t": "eq",
+   "codigo": "η_p = 0",
+   "modo": 2
+  },
+  {
+   "t": "eq",
+   "codigo": "J_p = J(ξ_p,η_p)",
+   "modo": 2
+  },
+  {
+   "t": "texto",
+   "text": "Matriz unitaria ampliada:",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "codigo": "I_a = [1,0,0,0; 0,1,0,0; 1,0,1,0]",
+   "modo": 2
+  },
+  {
+   "t": "texto",
+   "text": "Matriz inversa del jacobiano:",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "codigo": "detJ = det(J_p)",
+   "modo": 2
+  }
+ ]
+}

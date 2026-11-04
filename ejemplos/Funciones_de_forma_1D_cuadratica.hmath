@@ -1,0 +1,68 @@
+{
+  "formato": "hmath 1",
+  "eq": 18,
+  "txt": 16,
+  "gap": 0,
+  "fmt": 0,
+  "items": [
+    {
+      "t": "texto",
+      "text": "Funciones de forma 1D: elemento cuadrático de 3 nudos",
+      "titulo": true,
+      "mismaLinea": false
+    },
+    {
+      "t": "texto",
+      "text": "u(x) = N1·u1 + N2·u2 + N3·u3, con s = x/L. Mueve los deslizadores.",
+      "titulo": false,
+      "mismaLinea": false
+    },
+    {
+      "t": "slider",
+      "nombre": "u1",
+      "min": 0,
+      "max": 2,
+      "inc": 0.05,
+      "valor": 1
+    },
+    {
+      "t": "slider",
+      "nombre": "u2",
+      "min": 0,
+      "max": 2,
+      "inc": 0.05,
+      "valor": 1.5
+    },
+    {
+      "t": "slider",
+      "nombre": "u3",
+      "min": 0,
+      "max": 2,
+      "inc": 0.05,
+      "valor": 0.5
+    },
+    {
+      "t": "slider",
+      "nombre": "L",
+      "min": 0.5,
+      "max": 2,
+      "inc": 0.1,
+      "valor": 1
+    },
+    {
+      "t": "eq",
+      "ini": "",
+      "teclas": "",
+      "mismaLinea": false,
+      "codigo": "s = 0:0 + 0.05 - 0:1\r\nxs = s*L\r\ns2 = vectorize(s*s)\r\nN1 = 1 - 3*s + 2*s2\r\nN2 = 4*s - 4*s2\r\nN3 = -s + 2*s2\r\nu = N1*u1 + N2*u2 + N3*u3",
+      "oculto": true
+    },
+    {
+      "t": "eq",
+      "ini": "",
+      "teclas": "",
+      "mismaLinea": false,
+      "codigo": "curvas(xs, N1, N2, N3, u, \"N1\", \"N2\", \"N3\", \"u(x)\", \"Elemento cuadrático: N1, N2, N3 y u(x)\", \"x\", \"valor\")"
+    }
+  ]
+}

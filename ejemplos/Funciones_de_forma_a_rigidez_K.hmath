@@ -1,0 +1,158 @@
+{
+ "formato": "hmath 1",
+ "estilo": "lisp",
+ "eq": 15.33,
+ "txt": 15,
+ "gap": 0,
+ "items": [
+  {
+   "t": "texto",
+   "text": "De las funciones de forma a la matriz de rigidez K",
+   "titulo": true,
+   "nivel": 1
+  },
+  {
+   "t": "texto",
+   "text": "El eslabón que conecta todo. La matriz K del pórtico NO es un dato mágico: se COCINA de las funciones de forma. Aquí el motor la deduce integrando las curvaturas de las Hermite."
+  },
+  {
+   "t": "texto",
+   "text": "1 · La idea",
+   "titulo": true,
+   "nivel": 2
+  },
+  {
+   "t": "texto",
+   "text": "La rigidez de un elemento de viga es la integral de la curvatura de cada función de forma por la de la otra, por la rigidez del material:  K = EI · ∫ (N'')ᵀ (N'') dx. Las N'' son las CURVATURAS de las funciones de forma. Así que las funciones de forma están DENTRO de la K."
+  },
+  {
+   "t": "cad",
+   "codigo": ";; Dibujo AutoLISP (Hekatan Math Studio): cada línea agrega una entidad; abajo se dibuja.\n(peso \"gruesa\")\n(linea '(0 0) '(6 0))\n(peso \"media\")\n(circulo '(0 0) 0.12)\n(circulo '(6 0) 0.12)\n(texto '(-0.15 -0.55) \"1\" :altura 0.28)\n(texto '(5.85 -0.55) \"2\" :altura 0.28)\n(linea '(0 0) '(0 1.4))\n(polilinea '((-0.12 1.1) (0 1.4) (0.12 1.1)))\n(texto '(0.2 1.2) \"w₁\" :altura 0.28)\n(linea '(6 0) '(6 1.4))\n(polilinea '((5.88 1.1) (6 1.4) (6.12 1.1)))\n(texto '(6.2 1.2) \"w₂\" :altura 0.28)\n(arco '(0 0) 0.8 5 80)\n(polilinea '((0.352 0.842) (0.139 0.788) (0.32 0.664)))\n(texto '(0.9 0.55) \"θ₁\" :altura 0.28)\n(arco '(6 0) 0.8 5 80)\n(polilinea '((6.352 0.842) (6.139 0.788) (6.32 0.664)))\n(texto '(6.9 0.55) \"θ₂\" :altura 0.28)\n(peso \"fina\")\n(cota '(0 -1) '(6 -1) :sep -0.3 :texto \"L = 1\")",
+   "titulo": "Figura 1. El elemento viga de longitud L = 1 con sus 4 grados de libertad: desplazamiento transversal w y giro θ en cada nudo (w_1, θ_1, w_2, θ_2)."
+  },
+  {
+   "t": "parrafo",
+   "seg": [
+    {
+     "s": "Figura 2.",
+     "b": 1
+    },
+    {
+     "s": " Las cuatro funciones de forma de Hermite de la viga (x = posición, L = 1): H_1 y H_3 valen 1 en su nudo (desplazamiento); H_2 y H_4 tienen pendiente 1 en su nudo (giro)."
+    }
+   ]
+  },
+  {
+   "t": "eq",
+   "codigo": "fplot(1 - 3*x^2 + 2*x^3, x - 2*x^2 + x^3, 3*x^2 - 2*x^3, -x^2 + x^3, [0, 1])",
+   "modo": 0
+  },
+  {
+   "t": "texto",
+   "text": "2 · Las curvaturas de las Hermite (segunda derivada)",
+   "titulo": true,
+   "nivel": 2
+  },
+  {
+   "t": "texto",
+   "text": "Derivo dos veces H₁ (el motor), para ver el proceso:"
+  },
+  {
+   "t": "eq",
+   "codigo": "H1p = diff(1-3*x^2+2*x^3, x) % H₁' pendiente\nH1p",
+   "orig": "H1p = Diff{1-3*x^2+2*x^3 @ x} @@(H₁' pendiente)"
+  },
+  {
+   "t": "eq",
+   "codigo": "H1pp = diff(-6*x+6*x^2, x) % H₁'' curvatura\nH1pp",
+   "orig": "H1pp = Diff{-6*x+6*x^2 @ x} @@(H₁'' curvatura)"
+  },
+  {
+   "t": "texto",
+   "text": "Las cuatro curvaturas salen igual:  H₁''=−6+12x,  H₂''=−4+6x,  H₃''=6−12x,  H₄''=−2+6x."
+  },
+  {
+   "t": "parrafo",
+   "seg": [
+    {
+     "s": "Figura 3.",
+     "b": 1
+    },
+    {
+     "s": " Las cuatro curvaturas H″ (segundas derivadas): son rectas. Con ellas se integra K."
+    }
+   ]
+  },
+  {
+   "t": "eq",
+   "codigo": "fplot(-6 + 12*x, -4 + 6*x, 6 - 12*x, -2 + 6*x, [0, 1])",
+   "modo": 0
+  },
+  {
+   "t": "texto",
+   "text": "3 · La rigidez = integral de los productos de curvaturas",
+   "titulo": true,
+   "nivel": 2
+  },
+  {
+   "t": "texto",
+   "text": "Cada término de la matriz es la integral del producto de dos curvaturas (EI=1, L=1):"
+  },
+  {
+   "t": "eq",
+   "codigo": "k11 = integral((-6+12*x)^2, x, 0, 1) % H₁''·H₁''\nk11",
+   "orig": "k11 = Area{(-6+12*x)^2 @ x=0:1} @@(H₁''·H₁'')"
+  },
+  {
+   "t": "eq",
+   "codigo": "k12 = integral((-6+12*x)*(-4+6*x), x, 0, 1) % H₁''·H₂''\nk12",
+   "orig": "k12 = Area{(-6+12*x)*(-4+6*x) @ x=0:1} @@(H₁''·H₂'')"
+  },
+  {
+   "t": "eq",
+   "codigo": "k13 = integral((-6+12*x)*(6-12*x), x, 0, 1) % H₁''·H₃''\nk13",
+   "orig": "k13 = Area{(-6+12*x)*(6-12*x) @ x=0:1} @@(H₁''·H₃'')"
+  },
+  {
+   "t": "eq",
+   "codigo": "k22 = integral((-4+6*x)^2, x, 0, 1) % H₂''·H₂''\nk22",
+   "orig": "k22 = Area{(-4+6*x)^2 @ x=0:1} @@(H₂''·H₂'')"
+  },
+  {
+   "t": "texto",
+   "text": "Dan 12, 6, −12, 4. Repitiendo para todas las parejas sale la matriz de rigidez de la viga:"
+  },
+  {
+   "t": "eq",
+   "codigo": "K_viga = [12, 6, -12, 6; 6, 4, -6, 2; -12, -6, 12, -6; 6, 2, -6, 4] % rigidez del elemento viga\nK_viga",
+   "orig": "K_viga = [12, 6, -12, 6; 6, 4, -6, 2; -12, -6, 12, -6; 6, 2, -6, 4] @@(rigidez del elemento viga)"
+  },
+  {
+   "t": "parrafo",
+   "seg": [
+    {
+     "s": "Figura 4.",
+     "b": 1
+    },
+    {
+     "s": " La matriz de rigidez K del elemento viga dibujada como mapa de color: simétrica, con los términos 12, 6, 4 y 2 de las curvaturas integradas."
+    }
+   ]
+  },
+  {
+   "t": "eq",
+   "codigo": "mapa(K_viga)",
+   "modo": 0
+  },
+  {
+   "t": "texto",
+   "text": "4 · Conexión con el pórtico",
+   "titulo": true,
+   "nivel": 2
+  },
+  {
+   "t": "texto",
+   "text": "Esa K_viga (y la de columna, igual forma) es la que se ensambló en el pórtico del ejemplo anterior. Los números 12, 6, 4, 2 NO son mágicos: son las curvaturas de las Hermite integradas. Por eso el FEM ES con funciones de forma — están escondidas dentro de cada K de barra. El pórtico solo suma esas K en los nudos y resuelve."
+  }
+ ]
+}

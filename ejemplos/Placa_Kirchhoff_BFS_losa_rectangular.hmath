@@ -1,0 +1,969 @@
+{
+ "formato": "hmath 1",
+ "eq": 15.5,
+ "txt": 11,
+ "gap": -4,
+ "items": [
+  {
+   "t": "texto",
+   "text": "Análisis por elementos finitos de una losa rectangular",
+   "titulo": true
+  },
+  {
+   "t": "texto",
+   "text": "Réplica, línea por línea, del ejemplo Rectangular Slab FEA de Calcpad (Ned Ganchovski): el mismo elemento de placa (rectángulo de 16 grados de libertad, funciones de Hermite, BFS 1965), la misma malla de 6 × 4, las mismas cargas y los mismos apoyos. Aquí corre en HekatanMathStudio: la hoja entera es un programa con estado y los bucles se escriben como en MATLAB.",
+   "titulo": false
+  },
+  {
+   "t": "texto",
+   "text": "Unidades. Como en Calcpad: E en MPa (= MN/m²) y q en kN/m². Entonces K sale en MN/m, F en kN y el cociente F/K en kN/(MN/m) = 10⁻³ m = mm. Los momentos −D·B·Z salen en kN·m/m. Por eso los números coinciden con los de Calcpad sin factores de conversión.",
+   "titulo": false
+  },
+  {
+   "t": "texto",
+   "text": "1 · Datos",
+   "titulo": true
+  },
+  {
+   "t": "texto",
+   "text": "Dimensiones de la placa (m), espesor (m), carga (kN/m²), módulo de elasticidad (kN/m²) y coeficiente de Poisson.",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "a:6%largo de la placa en x [m]"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "b:4%largo de la placa en y [m]"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "t:0.1%espesor [m]"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "q:10%carga uniforme [kN/m2]"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "E:35000000%modulo de Young [kN/m2]"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "ν:0.15%coeficiente de Poisson"
+  },
+  {
+   "t": "texto",
+   "text": "Tabla de datos (a, b, t en m; q en kN/m²; E en kN/m²; ν sin unidad):",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "tabla(a,b,t,q,E,ν) ="
+  },
+  {
+   "t": "texto",
+   "text": "2 · Malla de elementos finitos",
+   "titulo": true
+  },
+  {
+   "t": "texto",
+   "text": "Elemento rectangular de 16 grados de libertad (w, θx, θy, ψ en cada uno de sus 4 nudos). Elementos a lo largo de a y de b:",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "n_a{R}:6%elementos en x"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "n_b{R}:4%elementos en y"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "n_e{R}:n_a{R}*n_b{R}%numero de elementos"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "n_j{R}:(n_a{R}+1)*(n_b{R}+1)%numero de nudos"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "n:4*n_j{R}%grados de libertad (4 por nudo: w, θx, θy, ψ)"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "a_1{R}:a/n_a{R}%lado del elemento en x [m]"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "b_1{R}:b/n_b{R}%lado del elemento en y [m]"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "s_a{R}:1/a_1{R}%1/a1: para derivar en x"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "s_b{R}:1/b_1{R}%1/b1: para derivar en y"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "s_n{R}:1/n_b{R}%1/n_b: numeracion de nudos"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "s_m{R}:1/(n_b{R}+1)%1/(n_b+1)"
+  },
+  {
+   "t": "texto",
+   "text": "Coordenadas de los nudos (el nudo j está en la columna ix = ⌊(j−1)/(n_b+1)⌋ y la fila iy = (j−1) mod (n_b+1)), conectividad y nudos apoyados:",
+   "titulo": false
+  },
+  {
+   "t": "texto",
+   "text": "Bucle de nudos (j = 1…n_j): la columna de la malla es el cociente y la fila el resto:",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": ";x_j{R}=floor((j-1)/(n_b{R}+1){R}{R})*a_1{R}"
+  },
+  {
+   "t": "texto",
+   "text": "Ec. (1)",
+   "mismaLinea": true
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": ";y_j{R}=mod(j-1,n_b{R}+1)*b_1{R}"
+  },
+  {
+   "t": "texto",
+   "text": "Por qué un bucle: la fórmula se aplica a cada uno de los n_j nudos; el bucle recorre j = 1…n_j y guarda x_j, y_j en un vector para poder dibujar y ensamblar.",
+   "titulo": false
+  },
+  {
+   "t": "texto",
+   "text": "Ec. (2)  —  coordenada x de cada nudo [m]  —  geometría de la malla regular (esta hoja)",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "xj:{prog}M:zeros(n_j{R},1){N}{for}j{R}1..n_j{R}{R}M_j{R}:floor((j-1)*s_m{R}+0.001)*a_1{R}{R}{N}{return}M",
+   "oculto": true
+  },
+  {
+   "t": "texto",
+   "text": "Ec. (3)  —  coordenada y de cada nudo [m]  —  geometría de la malla regular (esta hoja)",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "yj:{prog}M:zeros(n_j{R},1){N}{for}j{R}1..n_j{R}{R}M_j{R}:mod(j-1,n_b{R}+1)*b_1{R}{R}{N}{return}M",
+   "oculto": true
+  },
+  {
+   "t": "texto",
+   "text": "Bucle de elementos (e = 1…n_e): los cuatro nudos del elemento e, en sentido antihorario:",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": ";n_1{R}=e+floor((e-1)/n_b{R}{R})"
+  },
+  {
+   "t": "texto",
+   "text": "Ec. (4)",
+   "mismaLinea": true
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": ";n_2{R}=n_1{R}+n_b{R}+1"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": ";n_3{R}=n_1{R}+n_b{R}+2"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": ";n_4{R}=n_1{R}+1"
+  },
+  {
+   "t": "texto",
+   "text": "Por qué un bucle: son n_e elementos y todos siguen la misma regla; el bucle la repite para e = 1…n_e y llena la matriz de conectividad (una fila por elemento).",
+   "titulo": false
+  },
+  {
+   "t": "texto",
+   "text": "Ec. (5)  —  conectividad: los 4 nudos de cada elemento (una fila por elemento)  —  numeración de la malla regular (esta hoja)",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "ej:{prog}M:zeros(n_e{R},4){N}{for}e{R}1..n_e{R}{R}j:e+floor((e-1)*s_n{R}+0.001){N}M_e,1{R}:j{N}M_e,2{R}:j+n_b{R}+1{N}M_e,3{R}:j+n_b{R}+2{N}M_e,4{R}:j+1{R}{N}{return}M",
+   "oculto": true
+  },
+  {
+   "t": "texto",
+   "text": "Apoyos simples en los cuatro bordes (ix = 0, ix = n_a, iy = 0, iy = n_b): hay n_s nudos apoyados.",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": ";n_s{R}=2*(n_a{R}+n_b{R})"
+  },
+  {
+   "t": "texto",
+   "text": "Por qué un bucle: se recorren los cuatro bordes uno por uno y se anota el número de cada nudo apoyado.",
+   "titulo": false
+  },
+  {
+   "t": "texto",
+   "text": "números de los nudos apoyados (los cuatro bordes)",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "sj:{prog}M:zeros(2*(n_a{R}+n_b{R}),1){N}k:0{N}{for}i{R}1..n_a{R}+1{R}k:k+1{N}M_k{R}:(n_b{R}+1)*(i-1)+1{N}k:k+1{N}M_k{R}:(n_b{R}+1)*i{R}{N}{for}i{R}2..n_b{R}{R}k:k+1{N}M_k{R}:i{N}k:k+1{N}M_k{R}:n_a{R}*(n_b{R}+1)+i{R}{N}{return}M",
+   "oculto": true
+  },
+  {
+   "t": "texto",
+   "text": "Tablas de la malla: coordenadas de los nudos (m), nudos de cada elemento y nudos apoyados.",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "tabla(xj,yj) ="
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "tabla(ej) ="
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "tabla(sj) ="
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "mallanum(xj,yj,ej,sj) ="
+  },
+  {
+   "t": "texto",
+   "text": "3 · Formulación del elemento",
+   "titulo": true
+  },
+  {
+   "t": "texto",
+   "text": "Matriz constitutiva (relación momentos–curvaturas) de la placa de Kirchhoff:",
+   "titulo": false
+  },
+  {
+   "t": "texto",
+   "text": "Ec. (6)  —  E·t³ (numerador de D)  —  Kirchhoff (1850); Timoshenko y Woinowsky-Krieger, Theory of Plates and Shells",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "c1:E*t*t*t"
+  },
+  {
+   "t": "texto",
+   "text": "12(1−ν²) (denominador de D)  —  Kirchhoff (1850); Timoshenko y Woinowsky-Krieger",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "c2:12*(1-ν*ν)"
+  },
+  {
+   "t": "texto",
+   "text": "Ec. (7)  —  rigidez a flexion de la placa D [kN·m]  —  Kirchhoff (1850); Timoshenko y Woinowsky-Krieger",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "D0:c1/c2"
+  },
+  {
+   "t": "texto",
+   "text": "Ec. (8)  —  matriz constitutiva: momentos = Dm·curvaturas (3×3)  —  Kirchhoff–Love: momentos = D · curvaturas",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "Dm:{prog}M:zeros(3,3){N}M_1,1{R}:D0{N}M_1,2{R}:D0*ν{N}M_2,1{R}:D0*ν{N}M_2,2{R}:D0{N}M_3,3{R}:0.5*D0*(1-ν){N}{return}M"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "Dm ="
+  },
+  {
+   "t": "texto",
+   "text": "Funciones de forma de Hermite (valor, primera y segunda derivada) y su asignación a los 16 grados de libertad:",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "Φ_1{R}(x)=1-3x^2{R}+2x^3"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "Φ_2{R}(x,l)=l*x*(1-x)^2{R}"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "Φ_3{R}(x)=3x^2{R}-2x^3"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "Φ_4{R}(x,l)=l*x^2{R}*(x-1)"
+  },
+  {
+   "t": "texto",
+   "text": "Primeras derivadas (el motor simbólico las calcula; «→» las muestra):",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "Ψ_1{R}(x)=?x{R}Φ_1{R}(x){R}"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "Ψ_1{R}(x)->"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "Ψ_2{R}(x,l)=?x{R}Φ_2{R}(x,l){R}"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "Ψ_2{R}(x,l)->"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "Ψ_3{R}(x)=?x{R}Φ_3{R}(x){R}"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "Ψ_3{R}(x)->"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "Ψ_4{R}(x,l)=?x{R}Φ_4{R}(x,l){R}"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "Ψ_4{R}(x,l)->"
+  },
+  {
+   "t": "texto",
+   "text": "Segundas derivadas (curvaturas de la forma):",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "Ω_1{R}(x)=??x{R}Φ_1{R}(x){R}"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "Ω_1{R}(x)->"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "Ω_2{R}(x,l)=??x{R}Φ_2{R}(x,l){R}"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "Ω_2{R}(x,l)->"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "Ω_3{R}(x)=??x{R}Φ_3{R}(x){R}"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "Ω_3{R}(x)->"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "Ω_4{R}(x,l)=??x{R}Φ_4{R}(x,l){R}"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "Ω_4{R}(x,l)->"
+  },
+  {
+   "t": "texto",
+   "text": "Selección por grado de libertad k = 1…4 (F0 = valor, F1 y F2 = derivadas respecto de x físico, l = longitud del elemento):",
+   "titulo": false
+  },
+  {
+   "t": "texto",
+   "text": "Ec. (9)  —  funciones de forma de Hermite k=1..4 (valor)  —  polinomios cúbicos de Hermite; elemento BFS (Bogner, Fox y Schmit, 1965)",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "F0(k,x,l):if(k==1,Φ_1{R}(x),if(k==2,Φ_2{R}(x,l),if(k==3,Φ_3{R}(x),Φ_4{R}(x,l))))%valor de la función de Hermite k"
+  },
+  {
+   "t": "texto",
+   "text": "Ec. (10)  —  primera derivada de F0  —  derivada de la de Hermite (BFS)",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "F1(k,x,l):if(k==1,Ψ_1{R}(x),if(k==2,Ψ_2{R}(x,l),if(k==3,Ψ_3{R}(x),Ψ_4{R}(x,l))))*l^-1{R}%primera derivada respecto de x físico"
+  },
+  {
+   "t": "texto",
+   "text": "Ec. (11)  —  segunda derivada de F0  —  segunda derivada de la de Hermite (BFS)",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "F2(k,x,l):if(k==1,Ω_1{R}(x),if(k==2,Ω_2{R}(x,l),if(k==3,Ω_3{R}(x),Ω_4{R}(x,l))))*l^-2{R}%segunda derivada respecto de x físico"
+  },
+  {
+   "t": "texto",
+   "text": "nudo local (0..3) del grado de libertad m",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "nn(m):floor(0.25*(m-1))"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "dd(m):mod(m-1,4)%grado dentro del nudo: w, θx, θy, ψ"
+  },
+  {
+   "t": "texto",
+   "text": "funcion de forma en x del grado m",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "ka(m):2*((nn(m)==1)+(nn(m)==2))+1+(dd(m)==1)+(dd(m)==3)"
+  },
+  {
+   "t": "texto",
+   "text": "funcion de forma en y del grado m",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "kb(m):2*((nn(m)==2)+(nn(m)==3))+1+(dd(m)==2)+(dd(m)==3)"
+  },
+  {
+   "t": "texto",
+   "text": "Matriz deformación–desplazamiento B (3×16) y vector de funciones de forma N (16×1):",
+   "titulo": false
+  },
+  {
+   "t": "texto",
+   "text": "Ec. (12)  —  matriz curvatura-desplazamiento B (3×16) en (ξ,η)  —  Zienkiewicz y Taylor, The Finite Element Method",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "Bm(x,y):{prog}M:zeros(3,16){N}{for}m{R}1..16{R}M_1,m{R}:F2(ka(m),x,a_1{R})*F0(kb(m),y,b_1{R}){N}M_2,m{R}:F0(ka(m),x,a_1{R})*F2(kb(m),y,b_1{R}){N}M_3,m{R}:2*F1(ka(m),x,a_1{R})*F1(kb(m),y,b_1{R}){R}{N}{return}M",
+   "oculto": true
+  },
+  {
+   "t": "texto",
+   "text": "Ec. (13)  —  funciones de forma N (16×1) en (ξ,η)  —  elemento BFS (Bogner, Fox y Schmit, 1965)",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "Nv(x,y):{prog}M:zeros(16,1){N}{for}m{R}1..16{R}M_m{R}:F0(ka(m),x,a_1{R})*F0(kb(m),y,b_1{R}){R}{N}{return}M",
+   "oculto": true
+  },
+  {
+   "t": "texto",
+   "text": "4 · Matriz de rigidez y cargas del elemento",
+   "titulo": true
+  },
+  {
+   "t": "texto",
+   "text": "Matriz de rigidez del elemento K = a₁·b₁·∬ BᵀDB dξ dη y vector de cargas F = a₁·b₁·q·∬ N dξ dη:",
+   "titulo": false
+  },
+  {
+   "t": "texto",
+   "text": "Ec. (14)  —  rigidez del elemento K = a1·b1·∬BᵀDB dξdη (16×16)  —  Bathe, Finite Element Procedures (1996)",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "K:a_1{R}*b_1{R}*$0{R}1{R}$0{R}1{R}(Bm(ξ,η))^T *Dm*Bm(ξ,η){R}η{R}{R}ξ"
+  },
+  {
+   "t": "texto",
+   "text": "Ec. (15)  —  carga nodal equivalente = a1·b1·q·∬N dξdη (16×1)  —  Bathe, Finite Element Procedures (1996)",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "F:a_1{R}*b_1{R}*q*$0{R}1{R}$0{R}1{R}Nv(ξ,η){R}η{R}{R}ξ"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "K ="
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "F ="
+  },
+  {
+   "t": "texto",
+   "text": "5 · Ensamblaje y solución",
+   "titulo": true
+  },
+  {
+   "t": "texto",
+   "text": "Numeración global: nudo p del elemento e y grado de libertad global de cada grado local; apoyos simples en los cuatro bordes (penalización).",
+   "titulo": false
+  },
+  {
+   "t": "texto",
+   "text": "numero de nudo p (1..4) del elemento e",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "nd(e,p):e+floor((e-1)*s_n{R}+0.001)+(p==2)*(n_b{R}+1)+(p==3)*(n_b{R}+2)+(p==4)"
+  },
+  {
+   "t": "texto",
+   "text": "grado de libertad global del grado m del elemento e",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "gd(e,m):4*(nd(e,nn(m)+1)-1)+dd(m)+1"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "ks:1000000000000000000000%rigidez de penalizacion de los apoyos"
+  },
+  {
+   "t": "texto",
+   "text": "Ensamblaje de la matriz de rigidez global y del vector de cargas (suma de cada K y F de elemento en sus grados de libertad):",
+   "titulo": false
+  },
+  {
+   "t": "texto",
+   "text": "Bucle de ensamblaje (e = 1…n_e; i, j = 1…16): cada K del elemento se suma en los grados de libertad globales gd(e,i), gd(e,j):",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": ";K_g{R}=#e=1{R}n_e{R}{R}(L_e{R})^T{R}*K_e{R}*L_e{R}"
+  },
+  {
+   "t": "texto",
+   "text": "Ec. (16)",
+   "mismaLinea": true
+  },
+  {
+   "t": "texto",
+   "text": "Por qué un bucle: cada elemento aporta su K (16×16) a 16 filas y columnas distintas de K_g (las de sus nudos, gd(e,i) y gd(e,j)). No hay fórmula cerrada: se suma elemento por elemento, e = 1…n_e y dentro i, j = 1…16.",
+   "titulo": false
+  },
+  {
+   "t": "texto",
+   "text": "Ec. (17)  —  ensamblaje de la matriz global con los apoyos simples  —  método de rigidez directa: Turner, Clough, Martin y Topp (1956)",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "Kg:{prog}M:zeros(n,n){N}{for}e{R}1..n_e{R}{R}{for}i{R}1..16{R}gi:gd(e,i){N}{for}j{R}1..16{R}gj:gd(e,j){N}M_gi,gj{R}:M_gi,gj{R}+K_i,j{R}{R}{R}{R}{N}{for}j{R}1..n_j{R}{R}ix:floor((j-1)*s_m{R}+0.001){N}iy:mod(j-1,n_b{R}+1){N}g:4*(j-1)+1{N}g1:g+1{N}g2:g+2{N}M_g,g{R}:M_g,g{R}+ks*min(1,(ix==0)+(ix==n_a{R})+(iy==0)+(iy==n_b{R})){N}M_g1,g1{R}:M_g1,g1{R}+ks*min(1,(iy==0)+(iy==n_b{R})){N}M_g2,g2{R}:M_g2,g2{R}+ks*min(1,(ix==0)+(ix==n_a{R})){R}{N}{return}M",
+   "oculto": true
+  },
+  {
+   "t": "texto",
+   "text": "Bucle del vector de cargas (e = 1…n_e):",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": ";F_g{R}=#e=1{R}n_e{R}{R}(L_e{R})^T{R}*F_e{R}"
+  },
+  {
+   "t": "texto",
+   "text": "Ec. (18)",
+   "mismaLinea": true
+  },
+  {
+   "t": "texto",
+   "text": "Por qué un bucle: igual que K_g, cada elemento suma su F (16×1) en los grados de libertad de sus nudos.",
+   "titulo": false
+  },
+  {
+   "t": "texto",
+   "text": "Ec. (19)  —  vector de cargas global  —  método de rigidez directa: Turner, Clough, Martin y Topp (1956)",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "Fg:{prog}M:zeros(n,1){N}{for}e{R}1..n_e{R}{R}{for}i{R}1..16{R}gi:gd(e,i){N}M_gi{R}:M_gi{R}+F_i{R}{R}{R}{N}{return}M",
+   "oculto": true
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "Kg ="
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "Fg ="
+  },
+  {
+   "t": "texto",
+   "text": "Solución del sistema Kg·Z = Fg (desplazamientos y giros de todos los nudos):",
+   "titulo": false
+  },
+  {
+   "t": "texto",
+   "text": "Ec. (20)  —  desplazamientos nodales (w, θx, θy, ψ en cada nudo)  —  solución del sistema lineal Kg·Z = Fg",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "Z:lsolve(Kg,Fg)"
+  },
+  {
+   "t": "texto",
+   "text": "6 · Resultados",
+   "titulo": true
+  },
+  {
+   "t": "texto",
+   "text": "Desplazamientos verticales de los nudos, en mm (fila i = coordenada x, columna k = coordenada y). El mapa usa como escala el mínimo y el máximo de esta matriz:",
+   "titulo": false
+  },
+  {
+   "t": "texto",
+   "text": "Bucle de la matriz de desplazamientos (i = 1…n_a+1, k = 1…n_b+1), en mm:",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": ";w_i,k{R}=1000*Z_4*((i-1)*(n_b{R}+1)+k-1)+1{R}"
+  },
+  {
+   "t": "texto",
+   "text": "Ec. (21)",
+   "mismaLinea": true
+  },
+  {
+   "t": "texto",
+   "text": "Por qué un bucle: Z guarda 4 valores por nudo (w, θx, θy, ψ); hay que tomar solo w de cada nudo (uno de cada 4) y ponerlo en su fila i y columna k de la malla, ×1000 para mm.",
+   "titulo": false
+  },
+  {
+   "t": "texto",
+   "text": "flecha w de cada nudo en mm, acomodada en la malla (fila = x, columna = y)",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "Wz:{prog}M:zeros(n_a{R}+1,n_b{R}+1){N}{for}i{R}1..n_a{R}+1{R}{for}k{R}1..n_b{R}+1{R}g:4*((i-1)*(n_b{R}+1)+k-1)+1{N}M_i,k{R}:1000*Z_g{R}{R}{R}{N}{return}M",
+   "oculto": true
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "(Wz)^T{R} ="
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "mapa(Wz,a,b) ="
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "max(Wz) ="
+  },
+  {
+   "t": "texto",
+   "text": "Momentos flectores medios en los nudos (kNm/m): se calculan en cada elemento con M = −D·B·Z, se promedian en cada nudo y se acomodan como matriz de la malla.",
+   "titulo": false
+  },
+  {
+   "t": "texto",
+   "text": "Bucle de momentos (e = 1…n_e; p = 1…4): en cada elemento M = −D·B·Z, evaluado en sus cuatro nudos…",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": ";M_e{R}(ξ,η)=-D*Bm(ξ,η)*Z_e{R}"
+  },
+  {
+   "t": "texto",
+   "text": "Ec. (22)",
+   "mismaLinea": true
+  },
+  {
+   "t": "texto",
+   "text": "…y en cada nudo se promedia el valor de los c_j elementos que lo comparten:",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": ";M_j{R}=(1/c_j{R}{R})*#e=1{R}n_e{R}{R}M_e{R}(ξ_j{R},η_j{R})"
+  },
+  {
+   "t": "texto",
+   "text": "Ec. (23)",
+   "mismaLinea": true
+  },
+  {
+   "t": "texto",
+   "text": "Por qué un bucle: el momento se evalúa en los 4 nudos de cada elemento (e, p) y cada nudo recibe valores de varios elementos; el bucle los suma y cuenta c_j para promediar.",
+   "titulo": false
+  },
+  {
+   "t": "texto",
+   "text": "Ec. (24)  —  momentos Mx, My, Mxy en los nudos (promedio nodal)  —  M = −D·B·Z (Timoshenko); promedio nodal",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "S:{prog}M:zeros(3,n_j{R}){N}c:zeros(n_j{R},1){N}{for}e{R}1..n_e{R}{R}u:zeros(16,1){N}{for}m{R}1..16{R}gm:gd(e,m){N}u_m{R}:Z_gm{R}{R}{N}{for}p{R}1..4{R}xi:(p==2)+(p==3){N}et:(p==3)+(p==4){N}W:-1*Dm*Bm(xi,et)*u{N}jn:nd(e,p){N}c_jn{R}:c_jn{R}+1{N}{for}r{R}1..3{R}M_r,jn{R}:M_r,jn{R}+W_r{R}{R}{R}{R}{N}{for}jn{R}1..n_j{R}{R}ci:1/c_jn{R}{R}{N}{for}r{R}1..3{R}M_r,jn{R}:M_r,jn{R}*ci{R}{R}{N}{return}M",
+   "oculto": true
+  },
+  {
+   "t": "texto",
+   "text": "Cada fila r de S (1 = Mx, 2 = My, 3 = Mxy) se acomoda en la malla (i = columna x, k = fila y) para dibujarlo; el nudo es",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": ";Mm_i,k{R}=S_r,jn{R}"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": ";jn=(i-1)*(n_b{R}+1)+k"
+  },
+  {
+   "t": "texto",
+   "text": "Por qué un bucle: S tiene un valor por nudo en una fila, pero el mapa necesita una matriz (i, k); se recorre i, k y se toma el valor del nudo jn.",
+   "titulo": false
+  },
+  {
+   "t": "texto",
+   "text": "acomoda en la malla la fila r de S (1 = Mx, 2 = My, 3 = Mxy)",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "Mm(r):{prog}M:zeros(n_a{R}+1,n_b{R}+1){N}{for}i{R}1..n_a{R}+1{R}{for}k{R}1..n_b{R}+1{R}jn:(i-1)*(n_b{R}+1)+k{N}M_i,k{R}:S_r,jn{R}{R}{R}{N}{return}M",
+   "oculto": true
+  },
+  {
+   "t": "texto",
+   "text": "Momento Mx (kNm/m)",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "Mx:Mm(1)%momento Mx de cada nudo en la malla [kNm/m]"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "(Mx)^T{R} ="
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "mapa(Mx,a,b) ="
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "max(Mx) ="
+  },
+  {
+   "t": "texto",
+   "text": "Momento My (kNm/m)",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "My:Mm(2)%momento My de cada nudo en la malla [kNm/m]"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "(My)^T{R} ="
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "mapa(My,a,b) ="
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "max(My) ="
+  },
+  {
+   "t": "texto",
+   "text": "Momento Mxy (kNm/m)",
+   "titulo": false
+  },
+  {
+   "t": "texto",
+   "text": "momento de torsión Mxy de cada nudo en la malla [kNm/m]",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "Mxy:Mm(3)"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "(Mxy)^T{R} ="
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "mapa(Mxy,a,b) ="
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "max(Mxy) ="
+  },
+  {
+   "t": "texto",
+   "text": "Tabla de resultados por nudo: w en mm; Mx, My y Mxy en kNm/m (promedio de los elementos que comparten el nudo).",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "wn:1000*cada(Z,4,1)%flecha w de cada nudo [mm]"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "mxn:fila(S,1)%momento Mx de cada nudo [kNm/m]"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "myn:fila(S,2)%momento My de cada nudo [kNm/m]"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "mxyn:fila(S,3)%momento Mxy de cada nudo [kNm/m]"
+  },
+  {
+   "t": "eq",
+   "ini": "",
+   "teclas": "tabla(wn,mxn,myn,mxyn) ="
+  }
+ ]
+}

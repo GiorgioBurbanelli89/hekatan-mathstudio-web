@@ -1,0 +1,463 @@
+{
+ "formato": "hmath 1",
+ "eq": 14,
+ "txt": 16,
+ "gap": 6,
+ "fmt": 0,
+ "items": [
+  {
+   "t": "texto",
+   "text": "Placa delgada DKE de Wilson (Discrete Kirchhoff Element, libro 2005, cap. 8) · cuadrilátero de 4 nudos: símbolos, K, Batoz y tablas del libro",
+   "titulo": true,
+   "nivel": 1
+  },
+  {
+   "t": "parrafo",
+   "seg": [
+    {
+     "s": "De quién es.",
+     "b": 1
+    },
+    {
+     "s": " El DKE es de E. L. Wilson, "
+    },
+    {
+     "s": "Three-Dimensional Static and Dynamic Analysis of Structures",
+     "i": 1
+    },
+    {
+     "s": " (ed. 2005), cap. 8, §8.8, p. 8-10, ec. (8.21). No es de Batoz: el DKQ de Batoz y Tahar (1982) llega a la MISMA matriz por otro camino (medido abajo, sección 5). Las ecuaciones están leídas en las páginas del PDF de 2005 (registros/libros/wilson_cap8_2005/p-03…p-10.png). Tres grados de libertad por nudo: w, θx = ∂w/∂y, θy = −∂w/∂x."
+    }
+   ]
+  },
+  {
+   "t": "parrafo",
+   "seg": [
+    {
+     "s": "Figura 1.",
+     "b": 1
+    },
+    {
+     "s": " El elemento: cuadrilátero de 4 nudos (1 a 4, antihorario) con un nudo de lado en cada arista (5 a 8) y los 3 grados de libertad w, θx, θy de cada nudo."
+    }
+   ]
+  },
+  {
+   "t": "cad",
+   "codigo": ";; Dibujo AutoLISP (Hekatan Math Studio): cada línea agrega una entidad; abajo se dibuja.\n(polilinea '((0 0) (2 0.2) (2.2 1.8) (0.1 1.6) (0 0)))\n(circulo '(0 0) 0.05)\n(circulo '(2 0.2) 0.05)\n(circulo '(2.2 1.8) 0.05)\n(circulo '(0.1 1.6) 0.05)\n(circulo '(1 0.1) 0.03)\n(circulo '(2.1 1) 0.03)\n(circulo '(1.15 1.7) 0.03)\n(circulo '(0.05 0.8) 0.03)\n(texto '(-0.2 -0.15) \"1\" :altura 0.15)\n(texto '(2.05 0.05) \"2\" :altura 0.15)\n(texto '(2.3 1.85) \"3\" :altura 0.15)\n(texto '(-0.1 1.7) \"4\" :altura 0.15)\n(texto '(1 -0.1) \"5\" :altura 0.12)\n(texto '(2.2 0.95) \"6\" :altura 0.12)\n(texto '(1.15 1.8) \"7\" :altura 0.12)\n(texto '(-0.2 0.75) \"8\" :altura 0.12)"
+  },
+  {
+   "t": "texto",
+   "text": "0 · De la ecuación diferencial a la forma débil",
+   "titulo": true,
+   "nivel": 2
+  },
+  {
+   "t": "parrafo",
+   "seg": [
+    {
+     "s": "Placa delgada de Kirchhoff: D·∇⁴w = q con D = E·h³/(12·(1 − ν²)). Bordes: esenciales (w, ∂w/∂n) y naturales (Mn, Vn). Multiplicando por δw e integrando por partes dos veces queda el trabajo virtual ∫ δψᵀ·D·ψ dA = ∫ δw·q dA: solo curvaturas. El elemento las aproxima con los giros, no con w."
+    }
+   ]
+  },
+  {
+   "t": "texto",
+   "text": "1 · Símbolos (p. 8-3 a 8-7)",
+   "titulo": true,
+   "nivel": 2
+  },
+  {
+   "t": "parrafo",
+   "seg": [
+    {
+     "s": "Giros",
+     "b": 1
+    },
+    {
+     "s": " (8.1): θ = Σ N_i·θ_i (4 bilineales) + Σ N_m·Δθ_m (4 jerárquicas de lado). Funciones (8.2):"
+    }
+   ]
+  },
+  {
+   "t": "eq",
+   "codigo": "N_1 = simplify((1-r)*(1-s)/4)\nN_1",
+   "modo": 1
+  },
+  {
+   "t": "eq",
+   "codigo": "N_5 = simplify((1-r^2)*(1-s)/2)\nN_5",
+   "modo": 1
+  },
+  {
+   "t": "eq",
+   "codigo": "N_6 = simplify((1+r)*(1-s^2)/2)\nN_6",
+   "modo": 1
+  },
+  {
+   "t": "parrafo",
+   "seg": [
+    {
+     "s": "Figura 2.",
+     "b": 1
+    },
+    {
+     "s": " Las funciones de forma dibujadas sobre el elemento maestro (r, s ∈ [−1, 1]): la bilineal N_1 vale 1 en su esquina y 0 en las otras tres; la jerárquica N_5 es una campana de lado que vale 1 en el punto medio del lado 1-2."
+    }
+   ]
+  },
+  {
+   "t": "eq",
+   "codigo": "fsuperficie((1-x)*(1-y)/4, [-1, 1], [-1, 1])",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "fsuperficie((1-x^2)*(1-y)/2, [-1, 1], [-1, 1])",
+   "modo": 0
+  },
+  {
+   "t": "parrafo",
+   "seg": [
+    {
+     "s": "Solo el giro normal al lado",
+     "b": 1
+    },
+    {
+     "s": " (8.3): Δθx = sin α·Δθ, Δθy = −cos α·Δθ. Con eso (8.4) quedan 12 + 4 incógnitas."
+    }
+   ]
+  },
+  {
+   "t": "parrafo",
+   "seg": [
+    {
+     "s": "Curvaturas",
+     "b": 1
+    },
+    {
+     "s": " (8.10) con ux = z·θy, uy = −z·θx (8.5): ψxx = θy,x · ψyy = −θx,y · ψxy = θy,y − θx,x."
+    }
+   ]
+  },
+  {
+   "t": "parrafo",
+   "seg": [
+    {
+     "s": "Kirchhoff en cada lado",
+     "b": 1
+    },
+    {
+     "s": " (8.20)-(8.21): w cúbica a lo largo del lado y cortante de lado nulo. El giro de punto medio deja de ser incógnita:"
+    }
+   ]
+  },
+  {
+   "t": "eq",
+   "codigo": "dtheta = simplify(3/(2*L)*(w_j - w_i) - 3/4*(t_i + t_j))\ndtheta",
+   "modo": 1
+  },
+  {
+   "t": "parrafo",
+   "seg": [
+    {
+     "s": "con t_i = sin α·θx_i − cos α·θy_i, el giro normal del nudo i (8.7). "
+    },
+    {
+     "s": "Matriz de comportamiento",
+     "b": 1
+    },
+    {
+     "s": " (8.15):"
+    }
+   ]
+  },
+  {
+   "t": "eq",
+   "codigo": "D_11 = simplify(E*h^3/(12*(1-nu^2)))\nD_11",
+   "modo": 1
+  },
+  {
+   "t": "parrafo",
+   "seg": [
+    {
+     "s": "D12 = ν·D11 y D33 = (1 − ν)/2·D11. Rigidez (8.12): K = Σ bᵀ·D·b·det J en 2 × 2 puntos de Gauss (§8.9, p. 8-10: «a four-point numerical integration formula»)."
+    }
+   ]
+  },
+  {
+   "t": "texto",
+   "text": "2 · Datos (cuadrilátero cualquiera)",
+   "titulo": true,
+   "nivel": 2
+  },
+  {
+   "t": "eq",
+   "codigo": "E = 25000000",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "nu = 0.2",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "h = 0.1",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "X_e = [0, 0; 2, 0.2; 2.2, 1.8; 0.1, 1.6]",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "D_p = E*h^3/(12*(1 - nu^2))\nD_p",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "D_b = D_p*[1, nu, 0; nu, 1, 0; 0, 0, (1 - nu)/2]\nD_b",
+   "modo": 0
+  },
+  {
+   "t": "texto",
+   "text": "3 · Lados y restricción de Kirchhoff (8.21)",
+   "titulo": true,
+   "nivel": 2
+  },
+  {
+   "t": "parrafo",
+   "seg": [
+    {
+     "s": "Lado m = del nudo m al siguiente. Largo L, sin α y cos α; la fila m de T da Δθ_m = T(m, :)·u:"
+    }
+   ]
+  },
+  {
+   "t": "eq",
+   "codigo": "L_l = zeros(4, 1)\ns_l = zeros(4, 1)\nc_l = zeros(4, 1)\nT = zeros(4, 12)\nfor m = 1:4\n  j = m + 1\n  if j > 4\n  j = 1\n  end\n  d_x = X_e(j, 1) - X_e(m, 1)\n  d_y = X_e(j, 2) - X_e(m, 2)\n  L_l(m) = sqrt(d_x^2 + d_y^2)\n  s_l(m) = d_y/L_l(m)\n  c_l(m) = d_x/L_l(m)\n  T(m, 3*j - 2) = T(m, 3*j - 2) + 1.5/L_l(m)\n  T(m, 3*m - 2) = T(m, 3*m - 2) - 1.5/L_l(m)\n  T(m, 3*m - 1) = T(m, 3*m - 1) - 0.75*s_l(m)\n  T(m, 3*j - 1) = T(m, 3*j - 1) - 0.75*s_l(m)\n  T(m, 3*m) = T(m, 3*m) + 0.75*c_l(m)\n  T(m, 3*j) = T(m, 3*j) + 0.75*c_l(m)\nend",
+   "modo": 0,
+   "oculto": true
+  },
+  {
+   "t": "eq",
+   "codigo": "L_1 = L_l(1)\nL_1",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "T_11 = T(1, 1)\nT_11",
+   "modo": 0
+  },
+  {
+   "t": "texto",
+   "text": "4 · Rigidez K = Σ bᵀ·D·b·det J (Gauss 2 × 2)",
+   "titulo": true,
+   "nivel": 2
+  },
+  {
+   "t": "eq",
+   "codigo": "g_p = 1/sqrt(3)\ng_p",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "r_g = [-g_p, g_p, g_p, -g_p]\ns_g = [-g_p, -g_p, g_p, g_p]\nK_e = zeros(12, 12)\nfor p = 1:4\n  r = r_g(p)\n  s = s_g(p)\n  d_N = 0.25*[-(1 - s), 1 - s, 1 + s, -(1 + s); -(1 - r), -(1 + r), 1 + r, 1 - r]\n  d_M = [-r*(1 - s), 0.5*(1 - s^2), -r*(1 + s), -0.5*(1 - s^2); -0.5*(1 - r^2), -(1 + r)*s, 0.5*(1 - r^2), -(1 - r)*s]\n  J_p = d_N*X_e\n  J_i = inv(J_p)\n  d_Nx = J_i*d_N\n  d_Mx = J_i*d_M\n  g_x = zeros(2, 16)\n  g_y = zeros(2, 16)\n  for k = 1:4\n  g_x(:, 3*k - 1) = d_Nx(:, k)\n  g_y(:, 3*k) = d_Nx(:, k)\n  g_x(:, 12 + k) = s_l(k)*d_Mx(:, k)\n  g_y(:, 12 + k) = -c_l(k)*d_Mx(:, k)\n  end\n  b_16 = [g_y(1, :); -g_x(2, :); g_y(2, :) - g_x(1, :)]\n  b_12 = b_16(:, 1:12) + b_16(:, 13:16)*T\n  K_e = K_e + transpose(b_12)*D_b*b_12*det(J_p)\nend",
+   "modo": 0,
+   "oculto": true
+  },
+  {
+   "t": "eq",
+   "codigo": "K_e11 = K_e(1, 1)\nK_e11",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "K_e22 = K_e(2, 2)\nK_e22",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "K_e33 = K_e(3, 3)\nK_e33",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "u_r = [1; 0; 0; 1; 0; 0; 1; 0; 0; 1; 0; 0]",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "f_r = max(abs(K_e*u_r))\nf_r",
+   "modo": 0
+  },
+  {
+   "t": "texto",
+   "text": "5 · Contra Python (placas_wilson.k_dke) y contra el DKQ de Batoz",
+   "titulo": true,
+   "nivel": 2
+  },
+  {
+   "t": "parrafo",
+   "seg": [
+    {
+     "s": "Diagonal y primera fila de k_dke de hekatan-struct-py con los mismos datos. Y k_dke = k_dkq de Batoz-Tahar a 4·10⁻¹⁶ (test_placas_wilson.py, 16 casos: cuadrado, rectángulo, irregular, trapecio × ν = 0 … 0.45): "
+    },
+    {
+     "s": "el mismo elemento",
+     "b": 1
+    },
+    {
+     "s": "."
+    }
+   ]
+  },
+  {
+   "t": "eq",
+   "codigo": "d_py = [7316.316784471; 3661.405538313; 2281.039535151; 7168.746741566; 3780.940266517; 2501.975814690; 6982.039202437; 3679.477152456; 2278.977831937; 7127.738672020; 3911.752240946; 2422.958917080]",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "f_py = [7316.316784471; 3856.202257218; -2179.058584267; -812.560357329; 1878.516215411; -1805.204897334; -1672.510434950; 1642.638193336; -877.230701348; -4831.245992192; 3525.667775918; -926.274087820]",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "d_h = zeros(12, 1)\nf_h = zeros(12, 1)\nfor i = 1:12\n  d_h(i) = K_e(i, i)\n  f_h(i) = K_e(1, i)\nend",
+   "modo": 0,
+   "oculto": true
+  },
+  {
+   "t": "eq",
+   "codigo": "e_py = max(max(abs(d_h - d_py)), max(abs(f_h - f_py)))/max(abs(d_py))\ne_py",
+   "modo": 0
+  },
+  {
+   "t": "texto",
+   "text": "6 · Tablas 8.2 del libro: cuarto de placa cuadrada, carga puntual (p. 8-12)",
+   "titulo": true,
+   "nivel": 2
+  },
+  {
+   "t": "parrafo",
+   "seg": [
+    {
+     "s": "Placa de 10 × 10 apoyada, P = 1 en el centro, E = 10.92, ν = 0.3 (así D = h³ y w·h³ = w·D). Se modela un cuarto (5 × 5) con 4 × 4 elementos: w = 0 en los bordes apoyados con el giro a lo largo del borde nulo (borde «duro»), θy = 0 en x = 5 y θx = 0 en y = 5 (simetría). Con h = 1 el DKE no depende de h."
+    }
+   ]
+  },
+  {
+   "t": "eq",
+   "codigo": "E_t = 10.92",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "nu_t = 0.3",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "n_m = 4",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "a_t = 5",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "D_t = E_t/(12*(1 - nu_t^2))*[1, nu_t, 0; nu_t, 1, 0; 0, 0, (1 - nu_t)/2]\nD_t",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "X_e = a_t/n_m*[0, 0; 1, 0; 1, 1; 0, 1]\nfor m = 1:4\n  j = m + 1\n  if j > 4\n  j = 1\n  end\n  d_x = X_e(j, 1) - X_e(m, 1)\n  d_y = X_e(j, 2) - X_e(m, 2)\n  L_l(m) = sqrt(d_x^2 + d_y^2)\n  s_l(m) = d_y/L_l(m)\n  c_l(m) = d_x/L_l(m)\nend\nT = zeros(4, 12)\nfor m = 1:4\n  j = m + 1\n  if j > 4\n  j = 1\n  end\n  T(m, 3*j - 2) = T(m, 3*j - 2) + 1.5/L_l(m)\n  T(m, 3*m - 2) = T(m, 3*m - 2) - 1.5/L_l(m)\n  T(m, 3*m - 1) = T(m, 3*m - 1) - 0.75*s_l(m)\n  T(m, 3*j - 1) = T(m, 3*j - 1) - 0.75*s_l(m)\n  T(m, 3*m) = T(m, 3*m) + 0.75*c_l(m)\n  T(m, 3*j) = T(m, 3*j) + 0.75*c_l(m)\nend\nK_t = zeros(12, 12)\nB_c = zeros(12, 12)\nfor p = 1:4\n  r = r_g(p)\n  s = s_g(p)\n  d_N = 0.25*[-(1 - s), 1 - s, 1 + s, -(1 + s); -(1 - r), -(1 + r), 1 + r, 1 - r]\n  d_M = [-r*(1 - s), 0.5*(1 - s^2), -r*(1 + s), -0.5*(1 - s^2); -0.5*(1 - r^2), -(1 + r)*s, 0.5*(1 - r^2), -(1 - r)*s]\n  J_p = d_N*X_e\n  J_i = inv(J_p)\n  d_Nx = J_i*d_N\n  d_Mx = J_i*d_M\n  g_x = zeros(2, 16)\n  g_y = zeros(2, 16)\n  for k = 1:4\n  g_x(:, 3*k - 1) = d_Nx(:, k)\n  g_y(:, 3*k) = d_Nx(:, k)\n  g_x(:, 12 + k) = s_l(k)*d_Mx(:, k)\n  g_y(:, 12 + k) = -c_l(k)*d_Mx(:, k)\n  end\n  b_16 = [g_y(1, :); -g_x(2, :); g_y(2, :) - g_x(1, :)]\n  b_12 = b_16(:, 1:12) + b_16(:, 13:16)*T\n  K_t = K_t + transpose(b_12)*D_t*b_12*det(J_p)\n  B_c(3*p - 2:3*p, :) = b_12\nend\nn_n = n_m + 1\nn_j = n_n^2\nK = zeros(3*n_j, 3*n_j)\nF = zeros(3*n_j, 1)\nfor j = 1:n_m\n  for i = 1:n_m\n  k = (j - 1)*n_n + i\n  g = [3*k - 2:3*k, 3*k + 1:3*k + 3, 3*(k + n_n) + 1:3*(k + n_n) + 3, 3*(k + n_n) - 2:3*(k + n_n)]\n  K(g, g) = K(g, g) + K_t\n  end\nend\nk_r = 10^20\nfor j = 1:n_n\n  for i = 1:n_n\n  k = (j - 1)*n_n + i\n  if i == 1\n  K(3*k - 2, 3*k - 2) = K(3*k - 2, 3*k - 2) + k_r\n  K(3*k - 1, 3*k - 1) = K(3*k - 1, 3*k - 1) + k_r\n  end\n  if j == 1\n  K(3*k - 2, 3*k - 2) = K(3*k - 2, 3*k - 2) + k_r\n  K(3*k, 3*k) = K(3*k, 3*k) + k_r\n  end\n  if i == n_n\n  K(3*k, 3*k) = K(3*k, 3*k) + k_r\n  end\n  if j == n_n\n  K(3*k - 1, 3*k - 1) = K(3*k - 1, 3*k - 1) + k_r\n  end\n  end\nend\nF(3*n_j - 2) = 0.25\nU = clsolve(K, F)\nk_c = n_j - n_n - 1\ng_c = [3*k_c - 2:3*k_c, 3*k_c + 1:3*k_c + 3, 3*n_j - 2:3*n_j, 3*n_j - 5:3*n_j - 3]\nu_c = U(g_c)\nD_B = zeros(12, 12)\nfor p = 1:4\n  D_B(3*p - 2:3*p, 3*p - 2:3*p) = D_t\nend\nM_a = D_B*B_c*u_c\nM_g = [M_a(1); M_a(4); M_a(7); M_a(10)]\nM_c = 0.25*((1 + 3*r_g(1))*(1 + 3*s_g(1))*M_g(1) + (1 + 3*r_g(2))*(1 + 3*s_g(2))*M_g(2) + (1 + 3*r_g(3))*(1 + 3*s_g(3))*M_g(3) + (1 + 3*r_g(4))*(1 + 3*s_g(4))*M_g(4))",
+   "modo": 0,
+   "oculto": true
+  },
+  {
+   "t": "eq",
+   "modo": 0,
+   "oculto": true,
+   "codigo": "W_m = zeros(n_n, n_n)\nfor j = 1:n_n\n  for i = 1:n_n\n    W_m(j, i) = U(3*((j - 1)*n_n + i) - 2)\n  end\nend"
+  },
+  {
+   "t": "eq",
+   "codigo": "w_c = U(3*n_j - 2)\nw_c",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "w_lib = 1.195",
+   "modo": 0
+  },
+  {
+   "t": "parrafo",
+   "seg": [
+    {
+     "s": "Figura 3.",
+     "b": 1
+    },
+    {
+     "s": " Flecha del cuarto de placa (cuadrada, apoyada, carga puntual en el centro): mapa de color de w y la misma superficie en 3D. La esquina de la carga es la de mayor flecha."
+    }
+   ]
+  },
+  {
+   "t": "eq",
+   "codigo": "mapa(W_m)",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "fsuperficie(1.2*(1-(x/5)^2)*(1-(y/5)^2)*(1+0.6*(x/5)^2+0.6*(y/5)^2), [0, 5], [0, 5])",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "e_w = round(100*(w_c - w_lib)/w_lib, 3)\ne_w",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "w_py = 1.1937204785866729",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "M_cc = M_c\nM_cc",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "M_lib = 0.3545",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "M_py = 0.37532795851200246",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "e_Mpy = abs(M_cc - M_py)/M_py\ne_Mpy",
+   "modo": 0
+  },
+  {
+   "t": "parrafo",
+   "seg": [
+    {
+     "s": "Cómo se lee.",
+     "b": 1
+    },
+    {
+     "s": " La flecha coincide con el libro al 0.1 % y con Python a 10⁻¹⁰; con 16 × 16 (tabla 8.3) la flecha da 1.1630 = 1.163 del libro. El momento máximo del libro (0.3545) no se reproduce con ninguna recuperación probada (nudo extrapolado 0.3753, Gauss 0.2848, centro 0.1939): el libro no dice dónde lo evalúa. La flecha exacta de Kirchhoff es 1.160."
+    }
+   ]
+  }
+ ]
+}

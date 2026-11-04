@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hekatan Math Studio</title>
+<link rel="icon" type="image/png" href="icono.png">
+<link rel="shortcut icon" href="icono.ico">
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+<div id="app">
+  <div id="titulo"><img src="icono.png" alt="" width="18" height="18"><span>Hekatan Math Studio</span></div>
+
+  <nav id="menu">
+    <div class="mi"><span>Archivo</span>
+      <div class="sub">
+        <button data-a="nuevo">Nuevo <kbd>Ctrl+N</kbd></button>
+        <button data-a="abrir">Abrir… <kbd>Ctrl+O</kbd></button>
+        <div class="lbl">Abrir reciente</div>
+        <div id="recientes"><button disabled>(ninguno todavía)</button></div>
+        <div class="lbl">Abrir ejemplo</div>
+        <button data-ej="ejemplos/Funciones_de_forma.hmath">Funciones de forma (barra, viga, Q4, hex8)</button>
+        <button data-ej="ejemplos/Viga_deduccion.hmath">Viga: deducción simbólica a numérica</button>
+        <button data-ej="ejemplos/Armadura_Logan_3_9.hmath">Armadura 3D de Logan (contra Hekatan Struct)</button>
+        <hr>
+        <button data-a="guardar">Guardar <kbd>Ctrl+S</kbd></button>
+        <button data-a="guardarcomo">Guardar como…</button>
+      </div>
+    </div>
+    <div class="mi"><span>Letra</span>
+      <div class="sub">
+        <button data-a="txt-">Texto más pequeño</button><button data-a="txt+">Texto más grande</button>
+        <button data-a="eq-">Variables más pequeñas</button><button data-a="eq+">Variables más grandes</button>
+      </div>
+    </div>
+    <div class="mi sola" id="m-cuadricula"><span>▦ Cuadrícula</span></div>
+    <div class="mi sola" id="m-compartir" title="Copia la hoja como imagen al portapapeles (Ctrl+V para pegarla)"><span>📋 Compartir</span></div>
+    <div class="mi sola" id="m-lisp" title="Abre Hekatan LISP web: la hoja completa dibujada por el motor de Hekatan LISP"><span>Vista completa Hekatan LISP</span></div>
+  </nav>
+
+  <div id="pestanas"></div>
+  <div id="cinta"></div>
+
+  <div id="area">
+    <div id="papel"><div id="hoja"></div></div>
+  </div>
+  <div id="estado"><span id="msg">Hoja nueva</span><span id="motor">motor simbólico: cargando…</span></div>
+  <input id="archivo" type="file" accept=".hmath,.json,.lisp,.hlisp,.txt" hidden>
+</div>
+<script src="motor/hlisp.js"></script>
+<script src="parser.js"></script>
+<script src="matriz.js"></script>
+<script src="nodos.js"></script>
+<script src="autocompletar.js"></script>
+<script src="simbolico.js"></script>
+<script src="cad.js"></script>
+<script src="cadeditor.js"></script>
+<script src="graficas2.js"></script>
+<script src="teclas.js"></script>
+<script src="hlisp.js"></script>
+<script src="hoja.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
