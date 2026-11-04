@@ -209,6 +209,7 @@ body.lisp .fila > .txt.lado { margin-left:12px; flex:0 1 auto; }
   radial-gradient(circle at 2.5px 50%, #2D7DD2 1.2px, #0000 1.6px), radial-gradient(circle at 6.5px 50%, #2D7DD2 1.2px, #0000 1.6px),
   radial-gradient(circle at 2.5px calc(50% + 7px), #2D7DD2 1.2px, #0000 1.6px), radial-gradient(circle at 6.5px calc(50% + 7px), #2D7DD2 1.2px, #0000 1.6px), rgba(45,125,210,.11); }
 .mv-agarre, .mv-agarre * { cursor:move !important; }
+#papel.mv-gap, #papel.mv-gap .fila, #papel.mv-gap #hoja { cursor:move !important; }
 #hoja .fila > .mv-sel { background:rgba(45,125,210,.18) !important; }
 #hoja .fila > .mv-vuelo { opacity:.85; z-index:50; box-shadow:0 4px 14px #0005; background:rgba(251,246,234,.92); pointer-events:none; }
 body.mv-arrastrando { user-select:none; cursor:move; }

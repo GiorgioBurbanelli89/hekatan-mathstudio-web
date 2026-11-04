@@ -11,6 +11,13 @@
   let hov = null, ag = null, arr = null, banda = null, guia = null;
 
   const unidad = (t) => (t && t.closest) ? t.closest('#hoja > .fila > *') : null;          // la región: hijo directo de una línea (ecuación, grupo de ecuaciones, texto, deslizador, CAD, bloque)
+  const GAP = 12;          // margen a la izquierda de la región (relleno de la línea) que también agarra: el asa visible nunca queda «fuera»
+  function unidadEn(e) {          // la región bajo el ratón; si cae en el relleno de la línea justo a la izquierda de una región, esa región
+    const u = unidad(e.target); if (u) return u;
+    const t = e.target; if (!t || !t.classList || !(t.classList.contains('fila') || t === hoja || t === papel || t === area)) return null;
+    const z = zoom(); for (const f of filas()) for (const c of hijos(f)) { const r = c.getBoundingClientRect(); if (r.width && e.clientY >= r.top && e.clientY <= r.bottom && e.clientX < r.left && e.clientX >= r.left - GAP * z) return c; }
+    return null;
+  }
   const hijos = (f) => [...f.children].filter((u) => !u.classList.contains('oculto'));
   const filas = () => [...hoja.children].filter((f) => f.classList.contains('fila'));
   const enInline = (t) => !!(t && t.closest && t.closest('.ifx'));
@@ -33,9 +40,11 @@
   papel.addEventListener('mouseover', (e) => { if (arr) return; const u = unidad(e.target); if (u === hov) return; quitaAsa(); if (u && !u.classList.contains('oculto')) { hov = u; u.classList.add('mv-asa'); } });
   papel.addEventListener('mouseleave', () => { if (!arr) { quitaAsa(); if (ag) { ag.classList.remove('mv-agarre'); ag = null; } } });
   papel.addEventListener('mousemove', (e) => {
-    if (arr || banda) return; const u = unidad(e.target), ya = u && zona(u, e);
+    if (arr || banda) return; const u = unidadEn(e), ya = u && zona(u, e);
+    if (u && u !== hov && !u.classList.contains('oculto')) { quitaAsa(); hov = u; u.classList.add('mv-asa'); }
     if (ag && (ag !== u || !ya)) { ag.classList.remove('mv-agarre'); ag = null; }
     if (u && ya) { u.classList.add('mv-agarre'); ag = u; }
+    papel.classList.toggle('mv-gap', !!(u && ya && !unidad(e.target)));          // en el relleno a la izquierda de la región: cursor de mover también
   });
 
   // ---------------------------------------------------------------- dónde cae lo que se suelta
@@ -98,7 +107,7 @@
   // ---------------------------------------------------------------- arrastrar (con el ratón real)
   papel.addEventListener('mousedown', (e) => {
     if (e.button !== 0 || e._mv) return;
-    const u = unidad(e.target);
+    const u = unidadEn(e);
     if (u && !u.classList.contains('oculto') && zona(u, e)) {
       e.preventDefault(); e.stopPropagation(); if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
       if (e.shiftKey) { marca(u, !sel.has(u)); H().desactiva(); return; }          // Mayús+clic en la franja: suma / quita de la selección
