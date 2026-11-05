@@ -21,7 +21,7 @@
     const m = e.data;
     if (!marco || !m || typeof m !== 'object' || !m.hkCad || e.source !== marco.contentWindow) return;
     if (m.hkCad === 'cerrar') { cierra(); return; }
-    if (m.hkCad === 'struct' && m.url) { G.open(m.url, '_blank'); return; }
+    if (m.hkCad === 'struct' && m.url) { if (/^https:\/\//i.test(String(m.url))) G.open(String(m.url), '_blank', 'noopener,noreferrer'); return; }
     if (m.hkCad !== 'guardar') return;
     const cod = String(m.cuerpo || '');
     if (rec && HK.hoja.reg && HK.hoja.reg.indexOf(rec) >= 0) { rec.ta.value = cod; rec.dibuja(); }

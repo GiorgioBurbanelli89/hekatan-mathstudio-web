@@ -1,5 +1,7 @@
 # Hekatan Math Studio Web
 
+**▶ Abrir en línea: https://giorgioburbanelli89.github.io/hekatan-mathstudio-web/** (sin instalar nada)
+
 Editor de NODOS en el navegador (canvas), igual en estructura al de WPF. Sin servidor ni build: HTML + JS.
 
 Abrir (hace falta http: el motor WASM no carga con file://): `python -m http.server 8000` en esta carpeta y entrar a http://localhost:8000/ (o abrir `index.html`; los ejemplos del menú necesitan http).
