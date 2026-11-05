@@ -28,7 +28,7 @@
   // ---------------------------------------------------------------- ejecutar el código del bloque en el motor
   const LIMPIA = '(let ((l nil) (e (entnext))) (loop while e do (push e l) (setq e (entnext e))) (dolist (x l) (entdel x)))';
   const VUELCA = "(let ((r nil) (e (entnext))) (loop while e do (push (remove-if (lambda (g) (and (consp g) (member (car g) '(-1 5)))) (entget e)) r) (setq e (entnext e))) (reverse r))";
-  const PESO_DXF = { gruesa: 100, media: 50, fina: 25 }, PESO_PX = { gruesa: 2.8, media: 1.6, fina: 0.8 };          // grosor de trazo: DXF 370 en centésimas de mm (1,0 · 0,5 · 0,25 mm) y píxeles en pantalla
+  const PESO_DXF = { gruesa: 100, media: 50, fina: 25 }, PESO_PX = { gruesa: 2.4, media: 1.8, fina: 0.9 };          // grosor de trazo: DXF 370 en centésimas de mm (1,0 · 0,5 · 0,25 mm) y píxeles en pantalla
   const pesoDe = (e) => e.peso || null;
   // (peso "x") y (capa "N" ...) comparten la capa actual del motor: se combinan en «N|x»; al volcar se separan (capa N, grosor x)
   const aCapaPeso = (cod) => {
@@ -87,7 +87,7 @@
     const g = cotaEsp(e); if (!g) return '';
     const txtU = get(e, 1), c = '#555', ln = (a, b) => '<line x1="' + X(a[0]) + '" y1="' + Y(a[1]) + '" x2="' + X(b[0]) + '" y2="' + Y(b[1]) + '" stroke="' + c + '" stroke-width="1"/>';
     const fl = (x, y, ux, uy) => '<polygon points="' + [[x, y], [x - 8 * ux - 2.5 * uy, y - 8 * uy + 2.5 * ux], [x - 8 * ux + 2.5 * uy, y - 8 * uy - 2.5 * ux]].map((p) => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ') + '" fill="' + c + '"/>';
-    const txt = (t, x, y, rot) => '<text class="cota-t" transform="translate(' + x.toFixed(1) + ',' + y.toFixed(1) + ') rotate(' + (rot || 0).toFixed(1) + ')" text-anchor="middle" font-size="11" fill="#333">' + esc(t) + '</text>';
+    const txt = (t, x, y, rot) => '<text class="cota-t" transform="translate(' + x.toFixed(1) + ',' + y.toFixed(1) + ') rotate(' + (rot || 0).toFixed(1) + ')" text-anchor="middle" font-size="9" fill="#555">' + esc(t) + '</text>';
     const sobre = (t) => (txtU && txtU !== '<>') ? txtU.replace('<>', t) : t;
     if (g.k === 5) {
       let o = '<g class="hk-cota-esp">'; const cx = +X(g.v[0]), cy = +Y(g.v[1]), R = g.R * s;
@@ -148,14 +148,14 @@
     if (!P.length) return '<svg xmlns="http://www.w3.org/2000/svg" width="' + ancho + '" height="40"><text x="8" y="24" fill="#888" font-size="12">(el dibujo está vacío)</text></svg>';
     let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity; for (const p of P) { if (p[0] < x0) x0 = p[0]; if (p[0] > x1) x1 = p[0]; if (p[1] < y0) y0 = p[1]; if (p[1] > y1) y1 = p[1]; }
     if (x1 - x0 < 1e-9) x1 = x0 + 1; if (y1 - y0 < 1e-9) y1 = y0 + 1;
-    let M = 24, k = (ancho - 2 * M) / (x1 - x0), alto = Math.max(60, Math.min(520, (y1 - y0) * k + 2 * M)), s = Math.min(k, (alto - 2 * M) / (y1 - y0));
+    let M = 14, k = (ancho - 2 * M) / (x1 - x0), alto = Math.max(60, Math.min(520, (y1 - y0) * k + 2 * M)), s = Math.min(k, (alto - 2 * M) / (y1 - y0));
     if (HK.cad.vistaFija) { [x0, y0, s, alto, M] = HK.cad.vistaFija; }          // durante un arrastre la escala no cambia (si no, el ratón se desfasa en cada redibujo)
     const X = (x) => (M + (x - x0) * s).toFixed(2), Y = (y) => (alto - M - (y - y0) * s).toFixed(2), n = (v) => (v * s).toFixed(2);
     let kCota = 0;
-    let o = '<svg xmlns="http://www.w3.org/2000/svg" data-g="' + [x0, y0, s, alto, M].join(',') + '" width="' + ancho + '" height="' + alto + '" font-family="Segoe UI,sans-serif"><defs><pattern id="hkh" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="#444" stroke-width="1"/></pattern><pattern id="hkh37" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="#444" stroke-width="1"/><line x1="0" y1="0" x2="6" y2="0" stroke="#444" stroke-width="1"/></pattern></defs><rect width="100%" height="100%" fill="#fff"/>';
+    let o = '<svg xmlns="http://www.w3.org/2000/svg" data-g="' + [x0, y0, s, alto, M].join(',') + '" width="' + ancho + '" height="' + alto + '" font-family="Segoe UI,sans-serif"><defs><pattern id="hkh" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="#444" stroke-width="1"/></pattern><pattern id="hkh37" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="#444" stroke-width="1"/><line x1="0" y1="0" x2="6" y2="0" stroke="#444" stroke-width="1"/></pattern></defs>';
     for (const e of ents) {
       const ci = (ents.capas || {})[get(e, 8)]; if ((ci && ci.off) || malas.has(e)) continue;
-      const t = get(e, 0), col = ACI[get(e, 62)] || (ci && ACI[Math.abs(ci.c)]) || '#222', pw = pesoDe(e), st = 'stroke="' + col + '" fill="none" stroke-width="' + (pw ? PESO_PX[pw] : 1.4) + '" stroke-linejoin="round"';
+      const t = get(e, 0), pw = pesoDe(e), col = ACI[get(e, 62)] || (ci && ci.c !== 7 && ACI[Math.abs(ci.c)]) || (pw === 'fina' ? '#888' : '#222'), st = 'stroke="' + col + '" fill="none" stroke-width="' + (pw ? PESO_PX[pw] : 1.4) + '" stroke-linejoin="round"';
       if (t === 'LINE') { const a = get(e, 10), b = get(e, 11); o += '<line x1="' + X(a[0]) + '" y1="' + Y(a[1]) + '" x2="' + X(b[0]) + '" y2="' + Y(b[1]) + '" ' + st + '/>'; }
       else if (t === 'LWPOLYLINE' || t === 'POLYLINE') { const q = pts(e, 10); o += '<' + ((get(e, 70) || 0) & 1 ? 'polygon' : 'polyline') + ' points="' + q.map((p) => X(p[0]) + ',' + Y(p[1])).join(' ') + '" ' + st + '/>'; }
       else if (t === 'CIRCLE') { const c = get(e, 10); o += '<circle cx="' + X(c[0]) + '" cy="' + Y(c[1]) + '" r="' + n(get(e, 40)) + '" ' + st + '/>'; }
@@ -164,7 +164,7 @@
         const sx = c[0] + R * Math.cos(a1), sy = c[1] + R * Math.sin(a1), ex = c[0] + R * Math.cos(a2), ey = c[1] + R * Math.sin(a2);
         o += '<path d="M' + X(sx) + ' ' + Y(sy) + ' A' + n(R) + ' ' + n(R) + ' 0 ' + (d > Math.PI ? 1 : 0) + ' 0 ' + X(ex) + ' ' + Y(ey) + '" ' + st + '/>';
       }
-      else if (t === 'TEXT') { const p = get(e, 10), h = get(e, 40) || 1, ang = (get(e, 50) || 0) * 180 / Math.PI; o += '<text transform="translate(' + X(p[0]) + ',' + Y(p[1]) + ') rotate(' + (-ang).toFixed(2) + ')" font-size="' + Math.max(4, h * s).toFixed(1) + '" fill="' + col + '">' + esc(get(e, 1)) + '</text>'; }
+      else if (t === 'TEXT') { const p = get(e, 10), h = get(e, 40) || 1, ang = (get(e, 50) || 0) * 180 / Math.PI; o += '<text transform="translate(' + X(p[0]) + ',' + Y(p[1]) + ') rotate(' + (-ang).toFixed(2) + ')" font-size="' + Math.min(14, Math.max(9, h * s)).toFixed(1) + '" fill="' + col + '">' + esc(get(e, 1)) + '</text>'; }
       else if (t === 'HATCH') {
         const q = pts(e, 10).slice(1); const solido = (get(e, 2) || '').toUpperCase() === 'SOLID';
         o += '<polygon points="' + q.map((p) => X(p[0]) + ',' + Y(p[1])).join(' ') + '" fill="' + (solido ? suave(col) : /^(ANSI3[5-9]|NET|CROSS)/i.test(get(e, 2) || '') ? 'url(#hkh37)' : 'url(#hkh)') + '" stroke="' + col + '" stroke-width="0.8"/>';
@@ -173,13 +173,13 @@
       else if (t === 'DIMENSION') {
         const d = dimGeom(e); if (!d) continue; const ox = d.nx * d.s, oy = d.ny * d.s, tk = 4;
         o += '<g class="hk-cota" data-k="' + (kCota++) + '" data-a="' + nfin(d.a[0]) + ',' + nfin(d.a[1]) + '" data-b="' + nfin(d.b[0]) + ',' + nfin(d.b[1]) + '" data-s="' + nfin(d.s) + '">';
-        const A = [d.a[0] + ox, d.a[1] + oy], B = [d.b[0] + ox, d.b[1] + oy], g = 'stroke="#555" stroke-width="1"';
+        const A = [d.a[0] + ox, d.a[1] + oy], B = [d.b[0] + ox, d.b[1] + oy], g = 'stroke="#666" stroke-width="0.8"';
         o += '<line x1="' + X(d.a[0]) + '" y1="' + Y(d.a[1]) + '" x2="' + X(A[0]) + '" y2="' + Y(A[1]) + '" ' + g + '/><line x1="' + X(d.b[0]) + '" y1="' + Y(d.b[1]) + '" x2="' + X(B[0]) + '" y2="' + Y(B[1]) + '" ' + g + '/>';
         o += '<line x1="' + X(A[0]) + '" y1="' + Y(A[1]) + '" x2="' + X(B[0]) + '" y2="' + Y(B[1]) + '" ' + g + '/>';
-        for (const Q of [A, B]) o += '<line x1="' + (X(Q[0]) - tk) + '" y1="' + (+Y(Q[1]) + tk) + '" x2="' + (+X(Q[0]) + tk) + '" y2="' + (Y(Q[1]) - tk) + '" ' + g + '/>';
-        const txt = get(e, 1) || HK.fmt(get(e, 42) != null ? get(e, 42) : d.L);
+        for (const Q of [A, B]) { const qx = +X(Q[0]), qy = +Y(Q[1]); o += '<line x1="' + (qx - d.nx * tk).toFixed(2) + '" y1="' + (qy + d.ny * tk).toFixed(2) + '" x2="' + (qx + d.nx * tk).toFixed(2) + '" y2="' + (qy - d.ny * tk).toFixed(2) + '" ' + g + '/>'; }
+        let txt = get(e, 1) || (Math.round((get(e, 42) != null ? get(e, 42) : d.L) * 100) / 100).toFixed(2) + ' m'; if (/^\s*[^\d\n]*?=?\s*-?\d+(\.\d+)?\s*$/.test(txt)) txt = txt.replace(/-?\d+(\.\d+)?\s*$/, (q) => (+q).toFixed(2) + ' m');
         const mx = ((+X(A[0]) + +X(B[0])) / 2).toFixed(1), my = (((+Y(A[1]) + +Y(B[1])) / 2) - 4).toFixed(1);
-        o += '<text class="cota-t" x="' + mx + '" y="' + my + '" text-anchor="middle" font-size="11" fill="#333"><title>Doble clic: editar la medida</title>' + esc(txt) + '</text>';
+        o += '<text class="cota-t" x="' + mx + '" y="' + my + '" text-anchor="middle" font-size="9" fill="#555"><title>Doble clic: editar la medida</title>' + esc(txt) + '</text>';
         const H = (cls, x, y, ttl) => '<circle class="h" data-p="' + cls + '" cx="' + x + '" cy="' + y + '" r="5.5"><title>' + ttl + '</title></circle>';
         o += H('a', X(d.a[0]), Y(d.a[1]), 'Arrastra: mueve el punto medido A') + H('b', X(d.b[0]), Y(d.b[1]), 'Arrastra: mueve el punto medido B') + H('s', (+X(A[0]) + +X(B[0])) / 2, (+Y(A[1]) + +Y(B[1])) / 2 + 12, 'Arrastra: acerca o aleja la línea de cota') + '</g>';
       }

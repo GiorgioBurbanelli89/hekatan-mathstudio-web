@@ -1,0 +1,16 @@
+[
+ "Armadura_Logan_3_9.hmath",
+ "Funciones_de_forma.hmath",
+ "Funciones_de_forma_1D_cuadratica.hmath",
+ "Funciones_de_forma_1D_deduccion_simbolica.hmath",
+ "Funciones_de_forma_1D_hipotesis_graficas.hmath",
+ "Funciones_de_forma_1D_lineal.hmath",
+ "Funciones_de_forma_2D_CSI.hmath",
+ "Funciones_de_forma_2D_deduccion.hmath",
+ "Funciones_de_forma_a_rigidez_K.hmath",
+ "Integrales_Riemann_doble_triple.hmath",
+ "Placa_DKE_Wilson_formulacion_y_tablas.hmath",
+ "Placa_Kirchhoff_BFS_losa_rectangular.hmath",
+ "Triangulo_jacobiano.hmath",
+ "Viga_deduccion.hmath"
+]

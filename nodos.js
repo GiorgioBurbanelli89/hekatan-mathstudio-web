@@ -3,7 +3,7 @@
 (function (G) {
   const HK = G.HK = G.HK || {};
   const FUENTE = '"Cambria Math","STIX Two Math","Times New Roman",serif';
-  const COL = { define: '#2563eb', evalua: '#15803d', ecuacion: '#c2410c', tinta: '#1b1b1b', variable: '#1a4fa3', numero: '#12335f', cursor: '#d22e2e', hueco: '#9db2cf', igual: '#1d8a3a', aviso: '#8a8a8a', error: '#b3202a' };
+  const COL = { unidad: '#0B6E6A', define: '#2563eb', evalua: '#15803d', ecuacion: '#c2410c', tinta: '#1b1b1b', variable: '#1a4fa3', numero: '#12335f', cursor: '#d22e2e', hueco: '#9db2cf', igual: '#1d8a3a', aviso: '#8a8a8a', error: '#b3202a' };
   HK.fuentes = HK.fuentes || { v: 'Georgia', n: 'Cambria' };          // como TextNode del WPF: variables y signos en Georgia, cifras en Cambria (pestaña «Formato matemático»)
   const famDe = (s) => /^[0-9.]/.test(s) ? '"' + HK.fuentes.n + '","Cambria Math","Times New Roman",serif' : '"' + HK.fuentes.v + '","Cambria Math","Times New Roman",serif';
   const FUENTE_SIGNO = 'Georgia,"Cambria Math","Times New Roman",serif';          // ∫ ∑ ∏: serif claro, como BigOpNode del WPF
@@ -30,9 +30,9 @@
     // nombres de función (sin cursiva): letras seguidas de un paréntesis
     for (let i = 0; i < fila.length; i++) fila[i]._fn = false;
     for (let i = 0; i < fila.length; i++) {
-      if (fila[i].t === 'c' && LETRA.test(fila[i].s)) {
+      if (fila[i].t === 'c' && !fila[i].un && LETRA.test(fila[i].s)) {
         let j = i, nom = '';
-        while (j < fila.length && fila[j].t === 'c' && LETRA.test(fila[j].s)) { nom += fila[j].s; j++; }
+        while (j < fila.length && fila[j].t === 'c' && !fila[j].un && LETRA.test(fila[j].s)) { nom += fila[j].s; j++; }
         if (fila[j] && fila[j].t === 'sub') j++;
         if (fila[j] && fila[j].t === 'paren' && HK.FN && (HK.FN[nom] || nom === 'sqrt')) for (let k = i; k < j; k++) fila[k]._fn = true;
         i = j - 1;
@@ -46,6 +46,7 @@
   function medirItem(it, tam, fila) {
     switch (it.t) {
       case 'c': {
+        if (it.un) { const pu = tam * .2; return { w: ancho(it.s || "'", tam, false) + pu, a: tam * .72, d: tam * .22, pad: pu }; }          // unidad: un espacio delante (Nodes.cs:143,154) y el texto en teal
         const pad = it.u ? 0 : (OPS_ANCHOS[it.s] || 0) * tam;
         const cur = LETRA.test(it.s) && !it._fn;
         const w = ancho(glifo(it), tam, cur) + (it.s === ',' ? tam * .22 : it.s === '=' && it._ig ? 0 : 2 * pad);
@@ -211,6 +212,7 @@
     const b = it._b; ctx.textBaseline = 'alphabetic';
     switch (it.t) {
       case 'c': {
+        if (it.un) { ctx.font = tam + 'px ' + FUENTE; ctx.letterSpacing = '0px'; ctx.fillStyle = COL.unidad; ctx.fillText(it.s || "'", x + (b.pad || 0), y); break; }
         const cur = LETRA.test(it.s) && !it._fn;
         ctx.font = (cur ? 'italic ' : '') + tam + 'px ' + famDe(it.s); ctx.letterSpacing = esNum(it.s) ? espNum(tam) : '0px';
         ctx.fillStyle = cur ? COL.variable : /[0-9.]/.test(it.s) ? COL.numero : COL.tinta;
@@ -377,7 +379,7 @@
       } else if (res && res.texto) {
         let x = x0 + b.w + tam * .35;
         ctx.textBaseline = 'alphabetic';
-        if (res.kind === 'val') { ctx.font = tam + 'px ' + FUENTE; const ult = this.fila[this.fila.length - 1]; if (!(ult && ult.t === 'c' && ult.s === '=')) { ctx.fillStyle = COL.igual; ctx.fillText('=', x, y); x += ancho('=', tam) + tam * .35; } else x -= tam * .1; ctx.fillStyle = COL.numero; ctx.fillText(res.texto, x, y); }
+        if (res.kind === 'val') { ctx.font = tam + 'px ' + FUENTE; const ult = this.fila[this.fila.length - 1]; if (!(ult && ult.t === 'c' && ult.s === '=')) { ctx.fillStyle = COL.igual; ctx.fillText('=', x, y); x += ancho('=', tam) + tam * .35; } else x -= tam * .1; ctx.fillStyle = COL.numero; if (res.cu > 0) { const n0 = res.texto.slice(0, res.cu); ctx.fillText(n0, x, y); ctx.fillStyle = COL.unidad; ctx.fillText(res.texto.slice(res.cu), x + ctx.measureText(n0).width, y); } else ctx.fillText(res.texto, x, y); }          // la unidad del resultado en teal
         else if (res.kind === 'flecha') { ctx.font = tam + 'px ' + FUENTE; ctx.fillStyle = COL.aviso; ctx.fillText('→ ' + res.texto, x, y); }
         else { ctx.font = (tam * .75) + 'px ' + FUENTE; ctx.fillStyle = res.kind === 'err' ? COL.error : COL.aviso; ctx.fillText(res.texto, x, y); }
       }
@@ -395,7 +397,7 @@
     // ----- utilidades de rutas y copias
     limpiaNodo(it) {
       const o = { t: it.t };
-      if (it.t === 'c') { o.s = it.s; if (it.u) o.u = 1; return o; }
+      if (it.t === 'c') { o.s = it.s; if (it.u) o.u = 1; if (it.un) o.un = 1; return o; }
       for (const k of ['s', 'p', 'o', 'corch']) if (it[k] !== undefined) o[k] = it[k];
       if (it.t === 'mat') { o.cells = it.cells.map((f) => f.map((c) => c.map((x) => this.limpiaNodo(x)))); return o; }
       for (const k of ['n', 'd', 'r', 'lo', 'hi', 'body', 'v', 'f']) if (it[k]) o[k] = it[k].map((x) => this.limpiaNodo(x));
@@ -451,7 +453,7 @@
     // texto de lo que hay a la izquierda del cursor en la fila de arriba (solo letras, dígitos y signos simples)
     palabraNodo() {          // «lim␣», «limite␣», «serie␣», «taylor␣»: la palabra suelta se vuelve el nodo (variable → punto → [orden] → cuerpo)
       const f = this.cur.fila; let fin = this.cur.i; if (fin !== f.length) return false;
-      let ini = fin; while (ini > 0 && f[ini - 1].t === 'c' && /^[a-z]$/.test(f[ini - 1].s)) ini--;
+      let ini = fin; while (ini > 0 && f[ini - 1].t === 'c' && !f[ini - 1].un && /^[a-z]$/.test(f[ini - 1].s)) ini--;
       const w = f.slice(ini, fin).map((x) => x.s).join('');
       if (!/^(lim|limite|serie|taylor)$/.test(w)) return false;
       if (ini > 0 && !(f[ini - 1].t === 'c' && '+−·=≔,<>≤≥⇒→⇔;:(|'.includes(f[ini - 1].s))) return false;
@@ -494,6 +496,12 @@
         if (k === 'End') { this.vaA(this.fila, this.fila.length, sh); return true; }
         return false;
       }
+      { const pu = this.cur.fila[this.cur.i - 1];          // unidad abierta (tras «'»): las letras se acumulan en ella; cualquier otra tecla la cierra
+        if (pu && pu.un && pu.ab) {
+          if (k.length === 1 && /[A-Za-zµμΩ°%Å]/.test(k) && !this.sel) { this.snap('tec'); pu.s += (k === 'μ' ? 'µ' : k); this.cambio(); return true; }
+          if (k === 'Backspace' && pu.s.length > 0 && !this.sel) { this.snap('tec'); pu.s = pu.s.slice(0, -1); this.cambio(); return true; }
+          pu.ab = false;
+        } }
       { const kc = k.length === 1 ? k : (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter', 'Tab'].includes(k) ? ' ' : null); if (kc !== null) this.cierraPalabra(kc); }          // cierra la palabra: u1 → u₁, alpha → α
       if (k === 'Escape') { this.quitaSel(); this.dibuja(); return true; }
       if (k === 'ArrowLeft') { this.mueve(-1, sh); return true; }
@@ -580,6 +588,7 @@
           this.inserta({ t: 'c', s: '>' }); break;
         }
         case '*': this.inserta({ t: 'c', s: '·' }); break;
+        case "'": this.inserta({ t: 'c', s: '', un: 1, ab: 1 }); break;          // «'» abre una unidad: 'kN · 'm · 'kN/'m
         case '-': this.inserta(unario ? { t: 'c', s: '−', u: true } : { t: 'c', s: '−' }); break;          // −1 (signo) sin espacios; a − b con espacios
         case '+': this.inserta(unario ? { t: 'c', s: '+', u: true } : { t: 'c', s: '+' }); break;
         default: this.inserta({ t: 'c', s: k });
@@ -588,7 +597,7 @@
     }
     // «u1» → u₁ · «xprime» → x′ · «xsup2» → x² · «alpha» → α   (al cerrar la palabra, como en WPF)
     palabraAntes() {          // las letras justo antes del cursor (la palabra que se está escribiendo); «2x» no cuenta como palabra
-      const f = this.cur.fila; let j = this.cur.i; while (j > 0 && f[j - 1].t === 'c' && /^[A-Za-z]$/.test(f[j - 1].s)) j--;
+      const f = this.cur.fila; let j = this.cur.i; while (j > 0 && f[j - 1].t === 'c' && !f[j - 1].un && /^[A-Za-z]$/.test(f[j - 1].s)) j--;
       if (j === this.cur.i) return null; const pv = f[j - 1]; if (pv && pv.t === 'c' && /[0-9.]/.test(pv.s)) return null;
       return { j, texto: f.slice(j, this.cur.i).map((x) => x.s).join('') };
     }
@@ -603,7 +612,7 @@
     }
     cierraPalabra(k) {
       if (k.length === 1 && /[A-Za-z0-9._^Ͱ-Ͽ℀-⅏]/.test(k)) return;
-      const f = this.cur.fila, ok = (x) => x && x.t === 'c' && /[A-Za-z0-9]/.test(x.s); let j = this.cur.i;
+      const f = this.cur.fila, ok = (x) => x && x.t === 'c' && !x.un && /[A-Za-z0-9]/.test(x.s); let j = this.cur.i;
       while (j > 0 && ok(f[j - 1])) j--; if (j === this.cur.i) return;
       const palabra = f.slice(j, this.cur.i).map((x) => x.s).join(''); if (!/^[A-Za-z]/.test(palabra)) return;
       const antes = f[j - 1]; if (antes && antes.t === 'c' && /[0-9.]/.test(antes.s)) return;
@@ -682,6 +691,7 @@
           if (todos.every((h) => h.length === 0)) { this.snap('borra'); const k = p.fila.indexOf(p.it); p.fila.splice(k, 1); this.cur = { fila: p.fila, i: k }; }
           else this.cur = { fila: p.fila, i: p.fila.indexOf(p.it) };
         } else if (this.fila.length === 0 && this.alVaciar) { this.alVaciar(); return; }          // Retroceso en una ecuación vacía: se quita la ecuación
+          else if (this.alUne && this.alUne()) return;          // Retroceso al inicio de una ecuación con contenido: se une con la anterior (como el WPF)
       } else if (this.cur.i < f.length) {
         const it = f[this.cur.i], hijos = it.t === 'frac' ? [it.n, it.d] : it.r ? [it.r] : [];
         if (hijos.length && hijos.some((h) => h.length)) { this.cur = { fila: hijos[0], i: 0 }; this.dibuja(); return; }

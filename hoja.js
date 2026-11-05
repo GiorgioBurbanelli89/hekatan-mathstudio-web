@@ -41,7 +41,7 @@
   function edsDeFila(cv) { const f = cv.closest('.fila'); return reg.filter((r) => r.t === 'eq' && !r.enTexto && f && f.contains(r.el)).sort((a, b) => a.ed.canvas.getBoundingClientRect().left - b.ed.canvas.getBoundingClientRect().left).map((r) => r.ed); }
   function agregaEq(codigo, o) {
     o = o || {};
-    const c = o.grupo || contenedor(o.mismaLinea), d = document.createElement('div'); d.className = 'eq' + (o.oculto ? ' oculto' : ''); const cv = document.createElement('canvas'); d.appendChild(cv); c.appendChild(d);
+    const tr = o.tras && (o.tras.el.parentElement.classList.contains('grupo') ? o.tras.el.parentElement : o.tras.el), c = o.grupo || (tr ? tr.parentElement : contenedor(o.mismaLinea)), d = document.createElement('div'); d.className = 'eq' + (o.oculto ? ' oculto' : ''); const cv = document.createElement('canvas'); d.appendChild(cv); c.appendChild(d); if (tr) tr.after(d);
     const ed = new HK.Editor(cv, { tam: 14 }); ed.alCambiar = () => { r.editado = true; resolver(); };
     const r = { t: 'eq', ed, el: d, modo: o.modo || 0, codigo, editado: false, mismaLinea: !!o.mismaLinea, oculto: !!o.oculto };
     ed.cargar(codigo ? HK.codigoAFilas(codigo) : []);
@@ -69,6 +69,7 @@
     cv.addEventListener('dblclick', (e) => { const q = ptr(e, cv); activo = ed; ed.dobleClic(q.x, q.y); redibuja(); });
     ed.alSalir = (d) => salta(r, d);
     ed.alVaciar = () => quita(r);
+    ed.alUne = () => uneConAnterior(r);
     reg.push(r); return r;
   }
   function agregaSlider(nombre, min, max, valor, inc, mismo) {
@@ -319,7 +320,11 @@
     if (tipo === 'evalua') { for (let i = f.length - 1; i >= 0; i--) if (f[i].t === 'c' && f[i].s === '=') { f[i]._tint = 'evalua'; if (vis) f[i]._vis = vis; return; } }
     else for (let i = 0; i < f.length; i++) if (f[i].t === 'c' && (f[i].s === '=' || f[i].s === '≔')) { f[i]._tint = 'define'; return; }
   }
-  function valorRes(v) { return HK.M.esM(v) ? (v.r === 1 && v.c === 1 ? { kind: 'val', texto: HK.fmt(v.a[0]) } : { kind: 'mat', mat: v }) : { kind: 'val', texto: HK.fmt(v) }; }
+  function valorRes(v) {
+    if (HK.M.esM(v)) return v.r === 1 && v.c === 1 ? valorRes(v.a[0]) : { kind: 'mat', mat: v };
+    const texto = HK.fmt(v), q = HK.U && HK.U.esQ(v), i = q ? texto.indexOf(' ') : -1;
+    return { kind: 'val', texto, cu: i };          // cu: dónde empieza la unidad (se dibuja en teal)
+  }
   // Filas tecleadas (no abiertas de un .hmath): de un for/while/if hasta su «end» forman un programa; la sangría sigue la profundidad
   function agrupaProgramas() {
     for (const r of reg) if (r.t === 'eq' && r.tecleado) { r.prog = null; }
@@ -364,6 +369,7 @@
         else if (s.k === 'simbdef') {          // K = expr →  : el resultado simbólico queda como fórmula viva
           const res = sim(s.e); if (s.n.t === 'id') env.l[s.n.n] = res; r.ed.resultado = { sim: '→', fila: HK.aFilas(res) }; marcaIgual(r.ed, 'define');
         }
+        else if (s.k === 'conv') { marcaIgual(r.ed, 'evalua'); r.ed.resultado = valorRes(HK.convierte(HK.evalua(s.e, env), HK.evalua(s.u, env))); }          // F ='kN : cambia la unidad en que se muestra
         else if ((s.k === 'muestra' || s.k === 'expr') && s.e.t === 'call' && s.e.f === 'fplot') { r.graf = fplot(s.e.args, env); }
         else if ((s.k === 'muestra' || s.k === 'expr') && s.e.t === 'call' && HK.graf2 && HK.graf2.TIPOS[s.e.f]) { r.graf = HK.graf2.calcula(s.e.f, s.e.args, env); }          // friemann, fgauss, fgauss2d, fvolumen, fvoxeles
         else if ((s.k === 'muestra' || s.k === 'expr') && s.e.t === 'call' && (s.e.f === 'fmapa' || s.e.f === 'fsuperficie')) { r.graf = { tipo: s.e.f === 'fmapa' ? 'mapa' : 'sup', d: malla2(s.e.args, env) }; }
@@ -466,8 +472,44 @@
   document.addEventListener('keydown', (e) => {
     if (!activo || enTexto()) return; const r = eqs().find((x) => x.ed === activo); if (!r) return;
     if (e.key === 'Enter' && !e.ctrlKey && !e.altKey) { e.preventDefault(); const f = r.el.closest('.fila'); insertaDespues(f, nuevaEq('')); return; }
-    if (e.key === 'Tab') { e.preventDefault(); salta(r, e.shiftKey ? -1 : 1); }
+    if (e.key === 'Tab') { e.preventDefault(); if (e.shiftKey) salta(r, -1); else { const l = eqs(), nx = l[l.indexOf(r) + 1]; if (nx && !nx.ed.texto() && !r.el.nextElementSibling) salta(r, 1); else eqMisma(r); } }          // Tab: ecuación nueva en la MISMA línea (como el WPF); Mayús+Tab salta a la anterior
   });
+  function eqMisma(r) {
+    const n = agregaEq('', { tras: r, modo: r.modo, mismaLinea: true }); reg.splice(reg.indexOf(n), 1); reg.splice(reg.indexOf(r) + 1, 0, n);
+    n.ed.cargar([]); activo = n.ed; if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); resolver(); redibuja(); n.el.scrollIntoView({ block: 'nearest' }); return n;
+  }
+  function uneConAnterior(r) {          // Retroceso al inicio: concatena el código con el de la ecuación anterior y deja el cursor en la unión
+    if (r.enTexto) return false; const l = eqs().filter((x) => !x.enTexto), k = l.indexOf(r); if (k < 1) return false;
+    const p = l[k - 1], t1 = p.ed.texto(), t2 = r.ed.texto(), n1 = HK.codigoAFilas(t1).length;
+    quita(r); p.editado = true; p.ed.cargar(HK.codigoAFilas(t1 + t2)); p.ed.cur = { fila: p.ed.fila, i: Math.min(n1, p.ed.fila.length) }; activo = p.ed; resolver(); redibuja(); return true;
+  }
+  // Ctrl+D duplica (la selección o la región activa) debajo · Ctrl+J junta las seleccionadas en una línea · Ctrl+Mayús+J las separa
+  const unidadDeEl = (el) => (el && el.closest) ? el.closest('#hoja > .fila > *') : null;
+  const ordenDoc = (l) => l.slice().sort((a, b) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) ? -1 : 1);
+  function clona(r, mismo) {
+    if (r.t === 'eq') { const n = agregaEq(r.ed.texto(), { mismaLinea: mismo, modo: r.modo, oculto: r.oculto }); n.editado = true; return n; }
+    if (r.t === 'txt') { const n = agregaTxt(r.el.textContent, r.titulo, r.nivel, mismo); if (r.el.querySelector('*') && !r.el.querySelector('.ifx')) limpioHtml(n.el, r.el.innerHTML); return n; }
+    if (r.t === 'slider') return agregaSlider(r.nombre, r.min, r.max, r.valor, r.inc, mismo);
+    if (r.t === 'cad') return agregaCad(r.ta.value, r.titulo, mismo);
+    if (r.t === 'raw') return agregaRaw(r.ta.value, r.oculto, mismo);
+    return null;
+  }
+  function duplica(us) {
+    us = ordenDoc(us); const ult = us[us.length - 1].parentElement, nuevos = []; let fa = null;
+    for (const u of us) { const mismo = u.parentElement === fa; fa = u.parentElement; for (const r of reg.filter((x) => !x.enTexto && u.contains(x.el))) { const n = clona(r, mismo); if (n) nuevos.push(n); } }
+    if (!nuevos.length) return; const filas = [...new Set(nuevos.map((n) => n.el.closest('.fila')))]; let ref = ult; for (const f of filas) { ref.after(f); ref = f; }
+    for (const n of nuevos) reg.splice(reg.indexOf(n), 1); let k = 0; for (let i = 0; i < reg.length; i++) if (ult.contains(reg[i].el)) k = i + 1; reg.splice(k, 0, ...nuevos);
+    const e = nuevos.filter((n) => n.t === 'eq').pop(); if (e) activo = e.ed; resolver(); redibuja();
+  }
+  document.addEventListener('keydown', (e) => {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey) return; const k = e.key.toLowerCase(); if (k !== 'd' && k !== 'j') return;
+    const M = HK.mover; let us = M ? M.seleccion() : [];
+    if (!us.length) { const r = activo ? eqs().find((x) => x.ed === activo) : null; const u = r ? unidadDeEl(r.el) : unidadDeEl(document.activeElement); if (u) us = [u]; }
+    if (!us.length) return; e.preventDefault(); e.stopImmediatePropagation();
+    if (k === 'd') duplica(us);
+    else if (e.shiftKey) { for (const u of ordenDoc(us).reverse()) if (u.parentElement.children.length > 1) M.aplica([u], { k: 'despues', fila: u.parentElement }); }
+    else { us = ordenDoc(us); if (us.length > 1) M.aplica(us.slice(1), { k: 'lado', fila: us[0].parentElement, ref: us[0], desp: true }); }
+  }, true);
   // clic en la hoja vacía: se crea (o se enfoca) una ecuación, lista para escribir; clic derecho: menú «aquí»
   const papel = document.getElementById('papel'), area = document.getElementById('area');
   // botones Repetir / Mientras / Condición / Programa / Devolver del WPF: filas del bloque, el cursor queda en el cuerpo

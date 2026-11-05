@@ -109,7 +109,7 @@ body.sinpag #papel { min-height:0; }
 .eq.oculto { display:none; }          /* bloques «oculto» del WPF (ayudas de cálculo) */
 
 /* Código ⇄ Nodos, bloques ocultos y marcas de párrafo (como el WPF) */
-.eq textarea.cod { display:block; width:100%; min-width:260px; font:14px/1.45 Consolas,'Cascadia Mono',monospace; color:#1b1b1b; background:#fffdf5; border:1px dashed #9db2cf; border-radius:3px; padding:3px 6px; resize:vertical; outline:none; }
+.fila textarea.cod { display:block; width:100%; min-width:260px; font:14px/1.45 Consolas,'Cascadia Mono',monospace; color:#1b1b1b; background:#fffdf5; border:1px dashed #9db2cf; border-radius:3px; padding:3px 6px; resize:vertical; outline:none; }
 .ver-ocultos .eq.oculto { display:block; opacity:.45; outline:1px dashed #999; }
 .marcas .fila::after, .marcas .txt::after { content:'¶'; color:#6b8fbf; font:14px/1 sans-serif; margin-left:6px; align-self:center; }
 
@@ -203,11 +203,12 @@ body.lisp .fila > .txt.lado { margin-left:12px; flex:0 1 auto; }
 
 /* ---- desplazar regiones (como MoverRegiones.cs): asa azul a la izquierda, contorno punteado, ⠿ al medio ---- */
 #hoja .fila > * { position:relative; }
-#hoja .fila > .mv-asa { outline:1px dashed #2D7DD2; outline-offset:-1px; }
+#hoja .fila > .mv-asa { outline:1px dashed #2D7DD2; outline-offset:-1px; background:rgba(45,125,210,.05); }
 #hoja .fila > .mv-asa::before { content:''; position:absolute; left:0; top:0; bottom:0; width:10px; z-index:4; pointer-events:none; background:
   radial-gradient(circle at 2.5px calc(50% - 7px), #2D7DD2 1.2px, #0000 1.6px), radial-gradient(circle at 6.5px calc(50% - 7px), #2D7DD2 1.2px, #0000 1.6px),
   radial-gradient(circle at 2.5px 50%, #2D7DD2 1.2px, #0000 1.6px), radial-gradient(circle at 6.5px 50%, #2D7DD2 1.2px, #0000 1.6px),
-  radial-gradient(circle at 2.5px calc(50% + 7px), #2D7DD2 1.2px, #0000 1.6px), radial-gradient(circle at 6.5px calc(50% + 7px), #2D7DD2 1.2px, #0000 1.6px), rgba(45,125,210,.11); }
+  radial-gradient(circle at 2.5px calc(50% + 7px), #2D7DD2 1.2px, #0000 1.6px), radial-gradient(circle at 6.5px calc(50% + 7px), #2D7DD2 1.2px, #0000 1.6px), rgba(45,125,210,.26); box-shadow:inset 3px 0 0 #2D7DD2; }
+#hoja .fila > .mv-agarre::before { background-color:rgba(45,125,210,.45); }
 .mv-agarre, .mv-agarre * { cursor:move !important; }
 #papel.mv-gap, #papel.mv-gap .fila, #papel.mv-gap #hoja { cursor:move !important; }
 #hoja .fila > .mv-sel { background:rgba(45,125,210,.18) !important; }
@@ -216,3 +217,29 @@ body.mv-arrastrando { user-select:none; cursor:move; }
 .mv-guia { position:fixed; z-index:90; background:#2D7DD2; border-radius:2px; pointer-events:none; display:none; }
 .mv-banda { position:fixed; z-index:90; border:1px dashed #2D7DD2; background:rgba(45,125,210,.12); pointer-events:none; }
 #hoja .fila > .eq:not(.conGraf), #hoja .fila > .grupo { padding-left:10px; }          /* la franja izquierda (10 px) queda libre para agarrar, como el WPF (Padding.Left = 10) */
+
+/* Exportar PDF = window.print(): sólo las páginas de la hoja, sin menú, cinta, estado ni pestañas */
+@media print {
+  @page { margin:0; }
+  html, body { height:auto !important; overflow:visible !important; background:#fff !important; }
+  #menu, #pestanas, #cinta, #estado, #nav, #hlisp-modal, .pg.encab:empty, .corte, .marco { display:none !important; }
+  #area { position:static !important; overflow:visible !important; height:auto !important; background:#fff !important; padding:0 !important; }
+  #papel { zoom:1 !important; box-shadow:none !important; margin:0 !important; }
+}
+
+/* ---- bloque CAD como en el WPF (BloquesLisp.cs): sin marco, el dibujo flota sobre el papel; el borde azul solo al pasar el ratón / seleccionar */
+.cad { position:relative; background:transparent; border:1px solid transparent; box-shadow:none; margin:20px 0; padding:4px; }
+.cad:hover, .cad.sel, .cad.activo, .cad:focus-within { border-color:#2D7DD2; }
+.cad .cad-bar { background:transparent; flex-wrap:nowrap; padding:0 2px; gap:8px; min-height:18px; font-size:11px; }
+.cad .cad-bar .cad-tit { flex:0 1 auto; font-size:11px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cad .cad-bar .cad-msg { order:0; flex:1 1 auto; font-size:10.5px; font-weight:400; color:#888; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cad .cad-bar .cad-msg.mal { color:#b3261e; }
+.cad .cad-bar button { font-size:10px; padding:0 8px; line-height:16px; border-color:#C7CBD2; background:rgba(255,255,255,.55); color:#666; }
+.cad .cad-bar button[data-a=cod] { order:9; flex:0 0 auto; }
+.cad .cad-bar button[data-a=hcad], .cad .cad-bar button[data-a=hcad0], .cad .cad-bar button[data-a=lsp], .cad .cad-bar button[data-a=dxf] { position:absolute; top:5px; z-index:3; opacity:0; pointer-events:none; transition:opacity .12s; background:#fff; }
+.cad .cad-bar button[data-a=dxf] { right:40px; } .cad .cad-bar button[data-a=lsp] { right:80px; } .cad .cad-bar button[data-a=hcad0] { right:124px; } .cad .cad-bar button[data-a=hcad] { right:184px; }
+.cad:hover .cad-bar button, .cad.sel .cad-bar button, .cad.activo .cad-bar button, .cad:focus-within .cad-bar button { opacity:1; pointer-events:auto; }
+.cad .cad-vista { padding:0; overflow:visible; background:transparent; }
+.cad .cad-vista svg { margin:0 auto; background:transparent; }
+.cad-pie { font-size:10.5px; color:#999; padding:2px 0 0; }
+.cad-pie button { font-size:10.5px; padding:0 8px; line-height:16px; }

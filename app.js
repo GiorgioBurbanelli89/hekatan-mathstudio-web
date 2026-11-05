@@ -40,7 +40,7 @@
       { ic: '⇒', t: 'Implica', tip: 'Implica (teclas =>)', acc: () => H().escribe('⇒') },
       { ic: '→', t: 'Tiende a', tip: 'Flecha: resultado simbólico (teclas ->)', acc: () => H().escribe('→') },
       { ic: '⇔', t: 'Equivale', tip: 'Equivale (teclas <=>)', acc: () => H().escribe('⇔') },
-      { ic: '=', t: 'Definir', tip: 'Definir: x = … (tecla :)', acc: () => H().escribe(':') },
+      { ic: '≔', t: 'Definir', tip: 'Definir: x = … (tecla :)', acc: () => H().escribe(':') },
       { ic: '=', t: 'Evaluar', tip: 'x =   muestra el valor', acc: () => H().escribe('=') },
       { ic: '＝', t: 'Ecuación', tip: 'x^2 == 9', acc: () => H().escribe('==') },
       'sep',
@@ -217,6 +217,12 @@
       else if (q === 'ap') { H().abre(JSON.stringify(HK.hlisp.importa(ta.value))); v.remove(); estado('Script aplicado a la hoja'); setTimeout(pagina, 50); } });
   };
   $('m-lisp').onclick = () => { G.open('https://giorgioburbanelli89.github.io/hekatan-lisp/', '_blank', 'noopener,noreferrer'); estado('Vista completa Hekatan LISP: se abre en una pestaña nueva'); };          // siempre a la vista, en la barra de arriba
+  // Ejemplos: toda la carpeta ejemplos/ (ejemplos/lista.json); lo que no esté a mano en el menú se añade en «Otros ejemplos»
+  fetch('ejemplos/lista.json').then((r) => r.json()).then((L) => {
+    const ya = new Set([...document.querySelectorAll('button[data-ej]')].map((b) => b.dataset.ej)), faltan = L.filter((n) => !ya.has('ejemplos/' + n)); if (!faltan.length) return;
+    const g = $('grp-lisp'), l = document.createElement('div'); l.className = 'lbl'; l.textContent = 'Otros ejemplos'; g.before(l);
+    faltan.forEach((n) => { const b = document.createElement('button'); b.dataset.ej = 'ejemplos/' + n; b.textContent = n.replace(/\.hmath$/, '').replace(/_/g, ' '); b.addEventListener('click', () => { abreEjemplo('ejemplos/' + n); cierra(); }); g.before(b); });
+  }).catch(() => {});
   // Ejemplos de Hekatan LISP: la MISMA lista que la web de Hekatan LISP (ejemplos/hlisp/lista.json), un botón por hoja
   fetch('ejemplos/hlisp/lista.json').then((r) => r.json()).then((L) => {
     const g = $('grp-lisp'); if (!g) return; g.textContent = 'Hekatan LISP (.lisp) · ' + L.length + ' ejemplos'; let ant = g;
@@ -288,6 +294,13 @@
     if (!e.ctrlKey || e.altKey) return; const k = e.key.toLowerCase();
     if (k === 'm') { e.preventDefault(); H().nuevaEq('', false, e.shiftKey ? 1 : 2); estado(e.shiftKey ? 'Región simbólica' : 'Región de notación'); }
     else if (k === 'e' && e.shiftKey) { e.preventDefault(); H().nuevaEq('', false, 0); estado('Región numérica'); }
+  });
+  document.addEventListener('keydown', (e) => {          // Ctrl+B / I / U sobre texto editable; Mayús+F3 cicla MAYÚSCULAS → minúsculas → Cada Palabra (como el WPF)
+    if (e.altKey) return; const k = e.key.toLowerCase();
+    if (e.ctrlKey && !e.shiftKey && (k === 'b' || k === 'i' || k === 'u')) { if (selTxt()) { e.preventDefault(); cmd(k === 'b' ? 'bold' : k === 'i' ? 'italic' : 'underline'); } }
+    else if (e.key === 'F3' && e.shiftKey && !e.ctrlKey) { const t = selTxt(); if (!t) return; const s = String(getSelection()); if (!s) return; e.preventDefault();
+      const may = s.toUpperCase(), min = s.toLowerCase(), cap = s.toLowerCase().replace(/(^|[^\p{L}\p{N}])(\p{L})/gu, (m, a, b) => a + b.toUpperCase());
+      document.execCommand('insertText', false, s === may ? min : s === min ? cap : may); estado('Mayúsculas / minúsculas'); }
   });
   document.addEventListener('keydown', (e) => {
     if (!e.ctrlKey || e.altKey) return;

@@ -50,7 +50,20 @@
 
   // ---------------------------------------------------------------- la lista desplegable
   let el = null, lista = [], sel = 0, aplicar = null;
-  const CAT = { estructura: 'Estructura', simbolo: 'Símbolo', funcion: 'Función', variable: 'Variable de la hoja', palabra: 'Palabra del programa' };
+  // unidades tras «'»: las más usadas primero, luego las demás (con prefijos k M G m c d µ n h sobre las prefijables)
+  const COMUNES = ['m', 'mm', 'cm', 'km', 'kN', 'N', 'kg', 'kPa', 'MPa', 'GPa', 'Pa', 'tonf', 'kgf', 's', 'deg', 'rad', 'kN/m'];
+  let TODAS_U = null;
+  function unidadesSug(pref) {
+    if (!HK.U || !HK.U.UNIDADES) return [];
+    if (!TODAS_U) {
+      const base = Object.keys(HK.U.UNIDADES), pr = Object.keys(HK.U.PREFIJOS).filter((p) => 'kMGmcdµnh'.includes(p)), set = new Set(COMUNES);
+      base.forEach((b) => { set.add(b); if (HK.U.UNIDADES[b].prefijable) pr.forEach((p) => set.add(p + b)); });
+      TODAS_U = [...set].filter((n) => HK.U.existe(n));
+    }
+    const exacta = TODAS_U.filter((n) => n === pref), ini = TODAS_U.filter((n) => n !== pref && n.startsWith(pref));
+    return exacta.concat(ini.sort((a, b) => (COMUNES.indexOf(a) < 0 ? 99 : COMUNES.indexOf(a)) - (COMUNES.indexOf(b) < 0 ? 99 : COMUNES.indexOf(b)) || a.length - b.length)).slice(0, 8).map((n) => ({ p: n, t: 'unidad', ic: 'u', d: 'unidad (' + pref + '…): se escribe con apóstrofo, p. ej. 10' + "'" + n }));
+  }
+  const CAT = { unidad: 'Unidad', estructura: 'Estructura', simbolo: 'Símbolo', funcion: 'Función', variable: 'Variable de la hoja', palabra: 'Palabra del programa' };
   function oculta() { if (el) { el.remove(); el = null; } lista = []; aplicar = null; }
   function pinta() {
     if (!el) { el = document.createElement('div'); el.className = 'sug'; document.body.appendChild(el); }
@@ -68,6 +81,13 @@
   // ---------------------------------------------------------------- en una ecuación (nodos)
   function actualiza(ed) {
     if (!ed || !ed.palabraAntes) { oculta(); return; }
+    { const pu = ed.cur && ed.cur.fila[ed.cur.i - 1];          // unidad abierta (tras «'»): sugiere unidades
+      if (pu && pu.un && pu.ab && pu.s) {
+        const lu = unidadesSug(pu.s); if (!lu.length || (lu.length === 1 && lu[0].p === pu.s)) { oculta(); return; }
+        const s = ed.lugar(), r = ed.canvas.getBoundingClientRect(), k = ed.canvas.offsetWidth ? r.width / ed.canvas.offsetWidth : 1;
+        muestra(lu, r.left + s.x * k - 6, r.top + (s.y + s.d) * k + 8, (sg) => { pu.s = sg.p; pu.ab = false; ed.cambio(); });
+        return;
+      } }
     const w = ed.palabraAntes(); if (!w || w.texto.length < 2) { oculta(); return; }
     const l = sugerencias(w.texto, FIJAS); if (!l.length) { oculta(); return; }
     const s = ed.lugar(), r = ed.canvas.getBoundingClientRect(), k = ed.canvas.offsetWidth ? r.width / ed.canvas.offsetWidth : 1;
