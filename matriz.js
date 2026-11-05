@@ -7,7 +7,8 @@
     s(i, j, v) { this.a[i * this.c + j] = v; }
   }
   // tope de trabajo por recálculo: un archivo ajeno no puede congelar el navegador con bucles o productos gigantes
-  let PASOS = 0; const paso = (n) => { if ((PASOS += n || 1) > 1e6) throw new Error('demasiado cálculo (límite de seguridad de 1 millón de pasos)'); };
+  let PASOS = 0, LIM = 1e6; const pesado = (txt) => { const e = new Error(txt); e.pesado = true; return e; };
+  const paso = (n) => { if ((PASOS += n || 1) > LIM) throw pesado('cálculo pesado: pasa de ' + (LIM / 1e6) + ' millón(es) de pasos'); };
   const tam = (n, m) => { if (!(n * (m === undefined ? n : m) <= 4e6)) throw new Error('matriz demasiado grande (maximo 4 millones de elementos)'); };
   const esM = (x) => x instanceof Mat;
   // unidades: una celda es un número o una cantidad {v,d,disp} (HK.U); con solo números todo va por el camino rápido de siempre
@@ -218,7 +219,7 @@
         if (/^return\b/.test(raw)) { const e = raw.replace(/^return\s*/, '').replace(/;\s*$/, ''); if (e) ultimo = { v: ev(HK.parse(e)) }; i = lineas.length; return; }          // «return e»: devuelve y termina
         if ((m = /^while\s+(.+)$/.exec(raw))) {
           const cond = m[1], cuerpo = ++i; let fin = cuerpo, n = 0;
-          while (cumple(cond)) { if (++n > 1e6) throw new Error('demasiadas iteraciones'); paso(); i = cuerpo; bloque(); fin = i; }
+          while (cumple(cond)) { if (++n > LIM) throw pesado('cálculo pesado: demasiadas iteraciones'); paso(); i = cuerpo; bloque(); fin = i; }
           if (n === 0) { i = cuerpo; saltaBloque(); fin = i; }
           i = fin + 1; continue;
         }
@@ -262,5 +263,5 @@
     bloque();
     return ultimo;
   }
-  HK.M = { reinicia: () => { PASOS = 0; }, paso, tam, Mat, esM, arit, neg, FM, indice, literal, programa, COLON, asigna };
+  HK.M = { reinicia: () => { PASOS = 0; }, limite: (n) => { LIM = n; }, lim: () => LIM, pesado, paso, tam, Mat, esM, arit, neg, FM, indice, literal, programa, COLON, asigna };
 })(window);

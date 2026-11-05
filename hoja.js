@@ -339,11 +339,25 @@
       if (abre) prof++; else if (cierra && prof > 0) { prof--; if (prof === 0) grupo = null; }
     }
   }
+  // Cálculo pesado: no se cuelga ni se oculta; se avisa y la persona decide si sigue (hasta 20 millones de pasos).
+  function avisoPesado(msg) {
+    let b = document.getElementById('aviso-pesado');
+    if (!msg) { if (b) b.style.display = 'none'; return; }
+    if (!b) {
+      b = document.createElement('div'); b.id = 'aviso-pesado';
+      b.style.cssText = 'position:fixed;left:50%;bottom:38px;transform:translateX(-50%);z-index:50;background:#fff4d6;color:#6b4a00;border:1px solid #d9a42b;border-radius:8px;padding:8px 12px;font:13px Segoe UI,sans-serif;box-shadow:0 2px 10px #0003;display:flex;gap:10px;align-items:center;max-width:92vw';
+      b.innerHTML = '<span class="t"></span><button class="si">Continuar (hasta 20 millones)</button><button class="no">Cancelar</button>';
+      document.body.appendChild(b);
+      b.querySelector('.no').onclick = () => { b.style.display = 'none'; };
+      b.querySelector('.si').onclick = () => { b.style.display = 'none'; HK.M.limite(2e7); try { resolver(true); } finally { HK.M.limite(1e6); } };
+    }
+    b.querySelector('.t').textContent = '⚠ ' + msg + '. Puede tardar y congelar la pestaña unos segundos.'; b.style.display = 'flex';
+  }
   let calcManual = false;
   function resolver(forzar) {
     if (calcManual && !forzar) return;          // «Celdas a mano»: solo se calcula al ejecutar
     reg.sort((a, b) => (a === b || !a.el || !b.el) ? 0 : (a.el.compareDocumentPosition(b.el) & Node.DOCUMENT_POSITION_FOLLOWING) ? -1 : 1);          // las fórmulas dentro de un párrafo van en el orden del documento
-    const env = { v: {}, f: {}, l: {} }, S = HK.simb; HK.entorno = env; HK.M.reinicia();
+    const env = { v: {}, f: {}, l: {} }, S = HK.simb; HK.entorno = env; HK.M.reinicia(); let hayPesado = '';
     const sim = (e) => S.resuelve(e, env);
     const hechos = new Set();
     agrupaProgramas();          // for / while / if … end tecleados fila por fila en nodos
@@ -383,7 +397,7 @@
           let numInt = false;          // «∫ x² dx =» con límites: el «=» EJECUTA la integral (numérica, Gauss), como en el WPF; no hace falta «y = ∫…»
           if (r.modo !== 1 && S.tieneSimb(s.e) && soloIntegral(s.e)) {
             env.numInt = true;
-            try { r.ed.resultado = valorRes(HK.evalua(s.e, env)); numInt = true; } catch (e) { numInt = false; } finally { env.numInt = false; }
+            try { r.ed.resultado = valorRes(HK.evalua(s.e, env)); numInt = true; } catch (e) { if (e.pesado) throw e; numInt = false; } finally { env.numInt = false; }
           }
           if (numInt) { /* ya tiene resultado numérico */ }
           else if (r.modo === 1 || S.tieneSimb(s.e)) r.ed.resultado = { sim: r.modo === 1 ? '→' : '=', fila: HK.aFilas(sim(s.e)) };
@@ -395,7 +409,7 @@
           marcaIgual(r.ed, 'define');
           let simbolica = S.tieneSimb(s.r);
           if (simbolica && s.l.t === 'id' && r.modo !== 1 && soloIntegral(s.r)) {          // «K = … integral(…)»: numérica (Gauss) si todo se puede evaluar; si no, queda simbólica
-            env.numInt = true; try { env.v[s.l.n] = HK.evalua(s.r, env); delete env.l[s.l.n]; simbolica = null; } catch (e) { simbolica = true; } finally { env.numInt = false; }
+            env.numInt = true; try { env.v[s.l.n] = HK.evalua(s.r, env); delete env.l[s.l.n]; simbolica = null; } catch (e) { if (e.pesado) throw e; simbolica = true; } finally { env.numInt = false; }
           }
           if (simbolica === null) continue;
           if (s.muestra && s.l.t === 'id' && !simbolica) {          // «a = expr =»: define y enseña el valor
@@ -404,19 +418,21 @@
           let cuerpo = s.r;
           if (simbolica) {
             try { cuerpo = sim(s.r); }
-            catch (e) { if (e.message === 'motor:cargando' || s.l.t !== 'id' || r.modo === 1) throw e; let v; env.numInt = true; try { v = HK.evalua(s.r, env); } catch (e2) { throw e; } finally { env.numInt = false; } env.v[s.l.n] = v; delete env.l[s.l.n]; continue; }          // integral de una matriz (Nv, Bm…): el motor simbólico no puede → numérica (Gauss)
+            catch (e) { if (e.message === 'motor:cargando' || s.l.t !== 'id' || r.modo === 1) throw e; let v; env.numInt = true; try { v = HK.evalua(s.r, env); } catch (e2) { throw e2.pesado ? e2 : e; } finally { env.numInt = false; } env.v[s.l.n] = v; delete env.l[s.l.n]; continue; }          // integral de una matriz (Nv, Bm…): el motor simbólico no puede → numérica (Gauss)
           }
           if (s.l.t === 'call' && s.l.args.every((a) => a.t === 'id')) env.f[s.l.f] = { p: s.l.args.map((a) => a.n), b: cuerpo };
           else if (s.l.t === 'id') {
             if (simbolica) env.l[s.l.n] = cuerpo;
-            else { try { env.v[s.l.n] = HK.evalua(cuerpo, env); delete env.l[s.l.n]; } catch (e) { env.l[s.l.n] = cuerpo; } }
+            else { try { env.v[s.l.n] = HK.evalua(cuerpo, env); delete env.l[s.l.n]; } catch (e) { if (e.pesado) throw e; env.l[s.l.n] = cuerpo; } }
           }
         }
       } catch (e) {
         const m = /^indef:(.*)$/.exec(e.message);
-        r.ed.resultado = e.message === 'motor:cargando' ? { kind: 'aviso', texto: 'cargando el motor simbólico…' } : m ? { kind: 'aviso', texto: 'sin definir: ' + m[1] } : { kind: 'err', texto: e.message };
+        r.ed.resultado = e.message === 'motor:cargando' ? { kind: 'aviso', texto: 'cargando el motor simbólico…' } : m ? { kind: 'aviso', texto: 'sin definir: ' + m[1] } : e.pesado ? { kind: 'aviso', texto: '⚠ ' + e.message } : { kind: 'err', texto: e.message };
+        if (e.pesado) hayPesado = e.message;
       }
     }
+    avisoPesado(hayPesado);
     redibuja();
   }
   let previo = null;
