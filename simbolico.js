@@ -51,8 +51,17 @@
   function divCero(a) {          // ¿hay algún «/ algo 0»?  (tras plegar sin(0) etc. el motor devolvería 0 en vez de avisar)
     return typeof a !== 'string' && ((a[0] === '/' && a[2] === '0') || a.slice(1).some(divCero));
   }
+  // (expt base N) con N entero > 60 congela el navegador: se rechaza antes de llegar al motor
+  function topeExpLisp(code) {
+    if (code.length > 20000) throw new Error('expresion demasiado larga para el calculo simbolico');
+    let i = -1; while ((i = code.indexOf('(expt ', i + 1)) >= 0) {
+      let d = 0, j = i, ult = '', ini = -1;
+      for (; j < code.length; j++) { const ch = code[j]; if (ch === '(') { d++; if (d === 2) ini = j; } else if (ch === ')') { d--; if (d === 1) ini = -1; if (d === 0) break; } else if (d === 1 && ch === ' ' ) { ult = ''; ini = j + 1; } else if (d === 1) ult += ch; }
+      if (/^\d+$/.test(ult) && parseInt(ult, 10) > 60) throw new Error('exponente demasiado grande para el calculo simbolico (maximo 60)');
+    }
+  }
   function lisp(code) {
-    if (!M.listo) throw new Error('motor:cargando');
+    if (!M.listo) throw new Error('motor:cargando'); topeExpLisp(code);
     const s = M.run('(prin1 ' + code + ')');
     if (s.startsWith(';')) throw new Error(s.replace(/^;\s*(error:\s*)?/, '').trim());
     return s.trim();
@@ -231,7 +240,9 @@
     if (a.t === 'call' && SIMBOLICAS.has(a.f)) return true;
     return ['a', 'b'].some((k) => a[k] && tieneSimb(a[k])) || (a.args || []).some(tieneSimb);
   }
-  function resuelve(ast, env) {          // AST de la hoja → AST simplificado por el motor
+  // un archivo ajeno no puede congelar el navegador pidiendo (x+1)^100000: exponente simbólico máximo 60
+  function topeExp(n, k) { if (!n || typeof n !== 'object' || (k || 0) > 400) return; if (n.t === 'bin' && n.op === '^' && n.b && n.b.t === 'num' && n.b.v > 60) throw new Error('exponente demasiado grande para el cálculo simbólico (máximo 60)'); for (const q in n) { const h = n[q]; if (Array.isArray(h)) h.forEach((z) => topeExp(z, (k || 0) + 1)); else if (h && typeof h === 'object') topeExp(h, (k || 0) + 1); } }
+  function resuelve(ast, env) { topeExp(ast);          // AST de la hoja → AST simplificado por el motor
     const c = { env, libres: new Set() }, t = T(ast, c);
     return t.startsWith('(vec ') || c.crudo ? aAst(t) : aAst(lisp("(simplify '" + t + ')'));
   }

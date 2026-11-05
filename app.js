@@ -192,7 +192,7 @@
     try { const l = recientes().filter((r) => r.n !== nombre); l.unshift({ n: nombre, t: texto }); localStorage.setItem(RECI, JSON.stringify(l.slice(0, 8))); } catch (e) { /* sin almacenamiento: no pasa nada */ }
   }
   function pintaRecientes() {
-    const c = $('recientes'); if (!c) return; const l = recientes(); c.innerHTML = '';
+    const c = $('recientes'); if (!c) return; const l = recientes().filter((r) => r && typeof r.n === 'string' && typeof r.t !== 'undefined'); c.innerHTML = '';
     if (!l.length) { const b = document.createElement('button'); b.disabled = true; b.textContent = '(ninguno todavía)'; c.appendChild(b); return; }
     l.forEach((r) => { const b = document.createElement('button'); b.textContent = r.n; b.onclick = () => { H().abre(r.t); estado('Abierto: ' + r.n); setTimeout(pagina, 50); recuerda(r.n, r.t); }; c.appendChild(b); });
   }
@@ -216,7 +216,7 @@
       else if (q === 'dl') { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([ta.value], { type: 'text/plain;charset=utf-8' })); a.download = 'hoja.lisp'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); estado('Descargado: hoja.lisp'); }
       else if (q === 'ap') { H().abre(JSON.stringify(HK.hlisp.importa(ta.value))); v.remove(); estado('Script aplicado a la hoja'); setTimeout(pagina, 50); } });
   };
-  $('m-lisp').onclick = () => { G.open('https://giorgioburbanelli89.github.io/hekatan-lisp/', '_blank'); estado('Vista completa Hekatan LISP: se abre en una pestaña nueva'); };          // siempre a la vista, en la barra de arriba
+  $('m-lisp').onclick = () => { G.open('https://giorgioburbanelli89.github.io/hekatan-lisp/', '_blank', 'noopener,noreferrer'); estado('Vista completa Hekatan LISP: se abre en una pestaña nueva'); };          // siempre a la vista, en la barra de arriba
   // Ejemplos de Hekatan LISP: la MISMA lista que la web de Hekatan LISP (ejemplos/hlisp/lista.json), un botón por hoja
   fetch('ejemplos/hlisp/lista.json').then((r) => r.json()).then((L) => {
     const g = $('grp-lisp'); if (!g) return; g.textContent = 'Hekatan LISP (.lisp) · ' + L.length + ' ejemplos'; let ant = g;
@@ -416,8 +416,7 @@
     { ic: '==', t: 'Signo ==', tip: 'Cómo se dibuja el igual de ecuación (==)', acc: () => { document.body.classList.toggle('igual2'); estado('Signo == cambiado'); } },
     { ic: '▤', t: 'Hoja con páginas', tip: 'Hoja con páginas delimitadas o hoja continua sin límites', acc: hojaConPaginas },
     'sep',
-    { ic: '◫', t: 'Ocultar bloque', tip: 'Oculta la región donde está el cursor (Ctrl+H); Ctrl+Mayús+H muestra u oculta los bloques ocultos', acc: () => { const o = H().ocultaBloque(); estado(o ? 'Bloque oculto (Ctrl+Mayús+H para verlos)' : 'Bloque visible'); } }, { ic: '＋', t: 'Código', tip: 'Región nueva escrita como script (for / while / if … end)', acc: () => H().bloque('prog') },
-    { ic: '＋‹›', t: 'Código', tip: 'Región nueva escrita directamente como script estilo MATLAB (for / while / if / function … end); Ctrl+K la pasa a nodos', acc: () => { H().nuevoCodigo(); estado('Región de código: script estilo MATLAB (Ctrl+K lo pasa a nodos)'); } },
+    { ic: '◫', t: 'Ocultar bloque', tip: 'Oculta la región donde está el cursor (Ctrl+H); Ctrl+Mayús+H muestra u oculta los bloques ocultos', acc: () => { const o = H().ocultaBloque(); estado(o ? 'Bloque oculto (Ctrl+Mayús+H para verlos)' : 'Bloque visible'); } }, { ic: '＋', t: 'Código', tip: 'Región nueva escrita directamente como script estilo MATLAB (for / while / if / function … end); Ctrl+K la pasa a nodos', acc: () => { H().nuevoCodigo(); estado('Región de código: script estilo MATLAB (Ctrl+K lo pasa a nodos)'); } },
     { ic: '⇄', t: 'Código ⇄ Nodos', tip: 'Ver la región como código o como ecuación dibujada (Ctrl+K)', acc: () => { H().alternaCodigo(); } }, off('⌀', 'Ocultar unidades de conversión'),
   ];
   CINTA['Formato matemático'] = [
@@ -614,7 +613,7 @@
   }
   function llenaComentarios() {
     const p = $('coment'); if (!p) return; p.innerHTML = '<b>Comentarios</b>' + (comentarios().length ? '' : '<p>(ninguno)</p>');
-    comentarios().forEach((e, i) => { const a = document.createElement('a'); a.innerHTML = '<i>' + (i + 1) + '. «' + e.textContent.slice(0, 40) + '»</i><br>' + e.title; a.onclick = () => e.scrollIntoView({ block: 'center', behavior: 'smooth' }); p.appendChild(a); });
+    comentarios().forEach((e, i) => { const a = document.createElement('a'); const it = document.createElement('i'); it.textContent = (i + 1) + '. «' + e.textContent.slice(0, 40) + '»'; a.append(it, document.createElement('br'), document.createTextNode(e.title || '')); a.onclick = () => e.scrollIntoView({ block: 'center', behavior: 'smooth' }); p.appendChild(a); });
   }
   function panelComentarios() {
     const p = $('coment'); if (p) { p.remove(); estado('Panel de comentarios oculto'); return; }

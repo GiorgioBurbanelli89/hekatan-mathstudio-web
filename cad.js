@@ -58,7 +58,8 @@
 
   // ---------------------------------------------------------------- SVG
   const ACI = { 1: '#d32f2f', 2: '#d99a00', 3: '#2e9e4f', 4: '#00a5b5', 5: '#1a4fa3', 6: '#b0359b', 7: '#222', 8: '#777', 9: '#aaa' };
-  const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const nfin = (v) => { const x = Number(v); return isFinite(x) ? x : 0; };
   const suave = (c) => (c.length === 4 ? '#' + [...c.slice(1)].map((x) => x + x).join('') : c) + '55';          // relleno translucido (#rgb se expande a #rrggbb)
   const pts = (e, c) => todos(e, c).filter((v) => v.length >= 2);
   function dimGeom(e) {          // cota alineada: puntos 13 y 14, posición de la línea de cota 10
@@ -140,7 +141,7 @@
   function aSvg(ents, ancho) {
     const P = []; ents.forEach((e) => { const ci = (ents.capas || {})[get(e, 8)]; if (!(ci && ci.off)) puntosEnt(e).forEach((p) => P.push(p)); });
     if (!P.length) return '<svg xmlns="http://www.w3.org/2000/svg" width="' + ancho + '" height="40"><text x="8" y="24" fill="#888" font-size="12">(el dibujo está vacío)</text></svg>';
-    let x0 = Math.min(...P.map((p) => p[0])), x1 = Math.max(...P.map((p) => p[0])), y0 = Math.min(...P.map((p) => p[1])), y1 = Math.max(...P.map((p) => p[1]));
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity; for (const p of P) { if (p[0] < x0) x0 = p[0]; if (p[0] > x1) x1 = p[0]; if (p[1] < y0) y0 = p[1]; if (p[1] > y1) y1 = p[1]; }
     if (x1 - x0 < 1e-9) x1 = x0 + 1; if (y1 - y0 < 1e-9) y1 = y0 + 1;
     let M = 24, k = (ancho - 2 * M) / (x1 - x0), alto = Math.max(60, Math.min(520, (y1 - y0) * k + 2 * M)), s = Math.min(k, (alto - 2 * M) / (y1 - y0));
     if (HK.cad.vistaFija) { [x0, y0, s, alto, M] = HK.cad.vistaFija; }          // durante un arrastre la escala no cambia (si no, el ratón se desfasa en cada redibujo)
@@ -166,7 +167,7 @@
       else if (t === 'DIMENSION' && [3, 4, 5].includes((get(e, 70) || 0) & 7)) o += cotaEspecialSvg(e, X, Y, s);
       else if (t === 'DIMENSION') {
         const d = dimGeom(e); if (!d) continue; const ox = d.nx * d.s, oy = d.ny * d.s, tk = 4;
-        o += '<g class="hk-cota" data-k="' + (kCota++) + '" data-a="' + d.a[0] + ',' + d.a[1] + '" data-b="' + d.b[0] + ',' + d.b[1] + '" data-s="' + d.s + '">';
+        o += '<g class="hk-cota" data-k="' + (kCota++) + '" data-a="' + nfin(d.a[0]) + ',' + nfin(d.a[1]) + '" data-b="' + nfin(d.b[0]) + ',' + nfin(d.b[1]) + '" data-s="' + nfin(d.s) + '">';
         const A = [d.a[0] + ox, d.a[1] + oy], B = [d.b[0] + ox, d.b[1] + oy], g = 'stroke="#555" stroke-width="1"';
         o += '<line x1="' + X(d.a[0]) + '" y1="' + Y(d.a[1]) + '" x2="' + X(A[0]) + '" y2="' + Y(A[1]) + '" ' + g + '/><line x1="' + X(d.b[0]) + '" y1="' + Y(d.b[1]) + '" x2="' + X(B[0]) + '" y2="' + Y(B[1]) + '" ' + g + '/>';
         o += '<line x1="' + X(A[0]) + '" y1="' + Y(A[1]) + '" x2="' + X(B[0]) + '" y2="' + Y(B[1]) + '" ' + g + '/>';

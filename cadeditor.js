@@ -188,7 +188,7 @@
       if (e.t === 'cota') {
         const g = cotaG(e), c = '#' + (cls ? '1a73e8' : prev ? 'd99a00' : '555'), l = (a, b) => '<line x1="' + px(a[0]) + '" y1="' + py(a[1]) + '" x2="' + px(b[0]) + '" y2="' + py(b[1]) + '" stroke="' + c + '" stroke-width="1"/>';
         const t = e.txt != null ? e.txt : 'L = ' + nf(g.L);
-        return l(e.a, g.A2) + l(e.b, g.B2) + l(g.A2, g.B2) + '<text class="hc-cota" data-i="' + S.ents.indexOf(e) + '" x="' + (px(g.A2[0]) + px(g.B2[0])) / 2 + '" y="' + ((py(g.A2[1]) + py(g.B2[1])) / 2 - 5) + '" text-anchor="middle" font-size="12" fill="' + c + '" font-family="Segoe UI,sans-serif">' + t + '</text>';
+        return l(e.a, g.A2) + l(e.b, g.B2) + l(g.A2, g.B2) + '<text class="hc-cota" data-i="' + S.ents.indexOf(e) + '" x="' + (px(g.A2[0]) + px(g.B2[0])) / 2 + '" y="' + ((py(g.A2[1]) + py(g.B2[1])) / 2 - 5) + '" text-anchor="middle" font-size="12" fill="' + c + '" font-family="Segoe UI,sans-serif">' + esc(t) + '</text>';
       }
       return '';
     };

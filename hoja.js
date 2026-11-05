@@ -338,7 +338,7 @@
   function resolver(forzar) {
     if (calcManual && !forzar) return;          // «Celdas a mano»: solo se calcula al ejecutar
     reg.sort((a, b) => (a === b || !a.el || !b.el) ? 0 : (a.el.compareDocumentPosition(b.el) & Node.DOCUMENT_POSITION_FOLLOWING) ? -1 : 1);          // las fórmulas dentro de un párrafo van en el orden del documento
-    const env = { v: {}, f: {}, l: {} }, S = HK.simb; HK.entorno = env;
+    const env = { v: {}, f: {}, l: {} }, S = HK.simb; HK.entorno = env; HK.M.reinicia();
     const sim = (e) => S.resuelve(e, env);
     const hechos = new Set();
     agrupaProgramas();          // for / while / if … end tecleados fila por fila en nodos
@@ -487,26 +487,50 @@
     for (let k = 0; k < 4; k++) u = u.replace(/\(\(([^()]*)\)\)/g, '($1)');          // ((…)) → (…)
     return u.replace(/\(([\w.^]+)\)\//g, '$1/').replace(/\/\(([\w.^]+)\)/g, '/$1');          // (x^2)/… → x^2/…   y   …/(y) → …/y
   }
-  function alternaCodigo() {          // Código ⇄ Nodos (Ctrl+K): la región activa se ve como texto de código editable o como ecuación dibujada
-    const r = activaEq(); if (!r) return false;
-    if (r.cod) { r.ed.cargar(HK.codigoAFilas(r.cod.value)); r.editado = true; r.cod.remove(); r.cod = null; r.ed.canvas.style.display = ''; activo = r.ed; resolver(); redibuja(); return true; }
-    const ta = document.createElement('textarea'); ta.className = 'cod'; ta.spellcheck = false; ta.value = codigoLimpio(r.ed.texto()); ta.rows = Math.max(1, ta.value.split('\n').length);
+  // Código ⇄ Nodos (Ctrl+K), como el WPF: la UNIDAD (todas las líneas del bloque: grupo abierto de archivo o programa for/while/if…end) se ve como un solo texto con sangría, y al volver cada línea es un nodo
+  function unidadDe(r) {
+    const g = r.el.parentElement; if (g && g.classList && g.classList.contains('grupo')) return reg.filter((x) => x.t === 'eq' && x.el.parentElement === g);
+    if (r.prog) { const l = reg.filter((x) => x.t === 'eq' && x.prog === r.prog); if (l.length) return l; }
+    return [r];
+  }
+  function alternaCodigo() {
+    const act = activaEq(); if (!act) return false;
+    const cod = reg.find((x) => x.cod && (x === act || (x.cod.unidad && x.cod.unidad.includes(act)))) || (act.cod ? act : null);
+    if (cod) {          // código → nodos: una ecuación por línea (con la misma sangría) en el lugar del texto
+      const ta = cod.cod, ux = ta.unidad, f0 = ta.fila, i0 = Math.max(0, reg.indexOf(ux[0]));
+      const lineas = ta.value.replace(/\r/g, '').split('\n').filter((l) => l.trim());
+      ux.forEach((x) => { const k = reg.indexOf(x); if (k >= 0) reg.splice(k, 1); const fx = x.el.closest('.fila'); x.el.remove(); if (fx && fx !== f0 && !fx.children.length) fx.remove(); });
+      ta.remove(); cod.codRes.remove(); f0.querySelectorAll('.grupo').forEach((g) => { if (!g.children.length) g.remove(); });
+      const n0 = reg.length; const it = { t: 'eq', codigo: lineas.join('\n') };
+      const esProg = lineas.some((l) => /^\s*(for|while|if|prog|else|end|return)\b|=\s*prog\s*$/.test(l));
+      let grupo = f0; if (lineas.length > 1) { grupo = document.createElement('div'); grupo.className = 'grupo'; f0.appendChild(grupo); }
+      lineas.forEach((l) => { const sil = /;\s*$/.test(l), r = agregaEq(l.trim().replace(/;\s*$/, ''), { modo: ux[0].modo, grupo, oculto: ux[0].oculto }); r.original = it; r.sil = sil; r.auto = true; r.editado = true; if (esProg) { r.prog = it; r.ed.sangria = (l.match(/^\s*/)[0].length) * 2; r.el.style.marginLeft = r.ed.sangria * 5 + 'px'; } });
+      const nuevas = reg.splice(n0); reg.splice(i0, 0, ...nuevas); f0.classList.remove('esCodigo');
+      if (nuevas.length) activo = nuevas[nuevas.length - 1].ed; resolver(); redibuja(); return true;
+    }
+    const ux = unidadDe(act), f0 = ux[0].el.closest('.fila'); if (!f0) return false;
+    const ta = document.createElement('textarea'); ta.className = 'cod'; ta.spellcheck = false;
+    ta.value = ux.map((x) => ' '.repeat(Math.round((x.ed.sangria || 0) / 2)) + codigoLimpio(x.ed.texto()) + (x.sil ? ';' : '')).join('\n'); ta.rows = Math.max(1, ta.value.split('\n').length);
     const res = document.createElement('div'); res.className = 'cod-res';          // como el WPF: debajo del código, el resultado de cada línea
-    const muestra = () => {
-      const out = []; let err = false;
+    const muestra = () => {          // se evalúa en una COPIA del entorno (sin pisar las variables de la hoja): sentencia por sentencia, los bloques for/while/if…end completos
+      const out = []; let err = false, prof = 0, ini = -1; const E = HK.entorno || { v: {}, f: {}, l: {} }, env = { v: Object.assign({}, E.v), f: Object.assign({}, E.f), l: Object.assign({}, E.l) };
       ta.value.replace(/\r/g, '').split('\n').forEach((l, i) => {
-        const t = l.split('%')[0].trim(); if (!t || /^(for|while|if|else|elseif|end|function|prog)\b/.test(t) || /;\s*$/.test(t)) return;
-        try { const u = HK.M.programa([t], HK.entorno || { v: {}, f: {}, l: {} }); if (u && u.v !== undefined && u.v !== null) { const v = valorRes(u.v); out.push('línea ' + (i + 1) + ':  ' + (v.kind === 'mat' ? 'matriz ' + v.mat.r + '×' + v.mat.c : v.texto)); } } catch (e) { out.push('⚠ línea ' + (i + 1) + ': ' + e.message); err = true; }
+        const t = l.split('%')[0].trim(); if (!t) return; const abre = /^(for|while|if|prog)\b|=\s*prog\s*$/.test(t), cierra = /^end\b/.test(t);
+        if (abre) { if (prof === 0) ini = i; prof++; } else if (cierra && prof > 0) { prof--; if (prof === 0) { try { HK.M.programa(ta.value.split('\n').slice(ini, i + 1).map((s) => s.split('%')[0].trim()).filter(Boolean), env); } catch (e) { out.push('⚠ línea ' + (ini + 1) + ': ' + e.message); err = true; } } return; }
+        if (prof > 0 || /^(else|elseif|function)\b/.test(t)) return;
+        try { const u = HK.M.programa([t.replace(/;\s*$/, '') + (/;\s*$/.test(t) ? ';' : '')], env); if (!/;\s*$/.test(t) && u && u.v !== undefined && u.v !== null) { const v = valorRes(u.v); out.push('línea ' + (i + 1) + ':  ' + (v.kind === 'mat' ? 'matriz ' + v.mat.r + '×' + v.mat.c : v.texto)); } } catch (e) { out.push('⚠ línea ' + (i + 1) + ': ' + e.message); err = true; }
       });
       res.textContent = out.join('\n'); res.classList.toggle('err', err);
     };
-    r.codRes = res; r.codMuestra = muestra;
-    ta.addEventListener('input', () => { ta.rows = Math.max(1, ta.value.split('\n').length); try { r.ed.cargar(HK.codigoAFilas(ta.value)); r.editado = true; resolver(); muestra(); } catch (e) { res.textContent = '⚠ ' + e.message; res.classList.add('err'); } if (HK.sug) HK.sug.enTextarea(ta); });
+    ta.unidad = ux; ta.fila = f0; act.cod = ta; act.codRes = res; ta.rep = act;
+    ta.addEventListener('input', () => { ta.rows = Math.max(1, ta.value.split('\n').length); muestra(); if (HK.sug) HK.sug.enTextarea(ta); });
     ta.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.ctrlKey && e.key.toLowerCase() === 'k') { e.preventDefault(); alternaCodigo(); } });
-    r.ed.canvas.style.display = 'none'; r.el.appendChild(ta); r.el.appendChild(res); r.cod = ta; muestra(); ta.focus(); return true;
+    ux.forEach((x) => { x.el.style.display = 'none'; });
+    f0.appendChild(ta); f0.appendChild(res); f0.classList.add('esCodigo'); muestra(); ta.focus(); return true;
   }
   function nuevoCodigo(plantilla) {          // «＋ Código» (WPF): región nueva escrita directamente como script estilo MATLAB (for / while / if / function … end)
-    const r = agregaEq('', {}); activo = r.ed; r.ed.cargar([]); alternaCodigo(); if (r.cod) { r.cod.value = plantilla || '% escribe aquí un script (for / while / if / function … end)\n'; r.cod.rows = Math.max(2, r.cod.value.split('\n').length); r.cod.focus(); r.cod.setSelectionRange(r.cod.value.length, r.cod.value.length); }
+    const r = agregaEq('', {}); activo = r.ed; r.ed.cargar([]); alternaCodigo();
+    if (r.cod) { r.cod.value = plantilla || '% escribe aquí un script (for / while / if / function … end)\n'; r.cod.rows = Math.max(2, r.cod.value.split('\n').length); r.cod.focus(); r.cod.select(); r.cod.dispatchEvent(new Event('input')); }
     r.el.scrollIntoView({ block: 'nearest' }); return r;
   }
   function ocultaBloque() {          // Ocultar bloque (Ctrl+H): la región con el cursor se esconde; Ctrl+Mayús+H muestra u oculta los bloques ocultos
@@ -569,7 +593,10 @@
 
   // ---------------------------------------------------------------- abrir / guardar .hmath
   function abre(json) {
-    const d = typeof json === 'string' ? JSON.parse(json) : json; limpia();
+    const d = typeof json === 'string' ? JSON.parse(json) : json;
+    if (Array.isArray(d.items) && d.items.length > 3000) throw new Error('hoja demasiado grande (maximo 3000 regiones)');
+    if ((d.items || []).some((q) => q && typeof q.codigo === 'string' && q.codigo.length > 20000)) throw new Error('una ecuacion es demasiado larga (maximo 20000 caracteres)');
+    limpia();
     { const lisp = d.estilo === 'lisp'; document.body.classList.toggle('lisp', lisp); document.body.classList.toggle('sinpag', lisp);          // hoja de Hekatan LISP: continua y compacta, como en el WPF (estilo «lisp»)
       if (HK.app) { if (lisp) { HK.app.setTxt(Math.round(d.txt || 15)); HK.app.setEq(Math.round(d.eq || 15)); } else if (HK.app.estiloLisp) { HK.app.setTxt(13); HK.app.setEq(14); } HK.app.estiloLisp = lisp; } }
     for (let it of d.items || []) {
@@ -605,15 +632,23 @@
   }
   // formato del texto (negrita, tamaño, tabla…): solo etiquetas y estilos de una lista corta
   const ETQ = /^(B|I|U|S|STRIKE|SUB|SUP|A|BR|SPAN|FONT|DIV|P|UL|OL|LI|TABLE|TBODY|TR|TD|TH|IMG)$/;
+  // solo propiedades de formato: nada de position/z-index/inset (taparían la interfaz con un aviso falso)
+  const CSS_OK = /^(color|background|background-color|font|font-family|font-size|font-weight|font-style|text-decoration|text-align|vertical-align|line-height|border|border-collapse|border-color|border-style|border-width|padding|margin|width|height|white-space)$/;
+  function estiloSeguro(c) {
+    const v = c.getAttribute('style') || '', ok = [];
+    for (const par of v.split(';')) { const i = par.indexOf(':'); if (i < 0) continue; const k = par.slice(0, i).trim().toLowerCase(), val = par.slice(i + 1).trim(); if (CSS_OK.test(k) && !/url\(|expression|@import|javascript|[<>\\]/i.test(val)) ok.push(k + ':' + val); }
+    c.setAttribute('style', ok.join(';')); return ok.length > 0;
+  }
   function limpioHtml(el, html) {
     const t = document.createElement('template'); t.innerHTML = html;
     (function lim(n) {
       for (const c of [...n.children]) {
         if (!ETQ.test(c.tagName)) { c.replaceWith(document.createTextNode(c.textContent)); continue; }
         for (const a of [...c.attributes]) {
-          const ok = (a.name === 'style' && !/url\(|expression/i.test(a.value)) || (c.tagName === 'A' && a.name === 'href' && /^(https?:|#)/i.test(a.value)) || (c.tagName === 'IMG' && a.name === 'src' && /^data:image\//i.test(a.value)) || (c.tagName === 'FONT' && /^(face|size|color)$/.test(a.name)) || (c.tagName === 'SPAN' && c.className === 'coment' && /^(title|class)$/.test(a.name)) || (c.tagName === 'SUP' && /^(title|class)$/.test(a.name)) || /^(colspan|rowspan)$/.test(a.name);
+          const ok = (a.name === 'style' && estiloSeguro(c)) || (c.tagName === 'A' && a.name === 'href' && /^(https?:|#)/i.test(a.value)) || (c.tagName === 'IMG' && a.name === 'src' && /^data:image\//i.test(a.value)) || (c.tagName === 'FONT' && /^(face|size|color)$/.test(a.name)) || (c.tagName === 'SPAN' && c.className === 'coment' && /^(title|class)$/.test(a.name)) || (c.tagName === 'SUP' && /^(title|class)$/.test(a.name)) || /^(colspan|rowspan)$/.test(a.name);
           if (!ok) c.removeAttribute(a.name);
         }
+        if (c.tagName === 'A') { c.setAttribute('rel', 'noopener noreferrer'); c.setAttribute('target', '_blank'); }
         lim(c);
       }
     })(t.content);

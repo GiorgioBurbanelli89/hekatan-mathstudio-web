@@ -32,9 +32,9 @@
     if (marco) return;
     rec = r || null;
     const cs = getComputedStyle(document.documentElement), v = (k, d) => (cs.getPropertyValue(k) || '').trim() || d;
-    const id = 'hkdib1', dat = JSON.stringify(datos(rec)).replace(/</g, '\u003c');
+    const id = 'hkdib1', dat = JSON.stringify(datos(rec)).replace(/</g, '\u003c').replace(/>/g, '\u003e').replace(/&/g, '\u0026').replace(/\u2028/g, '\u2028').replace(/\u2029/g, '\u2029');
     const css = ':root{--bg:' + v('--bg', '#ffffff') + ';--fg:' + v('--fg', '#222222') + ';--sep:' + v('--sep', '#bbbbbb') + ';--mut:' + v('--mut', '#777777') + ';--var:' + v('--var', '#1c5fbf') + '}html,body{margin:0;background:transparent}';
-    marco = document.createElement('iframe'); marco.className = 'hkcad-marco';
+    marco = document.createElement('iframe'); marco.className = 'hkcad-marco'; marco.setAttribute('sandbox', 'allow-scripts allow-modals allow-popups allow-downloads');
     marco.setAttribute('style', 'position:fixed;inset:0;width:100%;height:100%;border:0;z-index:100000;background:transparent');
     marco.srcdoc = '<!doctype html><meta charset="utf-8"><style>' + css + '</style><body><script type="application/json" id="' + id + '-cad">' + dat + '<\/script>' +
       '<script src="' + new URL('LispCad.js', document.baseURI).href + '"><\/script><script>hkCadAbrir("' + id + '")<\/script></body>';

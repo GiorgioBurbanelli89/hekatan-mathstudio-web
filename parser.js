@@ -159,6 +159,7 @@
       case 'call': {
         if ((a.f === 'sum' || a.f === 'prod') && a.args.length === 4 && a.args[1].t === 'id') {
           const v = a.args[1].n, lo = Math.round(evalua(a.args[2], env)), hi = Math.round(evalua(a.args[3], env)); let r = a.f === 'sum' ? 0 : 1;
+          if (!(hi - lo <= 1e6)) throw new Error(a.f + ': demasiados terminos (maximo 1 000 000)'); HK.M.paso(hi - lo + 1);
           for (let k = lo; k <= hi; k++) { const e2 = { v: Object.assign({}, env.v, { [v]: k }), f: env.f, l: env.l }; r = HK.M.arit(a.f === 'sum' ? '+' : '*', r, evalua(a.args[0], e2)); }
           return r;
         }

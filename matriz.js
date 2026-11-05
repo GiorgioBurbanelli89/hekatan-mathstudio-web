@@ -6,6 +6,9 @@
     g(i, j) { return this.a[i * this.c + j]; }
     s(i, j, v) { this.a[i * this.c + j] = v; }
   }
+  // tope de trabajo por recálculo: un archivo ajeno no puede congelar el navegador con bucles o productos gigantes
+  let PASOS = 0; const paso = (n) => { if ((PASOS += n || 1) > 1e6) throw new Error('demasiado cálculo (límite de seguridad de 1 millón de pasos)'); };
+  const tam = (n, m) => { if (!(n * (m === undefined ? n : m) <= 4e6)) throw new Error('matriz demasiado grande (maximo 4 millones de elementos)'); };
   const esM = (x) => x instanceof Mat;
   function map2(x, y, f) {
     if (!esM(x) && !esM(y)) return f(x, y);
@@ -15,7 +18,7 @@
   }
   function mmul(x, y) {
     if (x.c !== y.r) throw new Error('producto de matrices: ' + x.r + '×' + x.c + ' por ' + y.r + '×' + y.c);
-    const o = new Mat(x.r, y.c);
+    paso(x.r * y.c * x.c); const o = new Mat(x.r, y.c);
     for (let i = 0; i < x.r; i++) for (let j = 0; j < y.c; j++) { let s = 0; for (let k = 0; k < x.c; k++) s += x.g(i, k) * y.g(k, j); o.s(i, j, s); }
     return o;
   }
@@ -47,7 +50,7 @@
   const FM = {
     mod: (a, b) => map2(a, b, (x, y) => x - y * Math.floor(x / y)), rem: (a, b) => map2(a, b, (x, y) => x - y * Math.trunc(x / y)),
     gausspts: (n) => { const g = HK.gaussLeg(n), o = new Mat(g.x.length, 2); g.x.forEach((v, i) => { o.a[2 * i] = v; o.a[2 * i + 1] = g.w[i]; }); return o; },          // [ξᵢ wᵢ] de Gauss–Legendre en [−1, 1]
-    zeros: (n, m) => new Mat(n, m === undefined ? n : m), ones: (n, m) => { const o = new Mat(n, m === undefined ? n : m); o.a.fill(1); return o; },
+    zeros: (n, m) => { tam(n, m); return new Mat(n, m === undefined ? n : m); }, ones: (n, m) => { tam(n, m); const o = new Mat(n, m === undefined ? n : m); o.a.fill(1); return o; },
     transpose, lsolve, abs: elem(Math.abs), sqrt: elem(Math.sqrt), sin: elem(Math.sin), cos: elem(Math.cos), exp: elem(Math.exp),
     max: (x, y) => y !== undefined ? map2(x, y, Math.max) : esM(x) ? Math.max(...x.a) : x, min: (x, y) => y !== undefined ? map2(x, y, Math.min) : esM(x) ? Math.min(...x.a) : x, sum: (x) => esM(x) ? x.a.reduce((p, q) => p + q, 0) : x,
     col: (m, j) => { const o = new Mat(m.r, 1); for (let i = 0; i < m.r; i++) o.s(i, 0, m.g(i, j - 1)); return o; },
@@ -114,7 +117,7 @@
         let m;
         if ((m = /^for\s+(\w+)\s*=\s*(.+?):(.+)$/.exec(raw))) {
           const a = ev(HK.parse(m[2])), b = ev(HK.parse(m[3])); const cuerpo = ++i; let fin = cuerpo;
-          for (let k = a; k <= b; k++) { env.v[m[1]] = k; i = cuerpo; bloque(); fin = i; }
+          for (let k = a; k <= b; k++) { paso(); env.v[m[1]] = k; i = cuerpo; bloque(); fin = i; }
           if (a > b) { i = cuerpo; saltaBloque(); fin = i; }
           i = fin + 1; continue;
         }
@@ -129,7 +132,7 @@
         if (/^return\b/.test(raw)) { const e = raw.replace(/^return\s*/, '').replace(/;\s*$/, ''); if (e) ultimo = { v: ev(HK.parse(e)) }; i = lineas.length; return; }          // «return e»: devuelve y termina
         if ((m = /^while\s+(.+)$/.exec(raw))) {
           const cond = m[1], cuerpo = ++i; let fin = cuerpo, n = 0;
-          while (cumple(cond)) { if (++n > 1e6) throw new Error('demasiadas iteraciones'); i = cuerpo; bloque(); fin = i; }
+          while (cumple(cond)) { if (++n > 1e6) throw new Error('demasiadas iteraciones'); paso(); i = cuerpo; bloque(); fin = i; }
           if (n === 0) { i = cuerpo; saltaBloque(); fin = i; }
           i = fin + 1; continue;
         }
@@ -174,5 +177,5 @@
     bloque();
     return ultimo;
   }
-  HK.M = { Mat, esM, arit, neg, FM, indice, literal, programa, COLON, asigna };
+  HK.M = { reinicia: () => { PASOS = 0; }, paso, Mat, esM, arit, neg, FM, indice, literal, programa, COLON, asigna };
 })(window);
