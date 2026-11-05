@@ -595,11 +595,13 @@
   function abre(json) {
     const d = typeof json === 'string' ? JSON.parse(json) : json;
     if (Array.isArray(d.items) && d.items.length > 3000) throw new Error('hoja demasiado grande (maximo 3000 regiones)');
-    if ((d.items || []).some((q) => q && typeof q.codigo === 'string' && q.codigo.length > 20000)) throw new Error('una ecuacion es demasiado larga (maximo 20000 caracteres)');
+    if ((d.items || []).some((q) => q && q.t === 'eq' && typeof q.codigo === 'string' && q.codigo.length > 100000)) throw new Error('una ecuacion es demasiado larga (maximo 100000 caracteres)');
     limpia();
     { const lisp = d.estilo === 'lisp'; document.body.classList.toggle('lisp', lisp); document.body.classList.toggle('sinpag', lisp);          // hoja de Hekatan LISP: continua y compacta, como en el WPF (estilo «lisp»)
       if (HK.app) { if (lisp) { HK.app.setTxt(Math.round(d.txt || 15)); HK.app.setEq(Math.round(d.eq || 15)); } else if (HK.app.estiloLisp) { HK.app.setTxt(13); HK.app.setEq(14); } HK.app.estiloLisp = lisp; } }
+    const dxs = [];
     for (let it of d.items || []) {
+      if (it.dx || it.dy) dxs.push([reg.length, it.dx || 0, it.dy || 0]);
       if (it.t === 'texto') { const r = agregaTxt(it.text, it.titulo, it.nivel, it.mismaLinea); if (it.html) limpioHtml(r.el, it.html); }
       else if (it.t === 'parrafo') {          // párrafo del WPF: [{s:texto,b,i,u}, {eq:código,m:0|1|2}, {img:data:…}]
         const r = agregaTxt('', !!it.titulo, it.nivel, it.mismaLinea);
@@ -628,6 +630,7 @@
         if (comentario) { const tc = agregaTxt(comentario, false, 1, true); tc.el.contentEditable = 'true'; }
       }
     }
+    for (const [i, x, y] of dxs) { const r = reg[i]; if (!r || !r.el) continue; const u = r.el.parentElement && r.el.parentElement.classList.contains('grupo') ? r.el.parentElement : r.el; if (x) { if (u.classList.contains('txt')) u.style.marginLeft = x + 'px'; else u.style.left = x + 'px'; } if (y) u.style.marginTop = y + 'px'; }
     resolver();
   }
   // formato del texto (negrita, tamaño, tabla…): solo etiquetas y estilos de una lista corta
@@ -669,6 +672,7 @@
   }
   function guarda() {
     const items = [];
+    const emp = (r, o) => { const u = r.el && r.el.parentElement, g = u && u.classList && u.classList.contains('grupo') ? u : r.el, l = g && g.style ? parseFloat(g.classList.contains('txt') ? g.style.marginLeft : g.style.left) : 0; if (l) o.dx = Math.round(l); const t = g && g.style ? parseFloat(g.style.marginTop) : 0; if (t) o.dy = Math.round(t); items.push(o); };          // posición horizontal libre (desplazar)
     for (const r of reg) {
       if (r.t === 'txt' && r.el.querySelector('.ifx')) {          // párrafo con fórmulas dentro: segmentos como el WPF
         const seg = []; (function rec(n) {
@@ -677,14 +681,14 @@
             else if (c.classList && c.classList.contains('ifx')) { const q = reg.find((x) => x.enTexto && x.spanTxt === c); if (q) seg.push({ eq: codigoWpf(q.editado || !q.codigo ? q.ed.texto() : q.codigo, true), m: q.modo }); }
             else if (c.tagName === 'BR') seg.push({ s: '\n' }); else if (c.tagName === 'IMG' && /^data:image\//i.test(c.getAttribute('src') || '')) seg.push({ img: c.getAttribute('src') }); else rec(c);
           }
-        })(r.el); const o = { t: 'parrafo', seg }; if (r.titulo) { o.titulo = true; o.nivel = r.nivel; } if (mismaLineaDe(r)) o.mismaLinea = true; items.push(o);
+        })(r.el); const o = { t: 'parrafo', seg }; if (r.titulo) { o.titulo = true; o.nivel = r.nivel; } if (mismaLineaDe(r)) o.mismaLinea = true; emp(r, o);
       }
-      else if (r.t === 'txt') { const o = { t: 'texto', text: r.el.textContent }; if (r.titulo) { o.titulo = true; o.nivel = r.nivel; } if (mismaLineaDe(r)) o.mismaLinea = true; if (r.el.querySelector('*') || r.el.getAttribute('style')) o.html = r.el.innerHTML; items.push(o); }
-      else if (r.t === 'slider') items.push({ t: 'slider', nombre: r.nombre, min: r.min, max: r.max, valor: r.valor, inc: r.inc, ...(mismaLineaDe(r) ? { mismaLinea: true } : {}) });
-      else if (r.t === 'cad') items.push({ t: 'cad', codigo: r.ta.value, ...(r.titulo ? { titulo: r.titulo } : {}), ...(mismaLineaDe(r) ? { mismaLinea: true } : {}) });
-      else if (r.t === 'raw') items.push({ t: 'raw', text: r.ta.value, ...(r.oculto ? { oculto: true } : {}), ...(mismaLineaDe(r) ? { mismaLinea: true } : {}) });
+      else if (r.t === 'txt') { const o = { t: 'texto', text: r.el.textContent }; if (r.titulo) { o.titulo = true; o.nivel = r.nivel; } if (mismaLineaDe(r)) o.mismaLinea = true; if (r.el.querySelector('*') || r.el.getAttribute('style')) o.html = r.el.innerHTML; emp(r, o); }
+      else if (r.t === 'slider') emp(r, { t: 'slider', nombre: r.nombre, min: r.min, max: r.max, valor: r.valor, inc: r.inc, ...(mismaLineaDe(r) ? { mismaLinea: true } : {}) });
+      else if (r.t === 'cad') emp(r, { t: 'cad', codigo: r.ta.value, ...(r.titulo ? { titulo: r.titulo } : {}), ...(mismaLineaDe(r) ? { mismaLinea: true } : {}) });
+      else if (r.t === 'raw') emp(r, { t: 'raw', text: r.ta.value, ...(r.oculto ? { oculto: true } : {}), ...(mismaLineaDe(r) ? { mismaLinea: true } : {}) });
       else if (r.enTexto) continue;          // ya va dentro de su párrafo
-      else items.push({ t: 'eq', codigo: codigoWpf(r.editado || !r.codigo ? r.ed.texto() : r.codigo), modo: r.modo, ...(r.oculto ? { oculto: true } : {}), ...(mismaLineaDe(r) ? { mismaLinea: true } : {}) });
+      else emp(r, { t: 'eq', codigo: codigoWpf(r.editado || !r.codigo ? r.ed.texto() : r.codigo), modo: r.modo, ...(r.oculto ? { oculto: true } : {}), ...(mismaLineaDe(r) ? { mismaLinea: true } : {}) });
     }
     return JSON.stringify({ formato: 'hmath 1', eq: 14, txt: 16, gap: 6, fmt: 0, items }, null, 1);
   }

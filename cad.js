@@ -51,9 +51,13 @@
   function ejecuta(codigo) {
     codigo = aCapaPeso(codigo);
     const M = HK.motor; if (!M.listo) return { ents: [], error: M.error ? 'motor: ' + M.error : 'el motor simbólico todavía está cargando…', cargando: !M.error };
-    const s = M.run('(prin1 (progn ' + LIMPIA + '\n' + codigo + '\n' + VUELCA + '))');
+    const s = M.run('(prin1 (progn ' + LIMPIA + '\n' + codigo + '\n(setq *hkv* ' + VUELCA + ') (length *hkv*)))');          // la lista se guarda y se imprime por trozos: imprimirla entera es superlineal en el motor (500 entidades = 33 s)
     if (s.startsWith(';')) return { ents: [], error: s.replace(/^;\s*(error:\s*)?/, '').split('\n')[0].trim() };
-    try { return { ents: separaCapas(grupos(s)) }; } catch (e) { return { ents: [], error: 'no se pudo leer el dibujo: ' + e.message }; }
+    try {
+      const N = parseInt(s, 10); if (!(N >= 0)) throw new Error('respuesta inesperada del motor'); const ents = [];
+      for (let a = 0; a < N; a += 25) { const t = M.run('(prin1 (subseq *hkv* ' + a + ' ' + Math.min(N, a + 25) + '))'); if (t.startsWith(';')) throw new Error(t.replace(/^;\s*(error:\s*)?/, '').split('\n')[0].trim()); grupos(t).forEach((e) => ents.push(e)); }
+      M.run('(prin1 (setq *hkv* nil))'); return { ents: separaCapas(ents) };
+    } catch (e) { return { ents: [], error: 'no se pudo leer el dibujo: ' + e.message }; }
   }
 
   // ---------------------------------------------------------------- SVG
@@ -139,7 +143,8 @@
     return r;
   }
   function aSvg(ents, ancho) {
-    const P = []; ents.forEach((e) => { const ci = (ents.capas || {})[get(e, 8)]; if (!(ci && ci.off)) puntosEnt(e).forEach((p) => P.push(p)); });
+    const P = [], malas = new Set(), fin = (v) => typeof v === 'number' && isFinite(v) && Math.abs(v) <= 1e12;          // entidades con NaN/Infinity/>1e12 no se dibujan (el SVG no puede llevar NaN)
+    ents.forEach((e) => { const ci = (ents.capas || {})[get(e, 8)]; if (ci && ci.off) return; let q; try { q = puntosEnt(e); } catch (x) { malas.add(e); return; } if (!q.every((p) => fin(p[0]) && fin(p[1])) || [40, 50, 51].some((c) => { const v = get(e, c); return typeof v === 'number' && !fin(v); })) { malas.add(e); return; } q.forEach((p) => P.push(p)); });
     if (!P.length) return '<svg xmlns="http://www.w3.org/2000/svg" width="' + ancho + '" height="40"><text x="8" y="24" fill="#888" font-size="12">(el dibujo está vacío)</text></svg>';
     let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity; for (const p of P) { if (p[0] < x0) x0 = p[0]; if (p[0] > x1) x1 = p[0]; if (p[1] < y0) y0 = p[1]; if (p[1] > y1) y1 = p[1]; }
     if (x1 - x0 < 1e-9) x1 = x0 + 1; if (y1 - y0 < 1e-9) y1 = y0 + 1;
@@ -149,7 +154,7 @@
     let kCota = 0;
     let o = '<svg xmlns="http://www.w3.org/2000/svg" data-g="' + [x0, y0, s, alto, M].join(',') + '" width="' + ancho + '" height="' + alto + '" font-family="Segoe UI,sans-serif"><defs><pattern id="hkh" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="#444" stroke-width="1"/></pattern><pattern id="hkh37" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="#444" stroke-width="1"/><line x1="0" y1="0" x2="6" y2="0" stroke="#444" stroke-width="1"/></pattern></defs><rect width="100%" height="100%" fill="#fff"/>';
     for (const e of ents) {
-      const ci = (ents.capas || {})[get(e, 8)]; if (ci && ci.off) continue;
+      const ci = (ents.capas || {})[get(e, 8)]; if ((ci && ci.off) || malas.has(e)) continue;
       const t = get(e, 0), col = ACI[get(e, 62)] || (ci && ACI[Math.abs(ci.c)]) || '#222', pw = pesoDe(e), st = 'stroke="' + col + '" fill="none" stroke-width="' + (pw ? PESO_PX[pw] : 1.4) + '" stroke-linejoin="round"';
       if (t === 'LINE') { const a = get(e, 10), b = get(e, 11); o += '<line x1="' + X(a[0]) + '" y1="' + Y(a[1]) + '" x2="' + X(b[0]) + '" y2="' + Y(b[1]) + '" ' + st + '/>'; }
       else if (t === 'LWPOLYLINE' || t === 'POLYLINE') { const q = pts(e, 10); o += '<' + ((get(e, 70) || 0) & 1 ? 'polygon' : 'polyline') + ' points="' + q.map((p) => X(p[0]) + ',' + Y(p[1])).join(' ') + '" ' + st + '/>'; }
