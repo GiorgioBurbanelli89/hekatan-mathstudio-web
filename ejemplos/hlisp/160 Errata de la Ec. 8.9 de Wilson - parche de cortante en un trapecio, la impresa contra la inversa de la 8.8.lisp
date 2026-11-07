@@ -241,6 +241,6 @@ W_correcta = [sin(a_ki), -sin(a_ij); -cos(a_ki), cos(a_ij)]/d_a 'T = 1/det · [s
 #: **Lo mal tipeado** (la (8.9) tal como está impresa): los dos términos de la diagonal secundaria quedaron **cambiados de lugar** (cos α_ki arriba y sin α_ij abajo). (8.9) = 1/det·[sin α_ki, mal:−cos α_ki; mal:−sin α_ij, cos α_ij]
 W_impresa = [sin(a_ki), -cos(a_ki); -sin(a_ij), cos(a_ij)]/d_a 'T = 1/det · [sin α_ki, −cos α_ki; −sin α_ij, cos α_ij]
 #: **Prueba de cada una:** M·T debe dar la identidad.
-W_prueba_ok = M_a·W_correcta 'identidad [1, 0; 0, 1]: bien
-W_prueba_mal = M_a·W_impresa 'NO es la identidad: mal
+W_ok = M_a·W_correcta 'identidad [1, 0; 0, 1]: bien
+W_mal = M_a·W_impresa 'NO es la identidad: mal
 #: **Qué cambia al calcular.** Con la correcta, el parche de cortante constante (γ = 0.3, 0.7) sale **exacto** en los cuatro nudos, en el rectángulo y en el trapecio (error ≈ 1e-16, ver sección 3). Con la impresa, el rectángulo sigue saliendo exacto, pero el **trapecio falla: el cortante del nudo se desvía hasta 0.246** (sección 3, E_trap_impresa) respecto de 0.3 y 0.7, y en los puntos de Gauss hasta 0.11 (sección 7). Es decir: **si se sigue la ecuación mal tipeada, en un elemento de lados no perpendiculares el cortante nudal sale equivocado**, y como la rigidez a cortante se arma con esos valores, la rigidez, los desplazamientos y los cortantes de la placa se alejan de la solución correcta. En rectángulos no se nota (por eso las tablas del libro no lo delatan). Esta hoja no mide cuánto cambia la rigidez total ni la flecha de una placa completa: eso depende de la malla.
