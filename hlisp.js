@@ -79,6 +79,17 @@
     rep(new RegExp(ANTES + 'transpose\\(\\s*' + ID + '\\s*\\)', 'gu'), (a) => nom(a[1]) + '<sup>T</sup>');
     rep(new RegExp(ANTES + ID + '\\^(-1|T)(?![\\p{L}\\p{N}])', 'gu'), (a) => nom(a[1]) + '<sup>' + (a[2] === '-1' ? '−1' : 'T') + '</sup>');
     if (cambio) h = h.replace(/(?<=[\p{L}\p{N})\]>])(?<!\*)\*(?!\*)(?=[\p{L}\p{N}(<])/gu, '·');
+    // matrices literales [a, b; c, d] dibujadas (corchetes, filas y columnas) y «1/det·[...]» con su fracción; letra griega + letras = subíndice (αij → α_ij)
+    const TD = 'padding:1px 9px;text-align:center;white-space:nowrap';
+    const celda = (c) => c.trim().replace(/([α-ωΑ-Ω])([A-Za-z]{1,2})(?![\p{L}\p{N}])/gu, '$1<sub>$2</sub>');
+    const matriz = (cuerpo) => '<table style="display:inline-table;vertical-align:middle;border-collapse:separate;border-left:2px solid #1d2430;border-right:2px solid #1d2430;border-radius:7px;margin:0 3px">' + cuerpo.split(';').map((f) => '<tr>' + f.split(',').map((c) => '<td style="' + TD + '">' + celda(c) + '</td>').join('') + '</tr>').join('') + '</table>';
+    const frac = (n, d) => '<span style="display:inline-block;vertical-align:middle;text-align:center;margin:0 3px"><span style="display:block;border-bottom:1px solid #1d2430;padding:0 4px">' + n + '</span><span style="display:block;padding:0 4px">' + d + '</span></span>';
+    h = h.replace(/(?<![\p{L}\p{N}_])1\/(det)\s*·?\s*\[([^\[\]]*;[^\[\]]*)\]/gu, (m, d, c) => { cambio = true; return frac('1', d) + matriz(c); });
+    h = h.replace(/\[([^\[\]<>]*;[^\[\]<>]*)\]/g, (m, c) => { cambio = true; return matriz(c); });
+    h = h.replace(/(?<![\p{L}\p{N}_<\/])([α-ωΑ-Ω])([A-Za-z]{1,2})(?![\p{L}\p{N}_>])(?![^<]*<\/td>)/gu, (m, g, s2) => { cambio = true; return g + '<sub>' + s2 + '</sub>'; });
+    // **negrita** y *cursiva* (markdown de los párrafos «#:», como en Hekatan LISP web)
+    const md = h.replace(/\*\*(?=\S)(.+?)(?<=\S)\*\*/gu, '<b>$1</b>').replace(/(?<![\p{L}\p{N}*])\*(?=[^\s*])([^*]+?)(?<=[^\s*])\*(?![\p{L}\p{N}*])/gu, '<i>$1</i>');
+    if (md !== h) { h = md; cambio = true; }
     return cambio ? h : null;
   }
   function importa(fuente) {
@@ -109,6 +120,7 @@
       if (t.startsWith('# ') || t === '#') continue;          // comentario de la hoja: no se dibuja
       if (t.startsWith('#')) {          // directiva de Hekatan LISP
         vacia(); primera = false; const nombre = (/^#(\w+)/.exec(t) || [])[1] || '', txt = [l];
+        if (nombre === 'numerico' || nombre === 'simbolico') { cuenta('#' + nombre + ' (sin efecto)'); continue; }
         if (nombre === 'fplot') { const cod = traduceFplot(t); if (cod) { items.push(oculto ? { t: 'eq', codigo: cod, modo: 0, oculto: true, orig: '' } : { t: 'eq', codigo: cod, modo: 0, orig: '' }); cuenta('#fplot (nativa)'); continue; } }
         if (t.startsWith('#|')) while (i < lin.length && lin[i].trimStart().startsWith('#|')) { txt.push(lin[i].replace(/\s+$/, '')); i++; }
         let cierre = Cierres[nombre] || null; if (!cierre && nombre === 'anim' && /^#anim\s*\(/.test(t)) cierre = '#finanim';

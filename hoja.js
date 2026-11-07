@@ -761,10 +761,10 @@
   // formato del texto (negrita, tamaño, tabla…): solo etiquetas y estilos de una lista corta
   const ETQ = /^(B|I|U|S|STRIKE|SUB|SUP|A|BR|SPAN|FONT|DIV|P|UL|OL|LI|TABLE|TBODY|TR|TD|TH|IMG)$/;
   // solo propiedades de formato: nada de position/z-index/inset (taparían la interfaz con un aviso falso)
-  const CSS_OK = /^(color|background|background-color|font|font-family|font-size|font-weight|font-style|text-decoration|text-align|vertical-align|line-height|border|border-collapse|border-color|border-style|border-width|padding|margin|width|height|white-space)$/;
+  const CSS_OK = /^(color|background|background-color|font|font-family|font-size|font-weight|font-style|text-decoration|text-align|vertical-align|line-height|border|border-collapse|border-left|border-right|border-top|border-bottom|border-radius|display|border-color|border-style|border-width|padding|margin|width|height|white-space)$/;
   function estiloSeguro(c) {
     const v = c.getAttribute('style') || '', ok = [];
-    for (const par of v.split(';')) { const i = par.indexOf(':'); if (i < 0) continue; const k = par.slice(0, i).trim().toLowerCase(), val = par.slice(i + 1).trim(); if (CSS_OK.test(k) && !/url\(|expression|@import|javascript|[<>\\]/i.test(val)) ok.push(k + ':' + val); }
+    for (const par of v.split(';')) { const i = par.indexOf(':'); if (i < 0) continue; const k = par.slice(0, i).trim().toLowerCase(), val = par.slice(i + 1).trim(); if (CSS_OK.test(k) && (k !== 'display' || /^(inline|inline-block|inline-table|block)$/.test(val)) && !/url\(|expression|@import|javascript|[<>\\]/i.test(val)) ok.push(k + ':' + val); }
     c.setAttribute('style', ok.join(';')); return ok.length > 0;
   }
   function limpioHtml(el, html) {
