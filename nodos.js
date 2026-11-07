@@ -91,8 +91,9 @@
         return { w: fw + tam * .15 + f.w, a: Math.max(eje + gap + tam * .22 + tam * .72, f.a), d: Math.max(Math.max(tam * .72, v.a) + Math.max(tam * .22, v.d) + gap - eje, f.d), fw, eje, gap, g, num, den };
       }
       case 'mat': {
-        const R = it.cells.length, C = it.cells[0].length, gx = tam * .8, gy = tam * .25, cw = new Array(C).fill(0), ra = [], rd = [];
+        const R = it.cells.length, C = it.cells[0].length, gx = tam * .8; let gy = tam * .25; const cw = new Array(C).fill(0), ra = [], rd = [];
         for (let i = 0; i < R; i++) { ra.push(tam * .72); rd.push(tam * .22); for (let j = 0; j < C; j++) { const cb = medirFila(it.cells[i][j], tam); cw[j] = Math.max(cw[j], cb.w); ra[i] = Math.max(ra[i], cb.a); rd[i] = Math.max(rd[i], cb.d); } }
+        if (ra.some((q) => q > tam * 1.1) || rd.some((q) => q > tam * .6)) gy = tam * .6;          // celdas con fracciones: más aire entre filas (si no, el denominador toca el numerador de la fila siguiente)
         const H = ra.reduce((p, q, i) => p + q + rd[i], 0) + gy * (R - 1), W = cw.reduce((p, q) => p + q, 0) + gx * (C - 1) + tam * .7, eje = tam * .3;
         return { w: W, a: Math.max(H / 2 + eje, tam * .72), d: Math.max(H / 2 - eje, tam * .22), cw, ra, rd, H, gx, gy, eje };
       }
@@ -180,8 +181,9 @@
         return { w: fw + tam * .15 + f.w, a: Math.max(eje + gap + tam * .22 + tam * .72, f.a), d: Math.max(Math.max(tam * .72, v.a) + Math.max(tam * .22, v.d) + gap - eje, f.d), fw, eje, gap, g, num, den };
       }
       case 'mat': {
-        const R = it.cells.length, C = it.cells[0].length, gx = tam * .8, gy = tam * .25, cw = new Array(C).fill(0), ra = [], rd = [];
+        const R = it.cells.length, C = it.cells[0].length, gx = tam * .8; let gy = tam * .25; const cw = new Array(C).fill(0), ra = [], rd = [];
         for (let i = 0; i < R; i++) { ra.push(tam * .72); rd.push(tam * .22); for (let j = 0; j < C; j++) { const cb = medirFila(it.cells[i][j], tam); cw[j] = Math.max(cw[j], cb.w); ra[i] = Math.max(ra[i], cb.a); rd[i] = Math.max(rd[i], cb.d); } }
+        if (ra.some((q) => q > tam * 1.1) || rd.some((q) => q > tam * .6)) gy = tam * .6;          // celdas con fracciones: más aire entre filas (si no, el denominador toca el numerador de la fila siguiente)
         const H = ra.reduce((p, q, i) => p + q + rd[i], 0) + gy * (R - 1), W = cw.reduce((p, q) => p + q, 0) + gx * (C - 1) + tam * .7, eje = tam * .3;
         return { w: W, a: Math.max(H / 2 + eje, tam * .72), d: Math.max(H / 2 - eje, tam * .22), cw, ra, rd, H, gx, gy, eje };
       }
