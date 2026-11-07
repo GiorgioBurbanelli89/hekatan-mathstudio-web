@@ -82,10 +82,10 @@
     if (!f || !f.isConnected) return;
     [...f.children].forEach((u, i) => { if (!u.classList.contains('txt')) return; const r = H().reg.find((x) => x.t === 'txt' && x.el === u); if (r) { r.mismo = i > 0; u.classList.toggle('lado', i > 0); } });
   }
-  const getX = (u) => parseFloat(u.classList.contains('txt') ? u.style.marginLeft : u.style.left) || 0;
+  const getX = (u) => parseFloat((u.classList.contains('txt') || u.classList.contains('slider')) ? u.style.marginLeft : u.style.left) || 0;
   function ponX(u, v) {          // posición horizontal LIBRE (no solo pegada al vecino): se corre cualquier distancia, sin salirse del margen
     const z = zoom(), cs = getComputedStyle(hoja), pl = (parseFloat(cs.paddingLeft) || 0) * z, pr = (parseFloat(cs.paddingRight) || 0) * z;
-    if (u.classList.contains('txt')) {          // el texto ocupa todo el ancho: se corre con margen izquierdo (se estrecha) y deja al menos 120 px
+    if (u.classList.contains('txt') || u.classList.contains('slider')) {          // el texto / deslizador ocupa todo el ancho: se corre con margen izquierdo (se estrecha) y deja al menos 120 px
       u.style.left = ''; u.style.marginLeft = ''; const w = u.getBoundingClientRect().width / z; v = Math.max(0, Math.min(v, w - 120)); u.style.marginLeft = Math.abs(v) < 1 ? '' : Math.round(v) + 'px'; return;
     }
     u.style.left = v + 'px'; const r = u.getBoundingClientRect(), hb = hoja.getBoundingClientRect();
@@ -97,14 +97,14 @@
     const viejas = new Set(grupo.map((u) => u.parentElement)), bloques = [];
     grupo.forEach((u) => { const l = bloques[bloques.length - 1]; if (l && l[0].parentElement === u.parentElement) l.push(u); else bloques.push([u]); });
     const tocadas = new Set(viejas);
-    if (d.k === 'lado') { for (const u of grupo) { u.style.left = ''; if (u.classList.contains('txt')) u.style.marginLeft = ''; u.style.marginTop = ''; if (d.desp) { d.ref.after(u); d.ref = u; } else d.ref.before(u); } tocadas.add(d.fila); }
+    if (d.k === 'lado') { for (const u of grupo) { u.style.left = ''; if (u.classList.contains('txt') || u.classList.contains('slider')) u.style.marginLeft = ''; u.style.marginTop = ''; if (d.desp) { d.ref.after(u); d.ref = u; } else d.ref.before(u); } tocadas.add(d.fila); }
     else {
       let ancla = d.fila;
       for (const b of bloques) {
         const f = document.createElement('div'); f.className = 'fila'; tocadas.add(f);
         if (d.k === 'antes') hoja.insertBefore(f, d.fila); else { ancla.after(f); ancla = f; }
         b.forEach((u) => f.appendChild(u));
-        b.forEach((u) => { if (l0 && l0.has(u)) { u.style.left = ''; if (u.classList.contains('txt')) u.style.marginLeft = ''; const z = zoom(); ponX(u, (l0.get(u) + dx * z - u.getBoundingClientRect().left) / z); } else if (dx || getX(u)) ponX(u, getX(u) + dx); u.style.marginTop = d.k === 'despues' && gap > 6 ? Math.round(gap) + 'px' : ''; });          // soltada en un espacio vacío: queda ahí (hueco real, lo de abajo baja)
+        b.forEach((u) => { if (l0 && l0.has(u)) { u.style.left = ''; if (u.classList.contains('txt') || u.classList.contains('slider')) u.style.marginLeft = ''; const z = zoom(); ponX(u, (l0.get(u) + dx * z - u.getBoundingClientRect().left) / z); } else if (dx || getX(u)) ponX(u, getX(u) + dx); u.style.marginTop = d.k === 'despues' && gap > 6 ? Math.round(gap) + 'px' : ''; });          // soltada en un espacio vacío: queda ahí (hueco real, lo de abajo baja)
       }
     }
     viejas.forEach((f) => { if (f.isConnected && !f.children.length) { f.remove(); tocadas.delete(f); } });

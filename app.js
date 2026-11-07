@@ -444,7 +444,7 @@
     off('W', 'Documento'), off('📂', 'Abrir Word'), off('💾', 'Guardar Word'), 'sep',
     { ic: 'Aa', t: 'Normal', tip: 'Quita el formato del texto seleccionado', acc: () => cmd('removeFormat') }, 'casos', { ic: '<u>S</u>', t: 'S', tip: 'Subrayado', acc: () => cmd('underline') },
     { ic: '•', t: 'Viñetas', acc: () => cmd('insertUnorderedList') }, { ic: '1.', t: 'Numeración', acc: () => cmd('insertOrderedList') },
-    { ic: '▦', t: 'Tabla', tip: 'Tabla 3×3 en el texto', acc: () => cmd('insertHTML', '<table border="1" style="border-collapse:collapse"><tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr><tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr><tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr></table>') },
+    { ic: '▦', t: 'Tabla', tip: 'Tabla 3×3 como bloque propio (se desplaza por su borde izquierdo)', acc: () => { H().nuevaTabla(3, 3); estado('Tabla 3×3: escribe en las celdas; arrástrala por su borde izquierdo'); } },
     { ic: '🖼', t: 'Imagen', tip: 'Inserta una imagen en el texto', acc: () => { const f = document.createElement('input'); f.type = 'file'; f.accept = 'image/*'; f.onchange = () => { const rd = new FileReader(); rd.onload = () => cmd('insertImage', rd.result); if (f.files[0]) rd.readAsDataURL(f.files[0]); }; f.click(); } },
     { ic: '⤓', t: 'Salto de página', tip: 'Salto de página en este punto', acc: () => cmd('insertHTML', '<div style="break-after:page;border-top:1px dashed #9AA5B5"></div>') },
     { ic: '∑=', t: 'Ecuación', acc: () => H().nuevaEq('') },

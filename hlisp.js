@@ -65,6 +65,22 @@
     }
     return true;
   }
+  // Matemática dentro de un párrafo «#:», sin símbolos extra (igual que Hekatan LISP web): det(A) → |A| · adj(A) · inv(A) → A⁻¹ ·
+  // transpose(A) → Aᵀ · A^-1 y A^T → exponente · a*d (sin espacios) → a·d · A_1 → subíndice. Devuelve HTML (solo B I SUB SUP) o null
+  // si el párrafo no trae nada de eso (entonces queda como texto, igual que antes).
+  function prosaHtml(texto) {
+    let h = String(texto).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'), cambio = false;
+    const nom = (n) => { const k = n.indexOf('_'); return k > 0 && k < n.length - 1 ? '<i>' + n.slice(0, k) + '</i><sub>' + n.slice(k + 1) + '</sub>' : '<i>' + n + '</i>'; };
+    const ID = '(\\p{L}[\\p{L}\\p{N}_]*)', ANTES = '(?<![\\p{L}\\p{N}_])';
+    const rep = (re, f) => { h = h.replace(re, (...a) => { cambio = true; return f(a); }); };
+    rep(new RegExp(ANTES + 'det\\(\\s*' + ID + '\\s*\\)', 'gu'), (a) => '|' + nom(a[1]) + '|');
+    rep(new RegExp(ANTES + 'adj\\(\\s*' + ID + '\\s*\\)', 'gu'), (a) => 'adj(' + nom(a[1]) + ')');
+    rep(new RegExp(ANTES + 'inv\\(\\s*' + ID + '\\s*\\)', 'gu'), (a) => nom(a[1]) + '<sup>−1</sup>');
+    rep(new RegExp(ANTES + 'transpose\\(\\s*' + ID + '\\s*\\)', 'gu'), (a) => nom(a[1]) + '<sup>T</sup>');
+    rep(new RegExp(ANTES + ID + '\\^(-1|T)(?![\\p{L}\\p{N}])', 'gu'), (a) => nom(a[1]) + '<sup>' + (a[2] === '-1' ? '−1' : 'T') + '</sup>');
+    if (cambio) h = h.replace(/(?<=[\p{L}\p{N})\]>])(?<!\*)\*(?!\*)(?=[\p{L}\p{N}(<])/gu, '·');
+    return cambio ? h : null;
+  }
   function importa(fuente) {
     fuente = griegasEnCodigo(fuente); for (const k in omitidas) delete omitidas[k];
     const items = []; let bloque = [], original = [], prof = 0, oculto = false, primera = true;
@@ -87,7 +103,7 @@
       if (t === '') { if (prof === 0 && !oculto) vacia(); continue; }
       if (t === '#hide') { vacia(); oculto = true; continue; }
       if (t === '#show') { vacia(); oculto = false; continue; }
-      if (t.startsWith('#:')) { vacia(); items.push({ t: 'texto', text: t.slice(2).trim() }); continue; }
+      if (t.startsWith('#:')) { vacia(); const tx = t.slice(2).trim(), ph = prosaHtml(tx); items.push(ph ? { t: 'texto', text: tx, html: ph } : { t: 'texto', text: tx }); continue; }
       if (t.startsWith('##')) { vacia(); const nv = t.match(/^#+/)[0].length; items.push({ t: 'texto', text: t.replace(/^#+/, '').trim(), titulo: true, nivel: Math.min(nv, 3) }); continue; }
       if (t.startsWith('# ') && primera) { vacia(); items.push({ t: 'texto', text: t.slice(1).trim(), titulo: true, nivel: 1 }); primera = false; continue; }
       if (t.startsWith('# ') || t === '#') continue;          // comentario de la hoja: no se dibuja

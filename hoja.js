@@ -20,7 +20,7 @@
   // ---------------------------------------------------------------- ecuaciones DENTRO de un párrafo (como el WPF: texto + fórmulas en la misma línea, todo editable)
   let rangoTxt = null;          // último cursor dentro de un texto: { el, range }
   document.addEventListener('selectionchange', () => { const s = getSelection(); if (!s.rangeCount || !s.anchorNode) return; const n = s.anchorNode.nodeType === 3 ? s.anchorNode.parentElement : s.anchorNode, el = n && n.closest ? n.closest('.txt') : null; if (el && el.isContentEditable) rangoTxt = { el, range: s.getRangeAt(0).cloneRange() }; });
-  document.addEventListener('mousedown', (e) => { if (!e.target.closest || e.target.closest('.txt') || e.target.closest('#cinta') || e.target.closest('.menu')) return; rangoTxt = null; }, true);
+  document.addEventListener('mousedown', (e) => { if (e.target.closest && e.target.closest('.txt')) limpiaHuecos(); if (!e.target.closest || e.target.closest('.txt') || e.target.closest('#cinta') || e.target.closest('.menu')) return; rangoTxt = null; }, true);
   function agregaEqEnTexto(el, codigo, modo, rango) {
     const sp = document.createElement('span'); sp.className = 'ifx'; sp.contentEditable = 'false';
     if (rango && el.contains(rango.startContainer)) { rango.deleteContents(); rango.insertNode(sp); } else el.appendChild(sp);
@@ -42,12 +42,12 @@
   function agregaEq(codigo, o) {
     o = o || {};
     const tr = o.tras && (o.tras.el.parentElement.classList.contains('grupo') ? o.tras.el.parentElement : o.tras.el), c = o.grupo || (tr ? tr.parentElement : contenedor(o.mismaLinea)), d = document.createElement('div'); d.className = 'eq' + (o.oculto ? ' oculto' : ''); const cv = document.createElement('canvas'); d.appendChild(cv); c.appendChild(d); if (tr) tr.after(d);
-    const ed = new HK.Editor(cv, { tam: 14 }); ed.alCambiar = () => { r.editado = true; resolver(); };
+    const ed = new HK.Editor(cv, { tam: 14 }); ed.alCambiar = () => { r.editado = true; if (r.huecoAuto && ed.fila.length) { r.huecoAuto = false; r.el.classList.remove('hueco'); } resolver(); const a = r.apoyo; if (a && r.el.style.left === a.left && r.el.style.marginTop === a.mt) alineaIndicador(r, a.rx, a.ry, a.z, a.maxRelX, true); };
     const r = { t: 'eq', ed, el: d, modo: o.modo || 0, codigo, editado: false, mismaLinea: !!o.mismaLinea, oculto: !!o.oculto };
     ed.cargar(codigo ? HK.codigoAFilas(codigo) : []);
     cv.addEventListener('mousedown', (e) => {
       if (e.button !== 0) return;
-      if (HK.sug) HK.sug.oculta(); const q = ptr(e, cv); activo = ed; ed.clic(q.x, q.y, e.shiftKey); redibuja(); e.preventDefault();
+      if (HK.sug) HK.sug.oculta(); limpiaHuecos(r); const q = ptr(e, cv); activo = ed; ed.clic(q.x, q.y, e.shiftKey); redibuja(); e.preventDefault();
       if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
       limpiaMulti(); let cur = ed; const ancEd = ed, ancla0 = ed.ancla ? { fila: ed.ancla.fila, i: ed.ancla.i } : null;          // arrastrar de una ecuación a la vecina de la MISMA línea selecciona de una a otra (como el WPF); el cursor sigue al ratón
       const mueve = (ev) => {
@@ -613,20 +613,72 @@
     for (const f of document.querySelectorAll('#hoja .fila')) { const b = f.getBoundingClientRect(); if (!b.height) continue; const d = y < b.top ? b.top - y : y > b.bottom ? y - b.bottom : 0; if (d <= 4 && d < dm) { dm = d; mejor = f; } }
     return mejor;
   }
+  function limpiaHuecos(excepto) {          // quita las ecuaciones VACÍAS que dejó un clic en un hueco (solo eran el indicador); si ya tienen algo, quedan
+    for (const r of reg.slice()) {
+      if (!r.huecoAuto || r === excepto) continue;
+      if (r.ed.fila.length) { r.huecoAuto = false; r.el.classList.remove('hueco'); continue; }
+      const pa = r.el.parentElement, fl = pa && pa.classList.contains('grupo') ? pa.parentElement : pa;          // la fila se toma ANTES de quitar el nodo (después ya no tiene padre y la fila vacía se quedaba, 16 px por clic)
+      r.el.remove(); if (pa && pa.classList.contains('grupo') && !pa.children.length) pa.remove();
+      if (fl && fl.classList.contains('fila') && !fl.children.length) fl.remove();
+      reg.splice(reg.indexOf(r), 1); if (activo === r.ed) activo = null;
+    }
+  }
+  function celda(c, orig, z) { return document.body.classList.contains('cuad') ? Math.floor(((c - orig) / z) / 20) * 20 : null; }          // con la cuadrícula visible (celdas de 20 px) el indicador cae en la celda del clic; sin ella, en el punto exacto
+  // Deja el borde izquierdo/superior del LIENZO (lo que se ve) en (xd, yd) de la ventana. Se mide el lienzo, no el recuadro: al quedar seleccionado, el mover le suma 10 px de asa a la izquierda.
+  function alineaIndicador(n, rx, ry, z, maxRelX, abajo) {          // rx, ry: posición pedida RELATIVA a la hoja (sin zoom); la hoja se desplaza al aparecer el nodo (barra de desplazamiento), por eso se convierte con su rect de AHORA
+    n.el.style.left = ''; n.el.style.marginTop = '';
+    const h = hoja.getBoundingClientRect(), c = n.ed.canvas.getBoundingClientRect(), xd = h.left + rx * z, v = Math.min(Math.round((xd - c.left) / z), Math.round((h.left + maxRelX * z - c.left) / z - 60));
+    let dy = 0;
+    if (ry !== null) {
+      const H = n.ed._yInk || c.height / z, nat = (c.top - h.top) / z;          // distancia del borde superior del lienzo a lo más bajo de lo dibujado, y posición natural del lienzo (no se puede subir más arriba que eso)
+      let top = abajo ? ry - H : ry;          // con cuadrícula ry es la LÍNEA donde se apoya la parte inferior de la ecuación
+      if (abajo && top < nat) top = Math.ceil((nat + H) / 20) * 20 - H;          // no cabe encima: se apoya en la siguiente línea de la cuadrícula
+      dy = Math.round(top - nat);
+    }
+    const g = document.body.classList.contains('cuad');          // con cuadrícula se ajusta hasta 1 px; sin ella, no se mueve por menos de 4–6 px
+    if (v > (g ? 0 : 4)) n.el.style.left = v + 'px'; if (dy > (g ? 0 : 6)) n.el.style.marginTop = dy + 'px';
+    n.apoyo = abajo && ry !== null ? { rx, ry, z, maxRelX, left: n.el.style.left, mt: n.el.style.marginTop } : null;          // para volver a apoyarla en la línea cuando crece al teclear (si el usuario la mueve a mano, ya no)
+  }
   function enHueco(e) { return e.target === papel || e.target === hoja || e.target === area || (e.target.classList && (e.target.classList.contains('fila') || e.target.classList.contains('pg'))); }
   (papel || document).addEventListener('mousedown', (e) => {
     if (e.button !== 0 || !enHueco(e)) return;
     e.preventDefault(); if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
-    const f = e.target.classList && e.target.classList.contains('fila') ? e.target : filaEnY(e.clientY);          // clic en la franja de una línea (hueco, margen izq./der., entre filas): el cursor se queda EN ESA LÍNEA, no baja a otra
+    const H0 = hoja.getBoundingClientRect(), Z0 = (H0.width / (hoja.offsetWidth || 1)) || 1;          // la hoja ANTES de crear nada: al aparecer el nodo puede salir la barra de desplazamiento y mover todo
+    limpiaHuecos();          // el indicador anterior (ecuación vacía) se quita primero: así ocupa lo mismo que nada y no tapa las celdas de al lado
+    let f = e.target.classList && e.target.classList.contains('fila') ? e.target : filaEnY(e.clientY); if (f && !f.isConnected) f = null;          // clic en la franja de una línea (hueco, margen izq./der., entre filas): el cursor se queda EN ESA LÍNEA, no baja a otra
     if (f) {
+      const topF0 = f.getBoundingClientRect().top;
+      const hijos = [...f.children].filter((c) => c.getBoundingClientRect().width > 0), dR = hijos.length ? Math.max(...hijos.map((c) => c.getBoundingClientRect().right)) : 0, frR = f.getBoundingClientRect().right;
+      if (hijos.length && hijos.every((c) => !c.classList.contains('txt') || c.getBoundingClientRect().right < frR - 80) && e.clientX > dR + 30) {          // (una línea cuyo último elemento es un texto de ancho completo: el cursor se queda en ese texto)
+                  // hueco libre DE LA MISMA LÍNEA, a la derecha de lo último (hasta el borde del papel): ahí aparece el indicador, como en Mathcad Prime; lo que se teclee nace en ese punto
+        const enF = reg.filter((r) => r.el && f.contains(r.el));
+        let n = enF.find((r) => r.t === 'eq' && !r.oculto && r.ed.fila.length === 0);
+        limpiaHuecos(n);
+        if (!n) { const ult = enF.slice().sort((a, b) => b.el.getBoundingClientRect().right - a.el.getBoundingClientRect().right)[0]; if (ult) { n = eqMisma(ult); n.huecoAuto = true; n.el.classList.add('hueco'); } }
+        if (n) {
+          const z = Z0, hr0 = H0, sx = celda(e.clientX, hr0.left, z), sy = celda(e.clientY, hr0.top, z);
+          const rx = sx === null ? (e.clientX - hr0.left) / z : sx, ry = sy === null ? null : sy + 20;          // con cuadrícula: la parte inferior de la ecuación se apoya en la línea inferior de la celda del clic
+          activo = n.ed; n.ed.cur = { fila: n.ed.fila, i: 0 }; redibuja();
+          const al = () => alineaIndicador(n, rx, ry, z, (frR - hr0.left) / z, true); al(); requestAnimationFrame(() => requestAnimationFrame(al)); return;
+        }
+      }
+      limpiaHuecos();
       const o = eqDeFila(f, e.clientX);
       if (o) { const b = o.ed.canvas.getBoundingClientRect(); activo = o.ed; o.ed.quitaSel(); o.ed.cur = { fila: o.ed.fila, i: e.clientX < b.left ? 0 : o.ed.fila.length }; redibuja(); return; }
       const t = [...f.querySelectorAll('.txt')].pop();          // la línea es solo texto: cursor al final de ese texto
       if (t) { t.focus(); const sel = getSelection(), rg = document.createRange(); rg.selectNodeContents(t); rg.collapse(e.clientX < t.getBoundingClientRect().left); sel.removeAllRanges(); sel.addRange(rg); return; }
     }
-    const u = ultimaEq();
-    if (u && u.ed.fila.length === 0) { activo = u.ed; u.ed.cur = { fila: u.ed.fila, i: 0 }; redibuja(); }
-    else nuevaEq('');
+    // hueco libre fuera de toda línea (entre filas, debajo de todo): el indicador aparece EN ESE PUNTO (x e y del clic) y lo que se teclee nace ahí
+    const filas = [...hoja.querySelectorAll(':scope > .fila')], arriba = filas.filter((fl) => fl.getBoundingClientRect().bottom <= e.clientY).pop() || null;
+    let n = reg.find((r) => r.huecoAuto && r.t === 'eq' && r.ed.fila.length === 0 && r.el.parentElement && r.el.parentElement.children.length === 1);          // solo se reutiliza una vacía que esté SOLA en su línea (si comparte línea con otro nodo, moverla arrastraría esa línea entera)
+    limpiaHuecos(n);
+    if (!n) { n = nuevaEq(''); n.huecoAuto = true; n.el.classList.add('hueco'); }
+    insertaDespues(arriba, n);
+    n.el.style.left = ''; n.el.style.marginTop = '';
+    const z = Z0, hr = H0, sx = celda(e.clientX, hr.left, z), sy = celda(e.clientY, hr.top, z);
+    const rx = sx === null ? (e.clientX - hr.left) / z : sx, ry = sy === null ? (e.clientY - hr.top) / z : sy + 20;
+    activo = n.ed; n.ed.cur = { fila: n.ed.fila, i: 0 }; redibuja();
+    const al = () => alineaIndicador(n, rx, ry, z, hr.width / z, sy !== null); al(); requestAnimationFrame(() => requestAnimationFrame(al));
   });
   let menuCtx = null;
   function cierraCtx() { if (menuCtx) { menuCtx.remove(); menuCtx = null; } }
@@ -688,7 +740,7 @@
         if (comentario) { const tc = agregaTxt(comentario, false, 1, true); tc.el.contentEditable = 'true'; }
       }
     }
-    for (const [i, x, y] of dxs) { const r = reg[i]; if (!r || !r.el) continue; const u = r.el.parentElement && r.el.parentElement.classList.contains('grupo') ? r.el.parentElement : r.el; if (x) { if (u.classList.contains('txt')) u.style.marginLeft = x + 'px'; else u.style.left = x + 'px'; } if (y) u.style.marginTop = y + 'px'; }
+    for (const [i, x, y] of dxs) { const r = reg[i]; if (!r || !r.el) continue; const u = r.el.parentElement && r.el.parentElement.classList.contains('grupo') ? r.el.parentElement : r.el; if (x) { if (u.classList.contains('txt') || u.classList.contains('slider')) u.style.marginLeft = x + 'px'; else u.style.left = x + 'px'; } if (y) u.style.marginTop = y + 'px'; }
     resolver();
   }
   // formato del texto (negrita, tamaño, tabla…): solo etiquetas y estilos de una lista corta
@@ -730,7 +782,7 @@
   }
   function guarda() {
     const items = [];
-    const emp = (r, o) => { const u = r.el && r.el.parentElement, g = u && u.classList && u.classList.contains('grupo') ? u : r.el, l = g && g.style ? parseFloat(g.classList.contains('txt') ? g.style.marginLeft : g.style.left) : 0; if (l) o.dx = Math.round(l); const t = g && g.style ? parseFloat(g.style.marginTop) : 0; if (t) o.dy = Math.round(t); items.push(o); };          // posición horizontal libre (desplazar)
+    const emp = (r, o) => { const u = r.el && r.el.parentElement, g = u && u.classList && u.classList.contains('grupo') ? u : r.el, l = g && g.style ? parseFloat((g.classList.contains('txt') || g.classList.contains('slider')) ? g.style.marginLeft : g.style.left) : 0; if (l) o.dx = Math.round(l); const t = g && g.style ? parseFloat(g.style.marginTop) : 0; if (t) o.dy = Math.round(t); items.push(o); };          // posición horizontal libre (desplazar)
     for (const r of reg) {
       if (r.t === 'txt' && r.el.querySelector('.ifx')) {          // párrafo con fórmulas dentro: segmentos como el WPF
         const seg = []; (function rec(n) {
@@ -752,6 +804,11 @@
   }
   // ---------------------------------------------------------------- acciones que usa la cinta (app.js)
   function nuevaEq(codigo, mismo, modo) { const r = agregaEq(codigo || '', { mismaLinea: !!mismo, modo: modo || 0 }); activo = r.ed; r.ed.cargar(codigo ? HK.codigoAFilas(codigo) : []); if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); resolver(); r.el.scrollIntoView({ block: 'nearest' }); return r; }
+  function nuevaTabla(filas, cols) {          // «Tabla»: bloque propio (se desplaza solo, como cualquier región); celdas editables
+    const c = Math.max(1, cols || 3), f = Math.max(1, filas || 3), cel = '<td>&nbsp;</td>'.repeat(c);
+    const r = agregaTxt('', false); r.el.innerHTML = '<table border="1" style="border-collapse:collapse">' + ('<tr>' + cel + '</tr>').repeat(f) + '</table>'; r.tabla = true;
+    r.el.scrollIntoView({ block: 'nearest' }); const td = r.el.querySelector('td'); if (td) { r.el.focus(); const g = getSelection(), rg = document.createRange(); rg.selectNodeContents(td); rg.collapse(true); g.removeAllRanges(); g.addRange(rg); } return r;
+  }
   function nuevoTxt(t) { const r = agregaTxt(t || 'Texto…', false); r.el.focus(); if (!t) { const g = getSelection(), rg = document.createRange(); rg.selectNodeContents(r.el); g.removeAllRanges(); g.addRange(rg); } return r; }
   function nuevoSlider(n) { n = n || prompt('Nombre del deslizador', 'a'); if (n) { agregaSlider(n, 0, 10, 1, 0.1); resolver(); } }
   function escribe(txt) {          // teclea en la ecuación activa (o crea una): «~» = Espacio
@@ -771,6 +828,6 @@
   function cadExporta(tipo) { const r = reg.filter((x) => x.t === 'cad').pop(); if (!r) return false; if (tipo === 'dwg') { HK.cad.bajaDwg(r.ents).then((n) => HK.app.estado('DWG guardado: dibujo.dwg (' + n + ' bytes)')).catch((x) => HK.app.estado('No se pudo guardar el DWG: ' + x.message)); return true; } HK.cad.baja(tipo === 'lsp' ? 'dibujo.lsp' : 'dibujo.dxf', tipo === 'lsp' ? HK.cad.aLsp(r.ents, 'dibujo') : HK.cad.aDxf(r.ents), 'text/plain'); return true; }
   function siguienteEq() { const l = reg.filter((r) => r.t === 'eq' && !r.oculto), i = l.findIndex((r) => r.ed === activo); const n = l[i + 1] || l[0]; if (n) { activo = n.ed; n.ed.cur = { fila: n.ed.fila, i: n.ed.fila.length }; redibuja(); n.el.scrollIntoView({ block: 'nearest' }); } }
   function fracVar() { if (!activo) nuevaEq(''); escribe('/'); const p = activo.cur.fila._p; if (p && p.it.t === 'frac') { p.it.diag = true; activo.cambio(); } }          // «Var. fracción»: fracción diagonal a⁄b
-  HK.hoja = { nuevoCodigo, fracVar, modoManual: (f) => { calcManual = !!f; if (!f) resolver(true); }, siguienteEq, nuevoCad, cadAgrega, cadExporta, abre, guarda, resolver, agregaEq, agregaTxt, agregaSlider, reg, limpia, activar: (r) => { activo = r.ed; redibuja(); }, nuevaEq, eqEnTexto, setModo, bloque, insertaMat, nuevoTxt, nuevoSlider, escribe, tam, descarga, hayActivo: () => !!activo, desactiva: () => { activo = null; if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); redibuja(); }, quitaRegs: (u) => { for (let i = reg.length - 1; i >= 0; i--) if (u.contains(reg[i].el)) { if (reg[i].ed && reg[i].ed === activo) activo = null; reg.splice(i, 1); } }, activa: () => activo, alternaCodigo, ocultaBloque, redibuja: () => { redibuja(); } };
+  HK.hoja = { nuevaTabla, nuevoCodigo, fracVar, modoManual: (f) => { calcManual = !!f; if (!f) resolver(true); }, siguienteEq, nuevoCad, cadAgrega, cadExporta, abre, guarda, resolver, agregaEq, agregaTxt, agregaSlider, reg, limpia, activar: (r) => { activo = r.ed; redibuja(); }, nuevaEq, eqEnTexto, setModo, bloque, insertaMat, nuevoTxt, nuevoSlider, escribe, tam, descarga, hayActivo: () => !!activo, desactiva: () => { activo = null; if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); redibuja(); }, quitaRegs: (u) => { for (let i = reg.length - 1; i >= 0; i--) if (u.contains(reg[i].el)) { if (reg[i].ed && reg[i].ed === activo) activo = null; reg.splice(i, 1); } }, activa: () => activo, alternaCodigo, ocultaBloque, redibuja: () => { redibuja(); } };
   if (!/[?&]vacia/.test(location.search)) { agregaTxt('Hekatan Math Studio', true, 1); agregaTxt('Pulsa «Ecuación» en la cinta, o haz clic en la hoja, y teclea: «/» fracción, «^» exponente, «_» subíndice, «\\» raíz, «(» paréntesis; Espacio sale del hueco. El resultado solo aparece cuando terminas con «=».', false); resolver(); nuevaEq(''); }
 })(window);

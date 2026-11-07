@@ -343,14 +343,14 @@
       else if (res && res.mat) resW = tam * 1.2 + (mColw ? mColw.reduce((p, q) => p + q, 0) : 0) + 20;
       else if (res && res.texto) resW = res.kind === 'val' ? ((u) => (u && u.t === 'c' && u.s === '=') ? ancho(res.texto, tam) + tam * .35 : ancho('= ' + res.texto, tam) + tam * .9)(this.fila[this.fila.length - 1]) : ancho('  ' + res.texto, tam * .75) + tam;
       const tx0 = cv.closest('.txt'), fl0 = cv.closest('.fila'), pw = tx0 ? Math.max(120, tx0.clientWidth - 8) : fl0 ? fl0.clientWidth : cv.parentElement && cv.parentElement.parentElement ? cv.parentElement.parentElement.clientWidth : 700;          // ancho de la FILA (no del grupo de líneas, que es angosto)
-      const W = Math.max(Math.min(pw || 700, Math.ceil(4 + b.w + resW + (this.foco ? 20 : (tx0 ? 2 : 8)) + (this.modo && this.foco ? 52 : 0))), (this.modo && this.foco) ? Math.ceil(4 + b.w + 8 + 46) : (this.fila.length ? 24 : 70));          // con modo (simbólica/notación) cabe además la etiqueta de arriba a la derecha sin tapar la ecuación
+      const W = Math.max(Math.min(pw || 700, Math.ceil(4 + b.w + resW + (this.foco ? 20 : (tx0 ? 2 : 8)) + (this.modo && this.foco ? 52 : 0))), (this.modo && this.foco) ? Math.ceil(4 + b.w + 8 + 46) : 24);          // con modo (simbólica/notación) cabe además la etiqueta de arriba a la derecha sin tapar la ecuación
       if (!reducida && pw > 60) { const nat = 4 + b.w + resW + 8; if (nat > pw) this._exceso = (pw - 2) / nat; }          // no cabe: se vuelve a dibujar más pequeña
       const H = Math.ceil(b.a + b.d + tam * .9);
       cv.width = Math.floor(W * dpr); cv.height = Math.floor(H * dpr); cv.style.width = W + 'px'; cv.style.height = H + 'px';
       const ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
       const y = Math.ceil(b.a + tam * .35), x0 = 4;
       this.reg = []; dibujarFila(ctx, this.fila, x0, y, tam, this.reg, null);
-      this.x0 = x0; this.y0 = y; this._H = H;
+      this.x0 = x0; this.y0 = y; this._H = H; this._yInk = y + b.d;          // _yInk: distancia del borde superior del lienzo al punto más bajo de lo DIBUJADO (para apoyar la ecuación en una línea de la cuadrícula)
       { const sp = cv.closest('.ifx'); if (sp) sp.style.verticalAlign = (-(H - y)) + 'px'; }          // dentro de un párrafo: la línea base de la fórmula coincide con la del texto
       cv.dataset.y0 = y; { const fl = cv.closest('.fila'); if (fl) { const cs = [...fl.querySelectorAll('canvas[data-y0]')]; const mx = Math.max(...cs.map((q) => +q.dataset.y0)); cs.forEach((q) => { q.style.marginTop = (mx - q.dataset.y0) + 'px'; }); } }          // en una misma línea las ecuaciones se alinean por la línea base (como el WPF)
       if (this.sel) {          // selección: un recuadro azul sobre los elementos elegidos

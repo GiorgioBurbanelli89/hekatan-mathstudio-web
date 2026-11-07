@@ -98,8 +98,17 @@
         return '(' + op + ' ' + T(a.a, c) + ' ' + T(a.b, c) + ')';
       }
       case 'call': return llamada(a, c);
+      case 'mat': return '(vec ' + a.rows.map((r) => '(vec ' + r.map((x) => T(x, c)).join(' ') + ')').join(' ') + ')';          // [a,b;c,d] con letras: matriz simbólica (se dibuja como matriz)
     }
     throw new Error('sin forma simbólica: ' + a.t);
+  }
+  // matriz con letras → código del motor: (vector (vector 'a 'b) (vector 'c 'd)); un nombre se resuelve hasta su definición
+  function matrizMotor(a, c) {
+    for (let k = 0; a && a.t === 'id' && c.env.l && a.n in c.env.l && k < 20; k++) a = c.env.l[a.n];
+    if (a && a.t === 'paren') a = a.a;
+    if (!a || a.t !== 'mat') throw new Error('det, adj, inv y transpose simbólicos piden una matriz con letras, p. ej. A = [a, b; c, d]');
+    if (a.rows.length > 6 || a.rows.some((r) => r.length !== a.rows.length)) throw new Error('matriz simbólica: cuadrada, de hasta 6 × 6');
+    return '(vector ' + a.rows.map((r) => '(vector ' + r.map((x) => "'" + T(x, c)).join(' ') + ')').join(' ') + ')';
   }
   function nombre(n, c) {
     const e = c.env;
@@ -119,7 +128,11 @@
     }
     if (['sin', 'cos', 'exp', 'ln', 'sqrt'].includes(f)) return '(' + f + ' ' + T(a.args[0], c) + ')';
     if (f === 'log') return '(ln ' + T(a.args[0], c) + ')';
-    if (f === 'simplify' || f === 'expand') return lisp("(simplify '" + T(a.args[0], c) + ')');
+    if ((f === 'det' || f === 'adj' || f === 'inv' || f === 'transpose') && a.args.length === 1) {          // determinante, adjunta, inversa y traspuesta con letras (motor de Hekatan LISP: mdet, madjugate, minv-auto, mtransp)
+      const m = matrizMotor(a.args[0], c), r = lisp({ det: '(mdet ', adj: '(madjugate ', inv: '(minv-auto ', transpose: '(mtransp ' }[f] + m + ')');
+      return f === 'det' ? r : r.replace(/#\(/g, '(vec ');          // la matriz vuelve como #(#(..) #(..)) → (vec (vec ..) (vec ..)) para dibujarla
+    }
+    if (f === 'simplify' || f === 'expand') { const x = T(a.args[0], c); return x.startsWith('(vec ') ? x : lisp("(simplify '" + x + ')'); }
     if (f === 'factor') { c.crudo = true; return lisp("(factor '" + T(a.args[0], c) + ')'); }          // factorizar (motor): el resultado NO se vuelve a simplificar (se desharía)
     if ((f === 'sum' || f === 'suma' || f === 'product' || f === 'prod') && a.args.length === 4) {          // Σ y Π con fórmula cerrada (b puede ser una letra: Σi = n²/2 + n/2)
       const op = (f === 'sum' || f === 'suma') ? 'suma' : 'producto-op', q = (i) => "'" + T(a.args[i], c);
@@ -227,7 +240,7 @@
       }
       case '/': return { t: 'bin', op: '/', a: k[0], b: k[1] };
       case 'expt': return { t: 'bin', op: '^', a: par(k[0].t === 'bin' || k[0].t === 'neg' ? { t: 'paren', a: k[0] } : k[0]), b: k[1] };
-      case 'vec': return { t: 'vec', items: k };
+      case 'vec': return k.length && k.every((x) => x.t === 'vec') ? { t: 'mat', corch: true, rows: k.map((x) => x.items) } : { t: 'vec', items: k };          // vector de vectores = matriz
       default: return { t: 'call', f: op, args: k };
     }
   }
