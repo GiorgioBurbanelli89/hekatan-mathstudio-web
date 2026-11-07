@@ -632,7 +632,7 @@
     if (ry !== null) {
       const H = n.ed._yInk || c.height / z, nat = (c.top - h.top) / z;          // distancia del borde superior del lienzo a lo más bajo de lo dibujado, y posición natural del lienzo (no se puede subir más arriba que eso)
       let top = abajo ? ry - H : ry;          // con cuadrícula ry es la LÍNEA donde se apoya la parte inferior de la ecuación
-      if (abajo && top < nat) top = Math.ceil((nat + H) / 20) * 20 - H;          // no cabe encima: se apoya en la siguiente línea de la cuadrícula
+      if (abajo && top < nat) top = document.body.classList.contains('cuad') ? Math.ceil((nat + H) / 20) * 20 - H : nat;          // no cabe encima: se apoya en la siguiente línea de la cuadrícula
       dy = Math.round(top - nat);
     }
     const g = document.body.classList.contains('cuad');          // con cuadrícula se ajusta hasta 1 px; sin ella, no se mueve por menos de 4–6 px
@@ -657,7 +657,7 @@
         if (!n) { const ult = enF.slice().sort((a, b) => b.el.getBoundingClientRect().right - a.el.getBoundingClientRect().right)[0]; if (ult) { n = eqMisma(ult); n.huecoAuto = true; n.el.classList.add('hueco'); } }
         if (n) {
           const z = Z0, hr0 = H0, sx = celda(e.clientX, hr0.left, z), sy = celda(e.clientY, hr0.top, z);
-          const rx = sx === null ? (e.clientX - hr0.left) / z : sx, ry = sy === null ? null : sy + 20;          // con cuadrícula: la parte inferior de la ecuación se apoya en la línea inferior de la celda del clic
+          const rx = sx === null ? (e.clientX - hr0.left) / z : sx, ry = sy === null ? (e.clientY - hr0.top) / z + 10 : sy + 20;          // sin cuadrícula: el punto del clic queda a media altura del indicador; con cuadrícula: la parte inferior de la ecuación se apoya en la línea inferior de la celda del clic
           activo = n.ed; n.ed.cur = { fila: n.ed.fila, i: 0 }; redibuja();
           const al = () => alineaIndicador(n, rx, ry, z, (frR - hr0.left) / z, true); al(); requestAnimationFrame(() => requestAnimationFrame(al)); return;
         }
@@ -676,9 +676,9 @@
     insertaDespues(arriba, n);
     n.el.style.left = ''; n.el.style.marginTop = '';
     const z = Z0, hr = H0, sx = celda(e.clientX, hr.left, z), sy = celda(e.clientY, hr.top, z);
-    const rx = sx === null ? (e.clientX - hr.left) / z : sx, ry = sy === null ? (e.clientY - hr.top) / z : sy + 20;
+    const rx = sx === null ? (e.clientX - hr.left) / z : sx, ry = sy === null ? (e.clientY - hr.top) / z + 10 : sy + 20;
     activo = n.ed; n.ed.cur = { fila: n.ed.fila, i: 0 }; redibuja();
-    const al = () => alineaIndicador(n, rx, ry, z, hr.width / z, sy !== null); al(); requestAnimationFrame(() => requestAnimationFrame(al));
+    const al = () => alineaIndicador(n, rx, ry, z, hr.width / z, true); al(); requestAnimationFrame(() => requestAnimationFrame(al));
   });
   let menuCtx = null;
   function cierraCtx() { if (menuCtx) { menuCtx.remove(); menuCtx = null; } }
