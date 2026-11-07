@@ -236,9 +236,9 @@ d_00 = cos(0)·sin(0) - cos(0)·sin(0) 'determinante con los dos lados paralelos
 
 ## 8 · Fuente, lo correcto y lo mal tipeado (qué cambia en el cálculo)
 #: **De dónde sale.** E. L. Wilson, *Three-Dimensional Static and Dynamic Analysis of Structures*, **cap. 8** (elemento de placa con cortante, DSE), **ecuaciones (8.8) y (8.9)**, p. 8-6 de la edición 2005 (p. 8-7 en el PDF paginado). La (8.8) pasa los cortantes del elemento (γxz, γyz) a los de los lados (γij, γki); la (8.9) debe hacer el camino inverso, o sea ser la **inversa** de la matriz de la (8.8).
-#: **Lo correcto** (inversa de la 8.8, adjunta ÷ determinante), con α_ij = 0° y α_ki = 60°: los términos de la diagonal secundaria **cambian de signo pero se quedan en su lugar**.
+#: **Lo correcto** (inversa de la 8.8, adjunta ÷ determinante), con α_ij = 0° y α_ki = 60°: los términos de la diagonal secundaria **cambian de signo pero se quedan en su lugar**. M⁻¹ = 1/det·[sin α_ki, ok:−sin α_ij; ok:−cos α_ki, cos α_ij]
 W_correcta = [sin(a_ki), -sin(a_ij); -cos(a_ki), cos(a_ij)]/d_a 'T = 1/det · [sin α_ki, −sin α_ij; −cos α_ki, cos α_ij]
-#: **Lo mal tipeado** (la (8.9) tal como está impresa): los dos términos de la diagonal secundaria quedaron **cambiados de lugar** (cos α_ki arriba y sin α_ij abajo).
+#: **Lo mal tipeado** (la (8.9) tal como está impresa): los dos términos de la diagonal secundaria quedaron **cambiados de lugar** (cos α_ki arriba y sin α_ij abajo). (8.9) = 1/det·[sin α_ki, mal:−cos α_ki; mal:−sin α_ij, cos α_ij]
 W_impresa = [sin(a_ki), -cos(a_ki); -sin(a_ij), cos(a_ij)]/d_a 'T = 1/det · [sin α_ki, −cos α_ki; −sin α_ij, cos α_ij]
 #: **Prueba de cada una:** M·T debe dar la identidad.
 W_prueba_ok = M_a·W_correcta 'identidad [1, 0; 0, 1]: bien

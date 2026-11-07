@@ -81,15 +81,18 @@
     if (cambio) h = h.replace(/(?<=[\p{L}\p{N})\]>])(?<!\*)\*(?!\*)(?=[\p{L}\p{N}(<])/gu, '·');
     // matrices literales [a, b; c, d] dibujadas (corchetes, filas y columnas) y «1/det·[...]» con su fracción; letra griega + letras = subíndice (αij → α_ij)
     const TD = 'padding:1px 9px;text-align:center;white-space:nowrap';
-    const celda = (c) => c.trim().replace(/([α-ωΑ-Ω])([A-Za-z]{1,2})(?![\p{L}\p{N}])/gu, '$1<sub>$2</sub>');
-    const matriz = (cuerpo) => '<table style="display:inline-table;vertical-align:middle;border-collapse:separate;border-left:2px solid #1d2430;border-right:2px solid #1d2430;border-radius:7px;margin:0 3px">' + cuerpo.split(';').map((f) => '<tr>' + f.split(',').map((c) => '<td style="' + TD + '">' + celda(c) + '</td>').join('') + '</tr>').join('') + '</table>';
+    const celda = (c) => c.trim().replace(/^(ok|mal):\s*/, '').replace(/([α-ωΑ-Ω])_?([A-Za-z]{1,2})(?![\p{L}\p{N}])/gu, '$1<sub>$2</sub>');
+    const estCas = (c) => { const m = /^\s*(ok|mal):/.exec(c); return m ? (m[1] === 'ok' ? ';background:#dff3e6;color:#1e8449;font-weight:600;border-radius:5px' : ';background:#fbe3e0;color:#c0392b;font-weight:600;border-radius:5px') : ''; };
+    const matriz = (cuerpo) => '<table style="display:inline-table;vertical-align:middle;border-collapse:separate;border-left:2px solid #1d2430;border-right:2px solid #1d2430;border-radius:7px;margin:0 3px">' + cuerpo.split(';').map((f) => '<tr>' + f.split(',').map((c) => '<td style="' + TD + estCas(c) + '">' + celda(c) + '</td>').join('') + '</tr>').join('') + '</table>';
     const frac = (n, d) => '<span style="display:inline-block;vertical-align:middle;text-align:center;margin:0 3px"><span style="display:block;border-bottom:1px solid #1d2430;padding:0 4px">' + n + '</span><span style="display:block;padding:0 4px">' + d + '</span></span>';
     h = h.replace(/(?<![\p{L}\p{N}_])1\/(det)\s*·?\s*\[([^\[\]]*;[^\[\]]*)\]/gu, (m, d, c) => { cambio = true; return frac('1', d) + matriz(c); });
     h = h.replace(/\[([^\[\]<>]*;[^\[\]<>]*)\]/g, (m, c) => { cambio = true; return matriz(c); });
-    h = h.replace(/(?<![\p{L}\p{N}_<\/])([α-ωΑ-Ω])([A-Za-z]{1,2})(?![\p{L}\p{N}_>])(?![^<]*<\/td>)/gu, (m, g, s2) => { cambio = true; return g + '<sub>' + s2 + '</sub>'; });
+    h = h.replace(/(?<![\p{L}\p{N}_<\/])([α-ωΑ-Ω])_?([A-Za-z]{1,2})(?![\p{L}\p{N}_>])(?![^<]*<\/td>)/gu, (m, g, s2) => { cambio = true; return g + '<sub>' + s2 + '</sub>'; });
     // **negrita** y *cursiva* (markdown de los párrafos «#:», como en Hekatan LISP web)
     const md = h.replace(/\*\*(?=\S)(.+?)(?<=\S)\*\*/gu, '<b>$1</b>').replace(/(?<![\p{L}\p{N}*])\*(?=[^\s*])([^*]+?)(?<=[^\s*])\*(?![\p{L}\p{N}*])/gu, '<i>$1</i>');
     if (md !== h) { h = md; cambio = true; }
+    const tj = /^\s*<b>(Lo correcto|Correcta|Inversa correcta)\b/i.test(h) ? ['ok', 'CORRECTA', '#dff3e6', '#1e8449'] : /^\s*<b>(Lo mal tipeado|Impresa|Mal tipeada)\b/i.test(h) ? ['mal', 'IMPRESA EN EL LIBRO', '#fbe3e0', '#c0392b'] : null;
+    if (tj) { h = '<div style="background:#f3f6fa;border-left:5px solid ' + tj[3] + ';border-radius:8px;padding:8px 14px;margin:6px 0"><span style="background:' + tj[2] + ';color:' + tj[3] + ';font-weight:700;font-size:12px;padding:2px 9px;border-radius:12px">' + tj[1] + '</span><br>' + h + '</div>'; cambio = true; }
     return cambio ? h : null;
   }
   function importa(fuente) {
