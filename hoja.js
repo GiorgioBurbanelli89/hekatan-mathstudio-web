@@ -42,7 +42,7 @@
   function agregaEq(codigo, o) {
     o = o || {};
     const tr = o.tras && (o.tras.el.parentElement.classList.contains('grupo') ? o.tras.el.parentElement : o.tras.el), c = o.grupo || (tr ? tr.parentElement : contenedor(o.mismaLinea)), d = document.createElement('div'); d.className = 'eq' + (o.oculto ? ' oculto' : ''); const cv = document.createElement('canvas'); d.appendChild(cv); c.appendChild(d); if (tr) tr.after(d);
-    const ed = new HK.Editor(cv, { tam: 14 }); ed.alCambiar = () => { r.editado = true; if (r.huecoAuto && ed.fila.length) { r.huecoAuto = false; r.el.classList.remove('hueco'); } resolver(); const a = r.apoyo; if (a && r.el.style.left === a.left && r.el.style.marginTop === a.mt) alineaIndicador(r, a.rx, a.ry, a.z, a.maxRelX, true); };
+    const ed = new HK.Editor(cv, { tam: 14 }); ed.alCambiar = () => { r.editado = true; if (r.huecoAuto && ed.fila.length) { r.huecoAuto = false; r.el.classList.remove('hueco'); } resolver(); const a = r.apoyo; if (a && r.el.style.left === a.left && r.el.style.marginTop === a.mt && r.el.style.top === a.tp) alineaIndicador(r, a.rx, a.ry, a.z, a.maxRelX, true, a.sube); };
     const r = { t: 'eq', ed, el: d, modo: o.modo || 0, codigo, editado: false, mismaLinea: !!o.mismaLinea, oculto: !!o.oculto };
     ed.cargar(codigo ? HK.codigoAFilas(codigo) : []);
     cv.addEventListener('mousedown', (e) => {
@@ -625,23 +625,42 @@
   }
   function celda(c, orig, z) { return document.body.classList.contains('cuad') ? Math.floor(((c - orig) / z) / 20) * 20 : null; }          // con la cuadrícula visible (celdas de 20 px) el indicador cae en la celda del clic; sin ella, en el punto exacto
   // Deja el borde izquierdo/superior del LIENZO (lo que se ve) en (xd, yd) de la ventana. Se mide el lienzo, no el recuadro: al quedar seleccionado, el mover le suma 10 px de asa a la izquierda.
-  function alineaIndicador(n, rx, ry, z, maxRelX, abajo) {          // rx, ry: posición pedida RELATIVA a la hoja (sin zoom); la hoja se desplaza al aparecer el nodo (barra de desplazamiento), por eso se convierte con su rect de AHORA
-    n.el.style.left = ''; n.el.style.marginTop = '';
-    const h = hoja.getBoundingClientRect(), c = n.ed.canvas.getBoundingClientRect(), xd = h.left + rx * z, v = Math.min(Math.round((xd - c.left) / z), Math.round((h.left + maxRelX * z - c.left) / z - 60));
+  function alineaIndicador(n, rx, ry, z, maxRelX, abajo, sube) {          // rx, ry: posición pedida RELATIVA a la hoja (sin zoom); la hoja se desplaza al aparecer el nodo (barra de desplazamiento), por eso se convierte con su rect de AHORA
+    n.el.style.left = ''; n.el.style.marginTop = ''; n.el.style.top = '';
+    const solo = n.el.classList.contains('hueco') && n.el.parentElement && n.el.parentElement.children.length === 1;          // indicador SOLO en su fila: la fila no ocupa alto (no empuja lo de abajo) y se coloca con `top`
+    const h = hoja.getBoundingClientRect(), c = n.ed.canvas.getBoundingClientRect(), xd = h.left + rx * z, v = Math.min(Math.round((xd - c.left) / z), Math.round((h.left + maxRelX * z - c.left) / z - 18));
     let dy = 0;
     if (ry !== null) {
       const H = n.ed._yInk || c.height / z, nat = (c.top - h.top) / z;          // distancia del borde superior del lienzo a lo más bajo de lo dibujado, y posición natural del lienzo (no se puede subir más arriba que eso)
       let top = abajo ? ry - H : ry;          // con cuadrícula ry es la LÍNEA donde se apoya la parte inferior de la ecuación
-      if (abajo && top < nat) top = document.body.classList.contains('cuad') ? Math.ceil((nat + H) / 20) * 20 - H : nat;          // no cabe encima: se apoya en la siguiente línea de la cuadrícula
+      if (abajo && top < nat && !sube && !solo) top = document.body.classList.contains('cuad') ? Math.ceil((nat + H) / 20) * 20 - H : nat;          // no cabe encima: se apoya en la siguiente línea de la cuadrícula
       dy = Math.round(top - nat);
     }
     const g = document.body.classList.contains('cuad');          // con cuadrícula se ajusta hasta 1 px; sin ella, no se mueve por menos de 4–6 px
-    if (v > (g ? 0 : 4)) n.el.style.left = v + 'px'; if (dy > (g ? 0 : 6)) n.el.style.marginTop = dy + 'px';
-    n.apoyo = abajo && ry !== null ? { rx, ry, z, maxRelX, left: n.el.style.left, mt: n.el.style.marginTop } : null;          // para volver a apoyarla en la línea cuando crece al teclear (si el usuario la mueve a mano, ya no)
+    if (v > (g ? 0 : 4)) n.el.style.left = v + 'px'; if (solo) { if (dy) n.el.style.top = dy + 'px'; } else if (dy > (g ? 0 : 6)) n.el.style.marginTop = dy + 'px'; else if (sube && dy < 0) n.el.style.top = dy + 'px';          // sube: el indicador puede quedar ENCIMA de su fila (sobre la parte libre de un texto), sin mover lo de debajo
+    n.apoyo = abajo && ry !== null ? { rx, ry, z, maxRelX, left: n.el.style.left, mt: n.el.style.marginTop, tp: n.el.style.top, sube } : null;          // para volver a apoyarla en la línea cuando crece al teclear (si el usuario la mueve a mano, ya no)
   }
   function enHueco(e) { return e.target === papel || e.target === hoja || e.target === area || (e.target.classList && (e.target.classList.contains('fila') || e.target.classList.contains('pg'))); }
+  function colocaHueco(filaRef, e, H0, Z0, sube) {          // indicador vacío EN el punto del clic, fuera de toda línea (o sobre la parte libre de un texto)
+    const filas = [...hoja.querySelectorAll(':scope > .fila')], arriba = filaRef || filas.filter((fl) => fl.getBoundingClientRect().bottom <= e.clientY).pop() || null;
+    let n = reg.find((r) => r.huecoAuto && r.t === 'eq' && r.ed.fila.length === 0 && r.el.parentElement && r.el.parentElement.children.length === 1);          // solo se reutiliza una vacía que esté SOLA en su línea (si comparte línea con otro nodo, moverla arrastraría esa línea entera)
+    limpiaHuecos(n);
+    if (!n) { n = nuevaEq(''); n.huecoAuto = true; n.el.classList.add('hueco'); }
+    insertaDespues(arriba, n);
+    n.el.style.left = ''; n.el.style.marginTop = '';
+    const z = Z0, hr = H0, sx = celda(e.clientX, hr.left, z), sy = celda(e.clientY, hr.top, z);
+    const rx = sx === null ? (e.clientX - hr.left) / z : sx, ry = sy === null ? (e.clientY - hr.top) / z + 10 : sy + 20;
+    activo = n.ed; n.ed.cur = { fila: n.ed.fila, i: 0 }; redibuja();
+    const al = () => alineaIndicador(n, rx, ry, z, hr.width / z, true, sube); al(); requestAnimationFrame(() => requestAnimationFrame(al));
+  }
   (papel || document).addEventListener('mousedown', (e) => {
-    if (e.button !== 0 || !enHueco(e)) return;
+    if (e.button !== 0) return;
+    if (!enHueco(e)) {          // zona libre de una línea de SOLO texto (a la derecha de lo escrito, o bajo la última línea): también cuenta como hueco
+      const t = e.target.closest ? e.target.closest('.txt') : null, fl = t && t.closest('.fila');
+      if (!t || !fl || fl.parentElement !== hoja || [...fl.children].some((c) => !c.classList.contains('txt'))) return;
+      const rg0 = document.createRange(); rg0.selectNodeContents(t);
+      if ([...rg0.getClientRects()].some((q) => q.width > 0 && e.clientY >= q.top - 2 && e.clientY <= q.bottom + 2 && e.clientX <= q.right + 20)) return;
+    }
     e.preventDefault(); if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
     const H0 = hoja.getBoundingClientRect(), Z0 = (H0.width / (hoja.offsetWidth || 1)) || 1;          // la hoja ANTES de crear nada: al aparecer el nodo puede salir la barra de desplazamiento y mover todo
     limpiaHuecos();          // el indicador anterior (ecuación vacía) se quita primero: así ocupa lo mismo que nada y no tapa las celdas de al lado
@@ -649,7 +668,7 @@
     if (f) {
       const topF0 = f.getBoundingClientRect().top;
       const hijos = [...f.children].filter((c) => c.getBoundingClientRect().width > 0), dR = hijos.length ? Math.max(...hijos.map((c) => c.getBoundingClientRect().right)) : 0, frR = f.getBoundingClientRect().right;
-      if (hijos.length && hijos.every((c) => !c.classList.contains('txt') || c.getBoundingClientRect().right < frR - 80) && e.clientX > dR + 30) {          // (una línea cuyo último elemento es un texto de ancho completo: el cursor se queda en ese texto)
+      if (hijos.length && hijos.every((c) => !c.classList.contains('txt') || c.getBoundingClientRect().right < frR - 80) && e.clientX > dR + 6) {          // (una línea cuyo último elemento es un texto de ancho completo: el cursor se queda en ese texto)
                   // hueco libre DE LA MISMA LÍNEA, a la derecha de lo último (hasta el borde del papel): ahí aparece el indicador, como en Mathcad Prime; lo que se teclee nace en ese punto
         const enF = reg.filter((r) => r.el && f.contains(r.el));
         let n = enF.find((r) => r.t === 'eq' && !r.oculto && r.ed.fila.length === 0);
@@ -666,19 +685,15 @@
       const o = eqDeFila(f, e.clientX);
       if (o) { const b = o.ed.canvas.getBoundingClientRect(); activo = o.ed; o.ed.quitaSel(); o.ed.cur = { fila: o.ed.fila, i: e.clientX < b.left ? 0 : o.ed.fila.length }; redibuja(); return; }
       const t = [...f.querySelectorAll('.txt')].pop();          // la línea es solo texto: cursor al final de ese texto
-      if (t) { t.focus(); const sel = getSelection(), rg = document.createRange(); rg.selectNodeContents(t); rg.collapse(e.clientX < t.getBoundingClientRect().left); sel.removeAllRanges(); sel.addRange(rg); return; }
+      if (t) {
+        const rg0 = document.createRange(); rg0.selectNodeContents(t); const rcs = [...rg0.getClientRects()].filter((q) => q.width > 0);
+        const sobreTexto = rcs.some((q) => e.clientY >= q.top - 2 && e.clientY <= q.bottom + 2 && e.clientX <= q.right + 20);
+        const tr = t.getBoundingClientRect();
+        if (!sobreTexto && e.clientX >= tr.left && e.clientX <= tr.right) { colocaHueco(f, e, H0, Z0, true); return; }          // zona libre de un texto (a la derecha de lo escrito o bajo la última línea): ahí aparece el indicador
+ t.focus(); const sel = getSelection(), rg = document.createRange(); rg.selectNodeContents(t); rg.collapse(e.clientX < t.getBoundingClientRect().left); sel.removeAllRanges(); sel.addRange(rg); return; }
     }
     // hueco libre fuera de toda línea (entre filas, debajo de todo): el indicador aparece EN ESE PUNTO (x e y del clic) y lo que se teclee nace ahí
-    const filas = [...hoja.querySelectorAll(':scope > .fila')], arriba = filas.filter((fl) => fl.getBoundingClientRect().bottom <= e.clientY).pop() || null;
-    let n = reg.find((r) => r.huecoAuto && r.t === 'eq' && r.ed.fila.length === 0 && r.el.parentElement && r.el.parentElement.children.length === 1);          // solo se reutiliza una vacía que esté SOLA en su línea (si comparte línea con otro nodo, moverla arrastraría esa línea entera)
-    limpiaHuecos(n);
-    if (!n) { n = nuevaEq(''); n.huecoAuto = true; n.el.classList.add('hueco'); }
-    insertaDespues(arriba, n);
-    n.el.style.left = ''; n.el.style.marginTop = '';
-    const z = Z0, hr = H0, sx = celda(e.clientX, hr.left, z), sy = celda(e.clientY, hr.top, z);
-    const rx = sx === null ? (e.clientX - hr.left) / z : sx, ry = sy === null ? (e.clientY - hr.top) / z + 10 : sy + 20;
-    activo = n.ed; n.ed.cur = { fila: n.ed.fila, i: 0 }; redibuja();
-    const al = () => alineaIndicador(n, rx, ry, z, hr.width / z, true); al(); requestAnimationFrame(() => requestAnimationFrame(al));
+    colocaHueco(null, e, H0, Z0, false);
   });
   let menuCtx = null;
   function cierraCtx() { if (menuCtx) { menuCtx.remove(); menuCtx = null; } }

@@ -343,7 +343,8 @@
       else if (res && res.mat) resW = tam * 1.2 + (mColw ? mColw.reduce((p, q) => p + q, 0) : 0) + 20;
       else if (res && res.texto) resW = res.kind === 'val' ? ((u) => (u && u.t === 'c' && u.s === '=') ? ancho(res.texto, tam) + tam * .35 : ancho('= ' + res.texto, tam) + tam * .9)(this.fila[this.fila.length - 1]) : ancho('  ' + res.texto, tam * .75) + tam;
       const tx0 = cv.closest('.txt'), fl0 = cv.closest('.fila'), pw = tx0 ? Math.max(120, tx0.clientWidth - 8) : fl0 ? fl0.clientWidth : cv.parentElement && cv.parentElement.parentElement ? cv.parentElement.parentElement.clientWidth : 700;          // ancho de la FILA (no del grupo de líneas, que es angosto)
-      const W = Math.max(Math.min(pw || 700, Math.ceil(4 + b.w + resW + (this.foco ? 20 : (tx0 ? 2 : 8)) + (this.modo && this.foco ? 52 : 0))), (this.modo && this.foco) ? Math.ceil(4 + b.w + 8 + 46) : 24);          // con modo (simbólica/notación) cabe además la etiqueta de arriba a la derecha sin tapar la ecuación
+      const Wn = Math.max(Math.min(pw || 700, Math.ceil(4 + b.w + resW + (this.foco ? 20 : (tx0 ? 2 : 8)) + (this.modo && this.foco ? 52 : 0))), (this.modo && this.foco) ? Math.ceil(4 + b.w + 8 + 46) : 24);          // con modo (simbólica/notación) cabe además la etiqueta de arriba a la derecha sin tapar la ecuación
+      const W = this.fila.length ? Wn : 16;          // ecuación vacía (el indicador): menos que una celda de 20 px, para no tapar la siguiente
       if (!reducida && pw > 60) { const nat = 4 + b.w + resW + 8; if (nat > pw) this._exceso = (pw - 2) / nat; }          // no cabe: se vuelve a dibujar más pequeña
       const H = Math.ceil(b.a + b.d + tam * .9);
       cv.width = Math.floor(W * dpr); cv.height = Math.floor(H * dpr); cv.style.width = W + 'px'; cv.style.height = H + 'px';

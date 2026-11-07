@@ -216,8 +216,10 @@ body.lisp .fila > .txt.lado { margin-left:12px; flex:0 1 auto; }
 body.mv-arrastrando { user-select:none; cursor:move; }
 .mv-guia { position:fixed; z-index:90; background:#2D7DD2; border-radius:2px; pointer-events:none; display:none; }
 .mv-banda { position:fixed; z-index:90; border:1px dashed #2D7DD2; background:rgba(45,125,210,.12); pointer-events:none; }
+#hoja > .fila:has(> .eq.hueco:only-child) { height:0; min-height:0; margin:-2px 0 0; padding:0; overflow:visible; }          /* el indicador vacío suelto no ocupa alto: al hacer clic entre líneas lo de abajo no salta */
 #hoja .fila > .eq.hueco { pointer-events:none; }          /* el indicador vacío de un clic en un hueco no captura clics: las celdas de al lado siguen siendo clicables */
-#hoja .fila > .eq:not(.conGraf), #hoja .fila > .grupo { padding-left:10px; }          /* la franja izquierda (10 px) queda libre para agarrar, como el WPF (Padding.Left = 10) */
+#hoja .fila > .eq:not(.conGraf), #hoja .fila > .grupo { padding-left:10px; }
+#hoja .fila > .eq.hueco:not(.conGraf) { padding-left:0; }          /* el indicador vacío mide solo su lienzo (sin la franja de agarre de 10 px) */          /* la franja izquierda (10 px) queda libre para agarrar, como el WPF (Padding.Left = 10) */
 
 /* Exportar PDF = window.print(): sólo las páginas de la hoja, sin menú, cinta, estado ni pestañas */
 @media print {
