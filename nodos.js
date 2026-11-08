@@ -622,7 +622,9 @@
       const ch = (s) => Array.from(s).map((c) => ({ t: 'c', s: c })); let nuevo = null, m;
       if (GRIEGAS[palabra]) nuevo = [{ t: 'c', s: GRIEGAS[palabra] }];
       else if ((m = /^([A-Za-z])(\d+)([A-Za-z]{0,2})$/.exec(palabra))) nuevo = [{ t: 'c', s: m[1] }, { t: 'sub', r: ch(m[2] + m[3]) }];
-      else if ((m = /^([A-Za-z]+)prime$/.exec(palabra))) nuevo = ch(m[1]).concat([{ t: 'c', s: '′' }]);
+      else if ((m = /^([A-Za-z]+)(tprime|pprime|prime)$/.exec(palabra))) nuevo = ch(m[1]).concat([{ t: 'c', s: { tprime: '‴', pprime: '″', prime: '′' }[m[2]] }]);
+      else if ((m = /^([A-Za-z]+?)(ddot|dot|hat|check|breve|tilde|vec|bar)$/.exec(palabra)) && !GRIEGAS[palabra]) nuevo = ch(GRIEGAS[m[1]] || m[1]).concat([{ t: 'c', s: { ddot: '̈', dot: '̇', hat: '̂', check: '̌', breve: '̆', tilde: '̃', vec: '⃗', bar: '̄' }[m[2]] }]);          // los mismos sufijos de Hekatan Lab y del WPF: x̄ x̂ x̃ x⃗ ẋ ẍ
+      else if (k !== '(' && (palabra === 'sum' || palabra === 'prod' || palabra === 'integral')) nuevo = [{ t: 'c', s: palabra === 'sum' ? '∑' : palabra === 'prod' ? '∏' : '∫' }];          // «sum» suelto → ∑ ; «sum(…)» sigue siendo la función
       else if ((m = /^([A-Za-z]+?)sup(\d+)$/.exec(palabra))) nuevo = ch(m[1]).concat([{ t: 'sup', r: ch(m[2]) }]);
       if (!nuevo) return; f.splice(j, this.cur.i - j, ...nuevo); this.cur.i = j + nuevo.length;
     }
