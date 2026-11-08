@@ -378,6 +378,7 @@
       if (r.prog) {          // programa: todas las líneas del bloque se ejecutan juntas
         if (hechos.has(r.prog)) continue; hechos.add(r.prog);
         const grupo = reg.filter((x) => x.prog === r.prog); grupo.forEach((x) => { x.ed.resultado = null; });
+        grupo.forEach((x, i) => x.el.classList.toggle('progl', i > 0 && i < grupo.length - 1));          // barra vertical a la izquierda del cuerpo del programa (como el bloque de Mathcad/WPF)
         try {
           const ult = HK.M.programa(grupo.map((x) => x.ed.texto() + (x.sil ? ';' : '')), env);
           if (ult && !grupo[0].prog.tecleado) grupo[grupo.length - 1].ed.resultado = valorRes(ult.v);
@@ -732,6 +733,7 @@
     limpia();
     { const lisp = d.estilo === 'lisp'; document.body.classList.toggle('lisp', lisp); document.body.classList.toggle('sinpag', lisp);          // hoja de Hekatan LISP: continua y compacta, como en el WPF (estilo «lisp»)
       if (HK.app) { if (lisp) { HK.app.setTxt(Math.round(d.txt || 15)); HK.app.setEq(Math.round(d.eq || 15)); } else if (HK.app.estiloLisp) { HK.app.setTxt(13); HK.app.setEq(14); } HK.app.estiloLisp = lisp; } }
+    { const gp = typeof d.gap === 'number' ? d.gap : 6; document.documentElement.style.setProperty('--gapfila', Math.max(0, gp + 8) + 'px'); }          // interlineado de la hoja (campo «gap» del .hmath, como el WPF): 6 → 14 px (como antes), -4 → 4 px
     const dxs = [];
     for (let it of d.items || []) {
       if (it.dx || it.dy) dxs.push([reg.length, it.dx || 0, it.dy || 0]);
