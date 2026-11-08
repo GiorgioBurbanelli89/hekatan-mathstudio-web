@@ -46,7 +46,7 @@ html, body { height:100%; margin:0; overflow:hidden; font:12.5px "Segoe UI", sys
 body.sinpag #hoja, body[data-vista=web] #hoja, body[data-vista=borrador] #hoja, body[data-vista=esquema] #hoja, body.lisp #hoja { outline:1px dashed #B4C6E4; outline-offset:12px; }
 body.sinpag #papel .marco, body[data-vista=web] #papel .marco, body[data-vista=borrador] #papel .marco, body[data-vista=esquema] #papel .marco, body.lisp #papel .marco { display:none; }
 body.cuad #hoja { background-image:linear-gradient(#0000000d 1px, transparent 1px), linear-gradient(90deg, #0000000d 1px, transparent 1px); background-size:20px 20px; }
-.fila { display:flex; gap:12px; align-items:flex-start; margin:2px 0; padding-bottom:var(--gapfila, 14px); flex-wrap:wrap; }          /* 16 px de aire debajo de cada bloque como el «gap» del WPF; en el relleno (no en el margen) para que el paginado lo cuente y no se solape con el margen del siguiente */          /* la línea respeta el margen: al llegar a él, sigue en la fila de abajo */
+.fila { display:flex; gap:12px; align-items:flex-start; margin:2px 0 var(--margfila, 2px); padding-bottom:var(--gapfila, 14px); flex-wrap:wrap; }          /* 16 px de aire debajo de cada bloque como el «gap» del WPF; en el relleno (no en el margen) para que el paginado lo cuente y no se solape con el margen del siguiente */          /* la línea respeta el margen: al llegar a él, sigue en la fila de abajo */
 .eq { flex:0 0 auto; max-width:100%; border-radius:2px; }
 .grupo { flex:0 0 auto; max-width:100%; display:flex; flex-direction:column; }
 .eq canvas { display:block; cursor:text; }

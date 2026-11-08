@@ -209,7 +209,7 @@
   function paso(rango, n) { const b = rango / n, e = Math.pow(10, Math.floor(Math.log10(b))), f = b / e; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * e; }          // paso «redondo» 1·2·5 ×10ⁿ
   const marcaTxt = (v) => HK.fmt(parseFloat(v.toPrecision(6)));
   function dibujaMalla(r) {
-    const g = r.graf, cv = r.gel, dpr = window.devicePixelRatio || 1, W = r.gw ? Math.max(180, Math.min((r.el.parentElement || r.el).clientWidth - 16, r.gw)) : Math.min(r.el.clientWidth - 8, 460); let H = r.gh || 300;
+    const g = r.graf, cv = r.gel, dpr = window.devicePixelRatio || 1, W = r.gw ? Math.max(180, Math.min((r.el.parentElement || r.el).clientWidth - 16, r.gw)) : (g.tipo === 'mapa' && r.el.parentElement && r.el.parentElement.children.length === 1 ? Math.min(r.el.parentElement.clientWidth - 24, 390) : Math.min(r.el.clientWidth - 8, 460)); let H = r.gh || 300;          // un mapa solo en su fila ocupa un ancho como el del WPF
     if (r.gw) r.el.style.flex = '0 0 ' + (W + 8) + 'px';          // el tamaño elegido nunca pasa del ancho de la fila (margen)
     if (g.tipo === 'mapa') H = Math.max(60, Math.min(W - 136, r.gh ? r.gh - 42 : 258)) + 42;          // alto justo: sin franja blanca abajo
     cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + 'px'; cv.style.height = H + 'px'; cv.style.margin = '4px 0 6px 6px';
@@ -396,7 +396,7 @@
         else if ((s.k === 'muestra' || s.k === 'expr') && s.e.t === 'call' && s.e.f === 'fplot') { r.graf = fplot(s.e.args, env); }
         else if ((s.k === 'muestra' || s.k === 'expr') && s.e.t === 'call' && HK.graf2 && HK.graf2.TIPOS[s.e.f]) { r.graf = HK.graf2.calcula(s.e.f, s.e.args, env); }          // friemann, fgauss, fgauss2d, fvolumen, fvoxeles
         else if ((s.k === 'muestra' || s.k === 'expr') && s.e.t === 'call' && (s.e.f === 'fmapa' || s.e.f === 'fsuperficie')) { r.graf = { tipo: s.e.f === 'fmapa' ? 'mapa' : 'sup', d: malla2(s.e.args, env) }; }
-        else if ((s.k === 'muestra' || s.k === 'expr') && s.e.t === 'call' && s.e.f === 'mapa' && (s.e.args.length === 1 || s.e.args.length === 3)) { r.graf = { tipo: 'mapa', d: mapaMatriz(s.e.args, env) }; }          // mapa(M [, a, b]): la matriz de resultados (i = x, j = y)
+        else if ((s.k === 'muestra' || s.k === 'expr') && s.e.t === 'call' && s.e.f === 'mapa' && (s.e.args.length === 1 || s.e.args.length === 3)) { r.graf = { tipo: 'mapa', d: mapaMatriz(s.e.args, env) }; r.ed.resultado = { kind: 'val', texto: 'mapa  ' + marcaTxt(r.graf.d.mn) + ' … ' + marcaTxt(r.graf.d.mx), cu: -1 }; }          // mapa(M [, a, b]): la matriz de resultados (i = x, j = y)
         else if (s.k === 'expr' && r.modo !== 1 && r.auto && !r.editado && !HK.simb.tieneSimb(s.e)) {          // solo filas cargadas de un .hmath y sin tocar          // fila numérica con solo una expresión («u», «dif»): muestra su valor, como en escritorio
           try { r.ed.resultado = valorRes(HK.evalua(s.e, env)); } catch (e) { if (!/^indef:/.test(e.message)) throw e; r.ed.resultado = { sim: '=', fila: HK.aFilas(sim(s.e)) }; }
         } else if (s.k === 'expr' && r.modo === 1 && r.auto && !r.editado) {          // fila simbólica: «expr» → resultado con flecha
@@ -733,7 +733,7 @@
     limpia();
     { const lisp = d.estilo === 'lisp'; document.body.classList.toggle('lisp', lisp); document.body.classList.toggle('sinpag', lisp);          // hoja de Hekatan LISP: continua y compacta, como en el WPF (estilo «lisp»)
       if (HK.app) { if (lisp) { HK.app.setTxt(Math.round(d.txt || 15)); HK.app.setEq(Math.round(d.eq || 15)); } else if (HK.app.estiloLisp) { HK.app.setTxt(13); HK.app.setEq(14); } HK.app.estiloLisp = lisp; } }
-    { const gp = typeof d.gap === 'number' ? d.gap : 6; document.documentElement.style.setProperty('--gapfila', Math.max(0, gp + 8) + 'px'); }          // interlineado de la hoja (campo «gap» del .hmath, como el WPF): 6 → 14 px (como antes), -4 → 4 px
+    { const gp = typeof d.gap === 'number' ? d.gap : 6; document.documentElement.style.setProperty('--gapfila', Math.max(0, gp + 8) + 'px'); document.documentElement.style.setProperty('--margfila', Math.min(2, 2 + (gp - 6) * 0.9) + 'px'); }          // interlineado de la hoja (campo «gap» del .hmath, como el WPF): 6 → 14 px (como antes), -4 → 4 px
     const dxs = [];
     for (let it of d.items || []) {
       if (it.dx || it.dy) dxs.push([reg.length, it.dx || 0, it.dy || 0]);
