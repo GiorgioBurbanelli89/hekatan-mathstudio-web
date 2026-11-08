@@ -212,6 +212,18 @@ T_cb = [sin(a_2), -sin(a_1); -cos(a_2), cos(a_1)]/d_b
 T_ib = [sin(a_2), -cos(a_2); -sin(a_1), cos(a_1)]/d_b
 P_cb = M_b·T_cb 'identidad
 P_ib = M_b·T_ib 'no es la identidad
+#: **d) Comprobación numérica del libro** con α_ij = 30° y α_ki = 105° (los lados del dibujo). Se multiplica (8.8) por cada versión de (8.9):
+a_3 = 30·pi/180 'ángulo del lado ij [rad]
+a_4 = 105·pi/180 'ángulo del lado ki [rad]
+M_d = [cos(a_3), sin(a_3); cos(a_4), sin(a_4)]
+d_d = sin(a_4 - a_3) 'determinante
+T_cd = [sin(a_4), -sin(a_3); -cos(a_4), cos(a_3)]/d_d
+T_id = [sin(a_4), -cos(a_4); -sin(a_3), cos(a_3)]/d_d
+#: **Correcta:** (8.8) × (8.9 correcta) = [1.0000, ok:0.0000; ok:0.0000, 1.0000]
+P_cd = M_d·T_cd 'identidad
+#: **Impresa:** (8.8) × (8.9 impresa) = [0.6072, mal:0.6803; mal:−0.7588, 0.7967]
+P_id = M_d·T_id 'no es la identidad
+#: La versión correcta da la **identidad** (unos y ceros). La impresa deja números distintos de cero fuera de la diagonal (**0.6803** y **−0.7588**): no es la inversa.
 
 ## 6 · Ejemplos de determinante
 #: **Qué es.** El determinante es un número que dice si la matriz tiene inversa (det ≠ 0) y por cuánto escala las áreas o volúmenes. En 2 × 2: det [m_a, m_b; m_c, m_d] = m_a·m_d − m_b·m_c = **área con signo del paralelogramo** formado por sus dos filas.
