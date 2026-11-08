@@ -209,18 +209,20 @@
   function paso(rango, n) { const b = rango / n, e = Math.pow(10, Math.floor(Math.log10(b))), f = b / e; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * e; }          // paso «redondo» 1·2·5 ×10ⁿ
   const marcaTxt = (v) => HK.fmt(parseFloat(v.toPrecision(6)));
   function dibujaMalla(r) {
-    const g = r.graf, cv = r.gel, dpr = window.devicePixelRatio || 1, W = Math.min(r.el.clientWidth - 8, 460), H = 300;
+    const g = r.graf, cv = r.gel, dpr = window.devicePixelRatio || 1, W = r.gw ? Math.max(180, Math.min((r.el.parentElement || r.el).clientWidth - 16, r.gw)) : Math.min(r.el.clientWidth - 8, 460); let H = r.gh || 300;
+    if (r.gw) r.el.style.flex = '0 0 ' + (W + 8) + 'px';          // el tamaño elegido nunca pasa del ancho de la fila (margen)
+    if (g.tipo === 'mapa') H = Math.max(60, Math.min(W - 136, r.gh ? r.gh - 42 : 258)) + 42;          // alto justo: sin franja blanca abajo
     cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + 'px'; cv.style.height = H + 'px'; cv.style.margin = '4px 0 6px 6px';
     const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.fillStyle = '#fff'; c.fillRect(0, 0, W, H);
     const d = g.d, n = d.n, col = (v) => { const q = jet(1 - (v - d.mn) / (d.mx - d.mn)); return 'rgb(' + q.join(',') + ')'; };
     if (g.tipo === 'mapa') {
-      const Lm = 44, T = 12, lado = Math.min(W - Lm - 78, H - T - 30), w = lado, h = lado, N = 96; r.hv = { k: 'mapa', Lm, T, w, h, d, n };          // el mapa es cuadrado y se interpola (suave) como en el WPF
+      const Lm = 44, T = 12, lado = Math.min(W - Lm - 92, H - T - 30), w = lado, h = lado, N = 96; r.hv = { k: 'mapa', Lm, T, w, h, d, n };          // el mapa es cuadrado y se interpola (suave) como en el WPF
       const zz = (u, v) => { const x = u * n, y = v * n, i = Math.min(n - 1, Math.floor(x)), j = Math.min(n - 1, Math.floor(y)), p = x - i, q = y - j; return d.z[i][j] * (1 - p) * (1 - q) + d.z[i + 1][j] * p * (1 - q) + d.z[i][j + 1] * (1 - p) * q + d.z[i + 1][j + 1] * p * q; };
       const cw = w / N; for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) { c.fillStyle = col(zz((i + .5) / N, (j + .5) / N)); c.fillRect(Lm + i * cw, T + h - (j + 1) * cw, cw + .6, cw + .6); }
       const nivel = paso(d.mx - d.mn, 8); c.strokeStyle = '#0006'; c.lineWidth = .8;          // curvas de nivel
       for (let lv = Math.ceil(d.mn / nivel + 1e-9) * nivel; lv < d.mx - 1e-9; lv += nivel) { c.beginPath(); for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) { const a = zz(i / N, j / N), b = zz((i + 1) / N, j / N), e = zz(i / N, (j + 1) / N), X0 = Lm + i * cw, Y0 = T + h - j * cw; if ((a - lv) * (b - lv) < 0) { const t = (lv - a) / (b - a); c.moveTo(X0 + t * cw, Y0); c.lineTo(X0 + t * cw, Y0 - cw * .5); } if ((a - lv) * (e - lv) < 0) { const t = (lv - a) / (e - a); c.moveTo(X0, Y0 - t * cw); c.lineTo(X0 + cw * .5, Y0 - t * cw); } } c.stroke(); }
       let bi = 0, bj = 0, bm = -Infinity; for (let i = 0; i <= n; i++) for (let j = 0; j <= n; j++) if (d.z[i][j] > bm) { bm = d.z[i][j]; bi = i; bj = j; }
-      { const mp = d.maxPos || [bi / n, bj / n], mx0 = Lm + mp[0] * w, my0 = T + h - mp[1] * h; if (d.maxPos) bm = d.mx; c.strokeStyle = '#000'; c.lineWidth = 1.2; c.beginPath(); c.arc(mx0, my0, 5, 0, 7); c.stroke(); c.beginPath(); c.arc(mx0, my0, 2, 0, 7); c.stroke(); c.fillStyle = '#fffd'; c.fillRect(mx0 + 8, my0 - 8, 44, 15); c.fillStyle = '#000'; c.font = '11px sans-serif'; c.textAlign = 'left'; c.fillText('máx ' + marcaTxt(bm), mx0 + 11, my0 + 3); }
+      { const mp = d.maxPos || [bi / n, bj / n], mx0 = Lm + mp[0] * w, my0 = T + h - mp[1] * h; if (d.maxPos) bm = d.mx; c.strokeStyle = '#000'; c.lineWidth = 1.2; c.beginPath(); c.arc(mx0, my0, 5, 0, 7); c.stroke(); c.beginPath(); c.arc(mx0, my0, 2, 0, 7); c.stroke(); c.font = '11px sans-serif'; const tx = 'máx ' + marcaTxt(bm), tw = c.measureText(tx).width; let lx = mx0 + 8; if (lx + tw + 6 > Lm + w) lx = mx0 - 8 - tw - 6; c.fillStyle = '#fffd'; c.fillRect(lx, my0 - 8, tw + 6, 15); c.fillStyle = '#000'; c.textAlign = 'left'; c.fillText(tx, lx + 3, my0 + 3); }          // la etiqueta nunca sale del mapa
       c.strokeStyle = '#222'; c.lineWidth = 1; c.strokeRect(Lm, T, w, h); c.fillStyle = '#444'; c.font = '11px sans-serif'; c.textAlign = 'center';
       for (let k = 0; k <= 2; k++) { c.fillText(marcaTxt(d.rg[0][0] + (d.rg[0][1] - d.rg[0][0]) * k / 2), Lm + w * k / 2, T + h + 14); c.textAlign = 'right'; c.fillText(marcaTxt(d.rg[1][0] + (d.rg[1][1] - d.rg[1][0]) * k / 2), Lm - 4, T + h - h * k / 2 + 4); c.textAlign = 'center'; }
       const bx = Lm + w + 22; for (let i = 0; i < 80; i++) { c.fillStyle = col(d.mn + (d.mx - d.mn) * (1 - i / 79)); c.fillRect(bx, T + i * h / 80, 14, h / 80 + 1); }
@@ -237,6 +239,7 @@
         for (let v = Math.ceil(d.mn / pc - 1e-9) * pc; v <= d.mx + 1e-9; v += pc) { const yy = T0 + hh - (v - d.mn) / (d.mx - d.mn) * hh; c.beginPath(); c.moveTo(bx - 3, yy); c.lineTo(bx, yy); c.stroke(); c.fillText(marcaTxt(v), bx - 5, yy + 3); } }
       c.fillStyle = '#444'; c.font = '11px sans-serif'; c.textAlign = 'left'; c.fillText('x de ' + HK.fmt(d.rg[0][0]) + ' a ' + HK.fmt(d.rg[0][1]) + ', y de ' + HK.fmt(d.rg[1][0]) + ' a ' + HK.fmt(d.rg[1][1]) + ', z de ' + HK.fmt(d.mn) + ' a ' + HK.fmt(d.mx), 8, H - 8);
     }
+    c.fillStyle = '#888'; c.beginPath(); c.moveTo(W - 2, H - 12); c.lineTo(W - 2, H - 2); c.lineTo(W - 12, H - 2); c.closePath(); c.fill();          // asa: arrastrar para cambiar el tamaño
   }
 
   // ---------------------------------------------------------------- hover de las gráficas (como el WPF): globo con los valores bajo el cursor
@@ -293,6 +296,11 @@
       r.gel.addEventListener('mousemove', (e) => { if (!arr) hover(r, e); });          // hover como el WPF
       r.gel.addEventListener('mouseleave', () => limpiaHover(r));
     }
+    if (!r.gel._rs) { r.gel._rs = 1; let rz = null; const cerca = (e) => { const b = r.gel.getBoundingClientRect(); return e.clientX > b.right - 16 && e.clientY > b.bottom - 16; };
+      r.gel.addEventListener('mousedown', (e) => { if (!cerca(e)) return; rz = { x: e.clientX, y: e.clientY, w: r.gel.offsetWidth, h: r.gel.offsetHeight }; e.preventDefault(); e.stopImmediatePropagation(); }, true);
+      r.gel.addEventListener('mousemove', (e) => { r.gel.style.cursor = cerca(e) ? 'nwse-resize' : ''; });
+      document.addEventListener('mousemove', (e) => { if (!rz) return; r.gw = Math.max(180, rz.w + e.clientX - rz.x); r.gh = Math.max(120, rz.h + e.clientY - rz.y); dibujaGraf(r); });
+      document.addEventListener('mouseup', () => { rz = null; }); }
     if (r.graf.tipo && HK.graf2 && /^(riemann|gauss1|gauss2|esc3|tabla|malla)$/.test(r.graf.tipo)) { HK.graf2.dibuja(r); return; }
     if (r.graf.tipo) { dibujaMalla(r); return; }
     const g = r.graf, cv = r.gel, dpr = window.devicePixelRatio || 1, W = Math.min(r.el.clientWidth - 8, 460), H = 230;
