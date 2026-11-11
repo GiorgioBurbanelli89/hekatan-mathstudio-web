@@ -230,7 +230,7 @@
   }).catch(() => { const g = $('grp-lisp'); if (g) g.textContent = 'Hekatan LISP (.lisp) · no se pudo leer la lista'; });
   document.querySelectorAll('.sub button').forEach((b) => b.addEventListener('click', () => {
     const a = b.dataset.a, ej = b.dataset.ej;
-    if (ej) abreEjemplo(ej); else if (a === 'nuevo') nuevo(); else if (a === 'abrir') $('archivo').click(); else if (a === 'guardar') guarda(); else if (a === 'guardarcomo') guardaComo();
+    if (ej) abreEjemplo(ej); else if (a === 'nuevo') nuevo(); else if (a === 'abrir') $('archivo').click(); else if (a === 'guardar') guarda(); else if (a === 'guardarcomo') guardaComo(); else if (a === 'pdf' || a === 'imprimir') G.print();
     else if (a === 'txt-') setTxt(-1); else if (a === 'txt+') setTxt(+1); else if (a === 'eq-') setEq(-1); else if (a === 'eq+') setEq(+1);
   }));
   $('archivo').onchange = (e) => { const f = e.target.files[0]; if (!f) return; const rd = new FileReader(); rd.onload = () => { const txt = comoHmath(f.name, rd.result); H().abre(txt); recuerda(f.name.replace(/\.(lisp|hlisp)$/i, '.hmath'), txt); estado('Abierto: ' + f.name); setTimeout(pagina, 50); }; rd.readAsText(f, 'utf-8'); e.target.value = ''; };
