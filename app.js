@@ -1,7 +1,11 @@
 // Hekatan Math Studio Web — la ventana: menú, cinta con pestañas (como la de WPF), hoja de papel con páginas y barra de estado
 (function (G) {
   const HK = G.HK, H = () => HK.hoja, $ = (id) => document.getElementById(id);
-  const estado = (t) => { $('msg').textContent = t; };
+  const estado = (t) => {
+    $('msg').textContent = t;
+    const m = /^(?:Abierto|Guardado): (.+)$/.exec(t), base = 'Hekatan Math Studio';   // el nombre de la hoja en la barra de título
+    if (m || t === 'Hoja nueva') { const nom = m ? m[1].replace(/\.(hmath|lisp)$/i, '') : '', sp = document.querySelector('#titulo span'); if (sp) sp.textContent = nom ? base + ' — ' + nom : base; document.title = nom ? nom + ' — ' + base : base; }
+  };
 
   // ---------------------------------------------------------------- cinta
   const G_ = (txt) => ({ ic: txt, t: txt, tip: 'Insertar ' + txt, acc: () => H().escribe(txt) });
