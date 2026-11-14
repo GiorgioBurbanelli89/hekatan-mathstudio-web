@@ -33,22 +33,22 @@
   },
   {
    "t": "eq",
-   "codigo": "tz=0.45 % espesor [m] (Footing Thickness)",
+   "codigo": "t_z=0.45 % espesor [m] (Footing Thickness)",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "bc=0.45 % lado de la columna [m] (Load Size)",
+   "codigo": "b_c=0.45 % lado de la columna [m] (Load Size)",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "kS=2920 % coeficiente de balasto [t/m³] (Subgrade Modulus)",
+   "codigo": "k_S=2920 % coeficiente de balasto [t/m³] (Subgrade Modulus)",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "Ec=14100*sqrt(280)*10 % módulo de elasticidad 14100·√f'c con f'c = 280 kg/cm² → 2 359 381.3 t/m²",
+   "codigo": "E_c=14100*sqrt(280)*10 % módulo de elasticidad 14100·√f'c con f'c = 280 kg/cm² → 2 359 381.3 t/m²",
    "modo": 0
   },
   {
@@ -63,22 +63,22 @@
   },
   {
    "t": "eq",
-   "codigo": "PD=91 % carga axial muerta [t]",
+   "codigo": "P_D=91 % carga axial muerta [t]",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "PL=30 % carga axial viva [t]",
+   "codigo": "P_L=30 % carga axial viva [t]",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "MyD=12 % momento My muerto [t·m]",
+   "codigo": "M_yD=12 % momento My muerto [t·m]",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "MyL=5 % momento My vivo [t·m]",
+   "codigo": "M_yL=5 % momento My vivo [t·m]",
    "modo": 0
   },
   {
@@ -94,12 +94,12 @@
   },
   {
    "t": "eq",
-   "codigo": "Iz=B*integral(x^2,x,-Lx/2,Lx/2)",
+   "codigo": "I_z=B*integral(x^2,x,-Lx/2,Lx/2)",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "Iz→",
+   "codigo": "I_z→",
    "modo": 0
   },
   {
@@ -119,7 +119,7 @@
   },
   {
    "t": "eq",
-   "codigo": "sr(PD+PL,MyD+MyL,L,L)",
+   "codigo": "sr(P_D+P_L,M_yD+M_yL,L,L)",
    "modo": 0
   },
   {
@@ -129,7 +129,7 @@
   },
   {
    "t": "eq",
-   "codigo": "sr(PD+PL,MyD+MyL,L,L)+gam*tz",
+   "codigo": "sr(P_D+P_L,M_yD+M_yL,L,L)+gam*t_z",
    "modo": 0
   },
   {
@@ -179,17 +179,17 @@
   },
   {
    "t": "eq",
-   "codigo": "Db=Dbs(Ec,tz,nu)",
+   "codigo": "Db=Dbs(E_c,t_z,nu)",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "Gc=Ec/(2*(1+nu))",
+   "codigo": "G_c=E_c/(2*(1+nu))",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "Cs=5/6*Gc*tz",
+   "codigo": "Cs=5/6*G_c*t_z",
    "modo": 0
   },
   {
@@ -327,12 +327,12 @@
   },
   {
    "t": "eq",
-   "codigo": "Kg = prog\n  M=zeros(nd,nd)\n  for ey = 1:nel\n    for ex = 1:nel\n      n1=(ey-1)*(nel+1)+ex\n      for i = 1:12\n        gi=gdof(n1,i)\n        for j = 1:12\n          gj=gdof(n1,j)\n          M_{gi,gj}=M_{gi,gj}+Ke_{i,j}\n        end\n      end\n    end\n  end\n  for j = 1:nn\n    ix=mod(j-1,nel+1)\n    iy=floor((j-1)/(nel+1)+0.001)\n    g=3*(j-1)+1\n    M_{g,g}=M_{g,g}+kS*hh*hh*fr(ix)*fr(iy)\n  end\n  return M\nend",
+   "codigo": "Kg = prog\n  M=zeros(nd,nd)\n  for ey = 1:nel\n    for ex = 1:nel\n      n1=(ey-1)*(nel+1)+ex\n      for i = 1:12\n        gi=gdof(n1,i)\n        for j = 1:12\n          gj=gdof(n1,j)\n          M_{gi,gj}=M_{gi,gj}+Ke_{i,j}\n        end\n      end\n    end\n  end\n  for j = 1:nn\n    ix=mod(j-1,nel+1)\n    iy=floor((j-1)/(nel+1)+0.001)\n    g=3*(j-1)+1\n    M_{g,g}=M_{g,g}+k_S*hh*hh*fr(ix)*fr(iy)\n  end\n  return M\nend",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "Fc(fD,fL) = prog\n  M=zeros(nd,1)\n  for j = 1:nn\n    ix=mod(j-1,nel+1)\n    iy=floor((j-1)/(nel+1)+0.001)\n    g=3*(j-1)+1\n    M_g=M_g-fD*gam*tz*hh*hh*fr(ix)*fr(iy)\n  end\n  c=(nel/2)*(nel+1)+nel/2+1\n  g=3*(c-1)+1\n  g2=g+2\n  M_g=M_g-(fD*PD+fL*PL)\n  M_g2=M_g2+(fD*MyD+fL*MyL)\n  return M\nend",
+   "codigo": "Fc(fD,fL) = prog\n  M=zeros(nd,1)\n  for j = 1:nn\n    ix=mod(j-1,nel+1)\n    iy=floor((j-1)/(nel+1)+0.001)\n    g=3*(j-1)+1\n    M_g=M_g-fD*gam*t_z*hh*hh*fr(ix)*fr(iy)\n  end\n  c=(nel/2)*(nel+1)+nel/2+1\n  g=3*(c-1)+1\n  g2=g+2\n  M_g=M_g-(fD*P_D+fL*P_L)\n  M_g2=M_g2+(fD*M_yD+fL*M_yL)\n  return M\nend",
    "modo": 0
   },
   {
@@ -368,22 +368,22 @@
   },
   {
    "t": "eq",
-   "codigo": "ss=-kS*ws % presión del suelo, servicio [t/m²] (+ compresión)",
+   "codigo": "ss=-k_S*ws % presión del suelo, servicio [t/m²] (+ compresión)",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "su=-kS*wu % presión del suelo, última [t/m²]",
+   "codigo": "su=-k_S*wu % presión del suelo, última [t/m²]",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "Rt(W) = prog\n  s=0\n  for j = 1:nn\n    ix=mod(j-1,nel+1)\n    iy=floor((j-1)/(nel+1)+0.001)\n    s=s-kS*hh*hh*fr(ix)*fr(iy)*W_j\n  end\n  return s\nend",
+   "codigo": "Rt(W) = prog\n  s=0\n  for j = 1:nn\n    ix=mod(j-1,nel+1)\n    iy=floor((j-1)/(nel+1)+0.001)\n    s=s-k_S*hh*hh*fr(ix)*fr(iy)*W_j\n  end\n  return s\nend",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "Pm(W) = prog\n  M=zeros(nel+1,nel+1)\n  for j = 1:nn\n    ix=mod(j-1,nel+1)\n    iy=floor((j-1)/(nel+1)+0.001)\n    ii=ix+1\n    kk=iy+1\n    M_{ii,kk}=-kS*W_j\n  end\n  return M\nend",
+   "codigo": "Pm(W) = prog\n  M=zeros(nel+1,nel+1)\n  for j = 1:nn\n    ix=mod(j-1,nel+1)\n    iy=floor((j-1)/(nel+1)+0.001)\n    ii=ix+1\n    kk=iy+1\n    M_{ii,kk}=-k_S*W_j\n  end\n  return M\nend",
    "modo": 0
   },
   {
@@ -400,57 +400,57 @@
   },
   {
    "t": "eq",
-   "codigo": "sigMaxS=max(ss)",
+   "codigo": "σ_maxS=max(ss)",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "sigMaxS=",
+   "codigo": "σ_maxS=",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "sigMinS=min(ss)",
+   "codigo": "σ_minS=min(ss)",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "sigMinS=",
+   "codigo": "σ_minS=",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "wMaxS=-1000*min(ws) % flecha máxima [mm]",
+   "codigo": "w_maxS=-1000*min(ws) % flecha máxima [mm]",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "wMaxS=",
+   "codigo": "w_maxS=",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "sumRS=Rt(ws) % suma de reacciones = P + peso propio",
+   "codigo": "R_totS=Rt(ws) % suma de reacciones = P + peso propio",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "sumRS=",
+   "codigo": "R_totS=",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "pesoS=L*L*tz*gam % peso propio [t]",
+   "codigo": "W_S=L*L*t_z*gam % peso propio [t]",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "pesoS=",
+   "codigo": "W_S=",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "eqS=sumRS-(PD+PL)-pesoS % equilibrio vertical: debe ser 0",
+   "codigo": "eqS=R_totS-(P_D+P_L)-W_S % equilibrio vertical: debe ser 0",
    "modo": 0
   },
   {
@@ -486,47 +486,47 @@
   },
   {
    "t": "eq",
-   "codigo": "sigMaxU=max(su)",
+   "codigo": "σ_maxU=max(su)",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "sigMaxU=",
+   "codigo": "σ_maxU=",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "sigMinU=min(su)",
+   "codigo": "σ_minU=min(su)",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "sigMinU=",
+   "codigo": "σ_minU=",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "wMaxU=-1000*min(wu)",
+   "codigo": "w_maxU=-1000*min(wu)",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "wMaxU=",
+   "codigo": "w_maxU=",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "sumRU=Rt(wu)",
+   "codigo": "R_totU=Rt(wu)",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "sumRU=",
+   "codigo": "R_totU=",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "eqU=sumRU-(1.4*PD+1.7*PL)-1.4*pesoS",
+   "codigo": "eqU=R_totU-(1.4*P_D+1.7*P_L)-1.4*W_S",
    "modo": 0
   },
   {
@@ -557,62 +557,62 @@
   },
   {
    "t": "eq",
-   "codigo": "sigSAFE=13.163 % t/m² (Fig. 29, pág. 36)",
+   "codigo": "σ_SAFE=13.163 % t/m² (Fig. 29, pág. 36)",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "sigSAFE=",
+   "codigo": "σ_SAFE=",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "difSAFE=(sigMaxS/sigSAFE-1)*100 % diferencia con SAFE [%]",
+   "codigo": "Δ_SAFE=(σ_maxS/σ_SAFE-1)*100 % diferencia con SAFE [%]",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "difSAFE=",
+   "codigo": "Δ_SAFE=",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "difNumpy=sigMaxS-13.249780 % contra numpy: debe ser ~0",
+   "codigo": "Δ_numpy=σ_maxS-13.249780 % contra numpy: debe ser ~0",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "difNumpy=",
+   "codigo": "Δ_numpy=",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "difNumpyW=wMaxS-4.537596",
+   "codigo": "Δ_numpyW=w_maxS-4.537596",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "difNumpyW=",
+   "codigo": "Δ_numpyW=",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "difNumpyR=sumRS-133.869697",
+   "codigo": "Δ_numpyR=R_totS-133.869697",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "difNumpyR=",
+   "codigo": "Δ_numpyR=",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "difNumpyU=sigMaxU-19.463055",
+   "codigo": "Δ_numpyU=σ_maxU-19.463055",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "difNumpyU=",
+   "codigo": "Δ_numpyU=",
    "modo": 0
   },
   {
@@ -633,7 +633,7 @@
   },
   {
    "t": "eq",
-   "codigo": "qadm=14 % presión admisible del enunciado [t/m²]",
+   "codigo": "q_adm=14 % presión admisible del enunciado [t/m²]",
    "modo": 0
   },
   {
@@ -644,32 +644,32 @@
   },
   {
    "t": "eq",
-   "codigo": "usoQ=sigMaxS/qadm",
+   "codigo": "η_q=σ_maxS/q_adm",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "usoQ=",
+   "codigo": "η_q=",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "FSq=qadm/sigMaxS",
+   "codigo": "FS_q=q_adm/σ_maxS",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "FSq=",
+   "codigo": "FS_q=",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "holgQ=qadm-sigMaxS % holgura [t/m²]",
+   "codigo": "Δ_q=q_adm-σ_maxS % holgura [t/m²]",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "holgQ=",
+   "codigo": "Δ_q=",
    "modo": 0
   },
   {
@@ -680,32 +680,32 @@
   },
   {
    "t": "eq",
-   "codigo": "eRes=(MyD+MyL)/(PD+PL+pesoS) % excentricidad de la resultante [m]",
+   "codigo": "e_res=(M_yD+M_yL)/(P_D+P_L+W_S) % excentricidad de la resultante [m]",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "eRes=",
+   "codigo": "e_res=",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "eNuc=L/6 % límite del núcleo central [m]",
+   "codigo": "e_nuc=L/6 % límite del núcleo central [m]",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "eNuc=",
+   "codigo": "e_nuc=",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "relE=eRes/eNuc",
+   "codigo": "r_E=e_res/e_nuc",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "relE=",
+   "codigo": "r_E=",
    "modo": 0
   },
   {
@@ -721,32 +721,32 @@
   },
   {
    "t": "eq",
-   "codigo": "sIzq=Bor(ws,0) % borde -x [mm]",
+   "codigo": "σ_izq=Bor(ws,0) % borde -x [mm]",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "sIzq=",
+   "codigo": "σ_izq=",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "sDer=Bor(ws,1) % borde +x [mm]",
+   "codigo": "σ_der=Bor(ws,1) % borde +x [mm]",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "sDer=",
+   "codigo": "σ_der=",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "dsDif=sDer-sIzq % asentamiento diferencial [mm]",
+   "codigo": "Δ_σ=σ_der-σ_izq % asentamiento diferencial [mm]",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "dsDif=",
+   "codigo": "Δ_σ=",
    "modo": 0
   },
   {
@@ -757,7 +757,7 @@
   },
   {
    "t": "eq",
-   "codigo": "beta=dsDif/(1000*L)",
+   "codigo": "beta=Δ_σ/(1000*L)",
    "modo": 0
   },
   {
@@ -767,12 +767,12 @@
   },
   {
    "t": "eq",
-   "codigo": "relBeta=beta*500",
+   "codigo": "r_beta=beta*500",
    "modo": 0
   },
   {
    "t": "eq",
-   "codigo": "relBeta=",
+   "codigo": "r_beta=",
    "modo": 0
   },
   {

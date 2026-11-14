@@ -309,7 +309,8 @@
     if (GRIEGO[n]) return chars(GRIEGO[n]);          // epsilon → ε, alpha → α… (nombre completo; como al teclearlo en el editor)
     const i = n.indexOf('_');
     if (i < 0) return chars(n);
-    return chars(n.slice(0, i)).concat([{ t: 'sub', r: chars(n.slice(i + 1)) }]);
+    const base = n.slice(0, i), sub = n.slice(i + 1);          // «_» = subíndice; la base y el subíndice que sean nombre griego se dibujan como símbolo: sigma_max → σ con subíndice max
+    return chars(GRIEGO[base] || base).concat([{ t: 'sub', r: chars(GRIEGO[sub] || sub) }]);
   }
   function aFilas(a) {
     switch (a.t) {
