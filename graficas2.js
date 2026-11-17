@@ -2,12 +2,13 @@
 //   friemann(f, a, b, n [, tipo])            integral de Riemann: curva, área exacta, n rectángulos (tipo 0 izq · 1 centro · 2 der)
 //   fgauss(f, a, b, n)                       cuadratura de Gauss: área con signo, n puntos, una barra por punto (base = peso)
 //   fgauss2d(n [, forma])                    n×n puntos de Gauss en el elemento de referencia y en el real (forma 0 rectángulo · 1 irregular)
+//   fbarra(n [, q])                          barra empotrada con n elementos, nudos numerados y carga repartida q
 //   fresorte(k1 [, k2, …], F)               resortes en serie con la pared a la izquierda: dibujo, cota del estiramiento u y flecha de la fuerza F
 //   fvolumen(f, x0, x1, y0, y1, n [, az, el])  doble integral: n×n prismas (n = 0 el sólido exacto)
 //   fvoxeles(f, x0, x1, y0, y1, n, m [, az, el])  triple integral de 1: n×n×m cubitos
 (function (G) {
   const HK = G.HK;
-  const TIPOS = { friemann: 'riemann', fgauss: 'gauss1', fgauss2d: 'gauss2', fvolumen: 'esc3', fvoxeles: 'esc3', tabla: 'tabla', mallanum: 'malla', fresorte: 'resorte' };
+  const TIPOS = { friemann: 'riemann', fgauss: 'gauss1', fgauss2d: 'gauss2', fvolumen: 'esc3', fvoxeles: 'esc3', tabla: 'tabla', mallanum: 'malla', fresorte: 'resorte', fbarra: 'barra' };
 
   // puntos y pesos de Gauss–Legendre en [-1, 1] (raíces de Legendre por Newton)
   function gaussLeg(n) {
@@ -48,6 +49,11 @@
       const me = HK.evalua(args[2], env); if (!HK.M.esM(me)) throw new Error('mallanum(X, Y, ELE, SUP)');
       const X = col(args[0]), Y = col(args[1]), el = []; for (let i = 0; i < me.r; i++) { const f = []; for (let j = 0; j < me.c; j++) f.push(Math.round(me.g(i, j)) - 1); el.push(f); }
       return { tipo: 'malla', d: { X, Y, el, sup: args.length > 3 ? col(args[3]).map(Math.round) : [], A: Math.max(1e-9, ...X), B: Math.max(1e-9, ...Y) } };
+    }
+    if (nombre === 'fbarra') {          // fbarra(n [, q]): barra empotrada a la izquierda, cortada en n elementos (n + 1 nudos), con una carga repartida q
+      if (args.length < 1) throw new Error('fbarra(n [, q])');
+      const n = Math.max(1, Math.min(8, Math.round(num(args[0])))), q = args.length > 1 ? num(args[1]) : NaN;
+      return { tipo: 'barra', d: { n, q } };
     }
     if (nombre === 'fresorte') {          // fresorte(k1 [, k2, …], F): resortes en serie, el primero pegado a la pared; la fuerza F jala del último nudo
       if (args.length < 2) throw new Error('fresorte(k1 [, k2, …], F)');
@@ -357,14 +363,31 @@
     ls.forEach((t2, i) => txt(c, t2, 12, yi + i * 15 - (ls.length - 1) * 15, 12, '#222', 'left'));
     if (W > 420) txt(c, 'misma escala en todos los cuadros: el resorte se alarga al subir F', W - 24, H - 6, 9, '#888', 'right');
   }
+  // fbarra: la barra del objeto, con su apoyo, sus elementos y nudos y la carga repartida
+  function barra(c, d, W, H) {
+    const n = d.n, x0 = 46, x1 = W - 40, y0 = Math.round(H * 0.58), h = 14, L = x1 - x0;
+    const lin = (a, b, e, f) => { c.beginPath(); c.moveTo(a, b); c.lineTo(e, f); c.stroke(); };
+    const flecha = (a, b, e, f, col) => { const t = Math.atan2(f - b, e - a); c.strokeStyle = col; c.fillStyle = col; c.lineWidth = 1.6; lin(a, b, e, f); c.beginPath(); c.moveTo(e, f); c.lineTo(e - 7 * Math.cos(t - 0.4), f - 7 * Math.sin(t - 0.4)); c.lineTo(e - 7 * Math.cos(t + 0.4), f - 7 * Math.sin(t + 0.4)); c.closePath(); c.fill(); };
+    c.lineCap = 'round'; c.lineJoin = 'round';
+    c.strokeStyle = '#444'; c.lineWidth = 3; lin(x0, y0 - 34, x0, y0 + 34); c.lineWidth = 1.2; for (let q = -34; q < 34; q += 9) lin(x0, y0 + q + 9, x0 - 10, y0 + q);          // el empotramiento
+    c.fillStyle = 'rgba(30,64,175,.10)'; c.fillRect(x0, y0 - h / 2, L, h); c.strokeStyle = AZUL; c.lineWidth = 2; c.strokeRect(x0, y0 - h / 2, L, h);
+    c.lineWidth = 1; for (let i = 1; i < n; i++) lin(x0 + L * i / n, y0 - h / 2, x0 + L * i / n, y0 + h / 2);          // separación entre elementos
+    const nA = 9; c.strokeStyle = NAR; c.lineWidth = 1.6; lin(x0, y0 - h / 2 - 34, x1, y0 - h / 2 - 34);          // carga repartida: línea y flechas hacia la barra
+    for (let k = 0; k < nA; k++) { const x = x0 + (L - 1) * k / (nA - 1); flecha(x, y0 - h / 2 - 34, x, y0 - h / 2 - 3, NAR); }
+    txt(c, Number.isFinite(d.q) ? 'q = ' + f4(d.q) : 'q', (x0 + x1) / 2, y0 - h / 2 - 46, 12, NAR, 'center');
+    for (let i = 0; i <= n; i++) { const x = x0 + L * i / n; if (i) { c.fillStyle = '#1f2937'; c.strokeStyle = '#fff'; c.lineWidth = 1.4; c.beginPath(); c.arc(x, y0, 5.5, 0, 7); c.fill(); c.stroke(); } txt(c, n === 1 ? (i ? 'b' : 'a') : String(i + 1), x + (i ? 0 : 12), y0 + 22, 11, '#111', 'center'); }
+    for (let e = 0; e < n; e++) txt(c, n === 1 ? 'elemento' : 'elemento ' + (e + 1), x0 + L * (e + 0.5) / n, y0 + 38, 10, '#64748b', 'center');
+    c.strokeStyle = VERDE; c.lineWidth = 1.4; lin(x0, y0 + 56, x1, y0 + 56); lin(x0, y0 + 51, x0, y0 + 61); lin(x1, y0 + 51, x1, y0 + 61); txt(c, 'L', (x0 + x1) / 2, y0 + 70, 12, VERDE, 'center');
+    txt(c, 'EA', x0 + 14, y0 + 3, 10, AZUL, 'left');
+  }
   function dibuja(r) {
-    let g = r.graf, cv = r.gel, dpr = window.devicePixelRatio || 1, pa = document.getElementById('hoja'), disp = pa ? pa.clientWidth - 24 : 600, W0 = Math.max(380, Math.min(disp, g.tipo === 'esc3' ? 560 : 680)), W = g.tipo === 'tabla' ? Math.min(W0, 60 + 92 * g.d.cols.length) : g.tipo === 'malla' ? Math.min(W0, 460) : W0, H = g.tipo === 'tabla' ? 40 + g.d.filas * 20 + (g.d.total > g.d.filas ? 18 : 0) : g.tipo === 'malla' ? Math.max(60, (W - 70) * g.d.B / g.d.A) + 30 : g.tipo === 'resorte' ? 230 : g.tipo === 'gauss1' ? 340 : g.tipo === 'gauss2' ? 300 : g.tipo === 'esc3' ? 400 : 290;
+    let g = r.graf, cv = r.gel, dpr = window.devicePixelRatio || 1, pa = document.getElementById('hoja'), disp = pa ? pa.clientWidth - 24 : 600, W0 = Math.max(380, Math.min(disp, g.tipo === 'esc3' ? 560 : 680)), W = g.tipo === 'tabla' ? Math.min(W0, 60 + 92 * g.d.cols.length) : g.tipo === 'malla' ? Math.min(W0, 460) : W0, H = g.tipo === 'tabla' ? 40 + g.d.filas * 20 + (g.d.total > g.d.filas ? 18 : 0) : g.tipo === 'malla' ? Math.max(60, (W - 70) * g.d.B / g.d.A) + 30 : g.tipo === 'resorte' ? 230 : g.tipo === 'barra' ? 200 : g.tipo === 'gauss1' ? 340 : g.tipo === 'gauss2' ? 300 : g.tipo === 'esc3' ? 400 : 290;
     if (r.gw) { W = Math.max(180, Math.min((r.el.parentElement || r.el).clientWidth - 16, r.gw)); r.el.style.flex = '0 0 ' + (W + 8) + 'px'; } if (r.gh) H = Math.max(g.tipo === 'resorte' ? 160 : 120, r.gh);          // tamaño elegido arrastrando la esquina
     cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + 'px'; cv.style.height = H + 'px'; cv.style.margin = '4px 0 6px 6px';
     const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.fillStyle = '#fff'; c.fillRect(0, 0, W, H);
     if (g.tipo === 'resorte') { const dm = Math.max(...g.d.du.map(Math.abs)); if (dm > 1e-9 && !(r.refR > 0)) r.refR = dm; g.d.ref = r.refR > 0 ? r.refR : dm; }          // la escala del estiramiento la fija el primer dibujo y no cambia con F
     HV = null; c.save(); c.beginPath(); c.rect(0, 0, W, H); c.clip();
-    ({ riemann, gauss1, gauss2, tabla, malla, resorte, esc3: (cc, d, w, h) => escena(cc, d, w, h, r.orb) })[g.tipo](c, g.d, W, H);
+    ({ riemann, gauss1, gauss2, tabla, malla, resorte, barra, esc3: (cc, d, w, h) => escena(cc, d, w, h, r.orb) })[g.tipo](c, g.d, W, H);
     if (HK.grip) HK.grip(c, W, H);
     c.restore(); conectaHover(r);
   }
