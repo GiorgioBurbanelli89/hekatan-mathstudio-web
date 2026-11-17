@@ -136,7 +136,7 @@
         if (nombre === 'numerico' || nombre === 'simbolico') { cuenta('#' + nombre + ' (sin efecto)'); continue; }
         if (nombre === 'fplot') { const cod = traduceFplot(t); if (cod) { items.push(oculto ? { t: 'eq', codigo: cod, modo: 0, oculto: true, orig: '' } : { t: 'eq', codigo: cod, modo: 0, orig: '' }); cuenta('#fplot (nativa)'); continue; } }
         if (nombre === 'slider') {          // #slider fplot(f1, f2, [a b]), n = lo:hi → un deslizador de la hoja (n) y la gráfica nativa que lo usa: al moverlo la curva se redibuja
-          const ms = /^#slider\s+(fplot|fresorte|fresortesim|friemann)\s*\((.*)\)\s*,\s*([\p{L}_][\p{L}\p{N}_]*)\s*=\s*(-?[\d.eE+-]+)\s*:\s*(-?[\d.eE+-]+)\s*$/u.exec(t), cod = ms && (ms[1] === 'fplot' ? traduceFplot('#fplot(' + ms[2] + ')') : ms[1] + '(' + ms[2].replace(/·/g, '*') + ')');
+          const ms = /^#slider\s+(fplot|fresorte|fresortesim|ftrocito|friemann)\s*\((.*)\)\s*,\s*([\p{L}_][\p{L}\p{N}_]*)\s*=\s*(-?[\d.eE+-]+)\s*:\s*(-?[\d.eE+-]+)\s*$/u.exec(t), cod = ms && (ms[1] === 'fplot' ? traduceFplot('#fplot(' + ms[2] + ')') : ms[1] + '(' + ms[2].replace(/·/g, '*') + ')');
           if (ms && cod) { const lo = parseFloat(ms[4]), hi = parseFloat(ms[5]); items.push({ t: 'slider', nombre: ms[3], min: lo, max: hi, valor: (lo + hi) / 2, inc: (hi - lo) / 50 }, oculto ? { t: 'eq', codigo: cod, modo: 0, oculto: true, orig: '' } : { t: 'eq', codigo: cod, modo: 0, orig: '' }); cuenta('#slider fplot (nativa)'); continue; }
         }
         if (t.startsWith('#|')) while (i < lin.length && lin[i].trimStart().startsWith('#|')) { txt.push(lin[i].replace(/\s+$/, '')); i++; }

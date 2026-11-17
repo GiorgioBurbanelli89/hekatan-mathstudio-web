@@ -314,7 +314,7 @@
       document.addEventListener('mousedown', (e) => { if (e.button !== 0) return; const q = agarre(e); if (!q) return; rz = { r: q, x: e.clientX, y: e.clientY, w: q.gel.offsetWidth, h: q.gel.offsetHeight }; e.preventDefault(); e.stopImmediatePropagation(); }, true);
       document.addEventListener('mousemove', (e) => { if (rz) { rz.r.gw = Math.max(180, rz.w + e.clientX - rz.x); rz.r.gh = Math.max(120, rz.h + e.clientY - rz.y); dibujaGraf(rz.r); return; } const cv = e.target; if (cv && cv.tagName === 'CANVAS' && !cv.classList.contains('ghov')) cv.style.cursor = agarre(e) ? 'nwse-resize' : ''; }, true);
       document.addEventListener('mouseup', () => { rz = null; }, true); }
-    if (r.graf.tipo && HK.graf2 && /^(riemann|gauss1|gauss2|esc3|tabla|malla|resorte|barra|membrana)$/.test(r.graf.tipo)) { HK.graf2.dibuja(r); return; }
+    if (r.graf.tipo && HK.graf2 && /^(riemann|gauss1|gauss2|esc3|tabla|malla|resorte|barra|membrana|trocito)$/.test(r.graf.tipo)) { HK.graf2.dibuja(r); return; }
     if (r.graf.tipo) { dibujaMalla(r); return; }
     const g = r.graf, cv = r.gel, dpr = window.devicePixelRatio || 1, W = r.gw ? Math.max(180, Math.min((r.el.parentElement || r.el).clientWidth - 16, r.gw)) : Math.min(r.el.clientWidth - 8, 460), H = r.gh ? Math.max(120, r.gh) : 230;          // el ancho y el alto que eligió el usuario (arrastrando la esquina)
     if (r.gw) r.el.style.flex = '0 0 ' + (W + 8) + 'px';

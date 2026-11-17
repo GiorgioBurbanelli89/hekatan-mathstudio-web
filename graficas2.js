@@ -3,13 +3,14 @@
 //   fgauss(f, a, b, n)                       cuadratura de Gauss: área con signo, n puntos, una barra por punto (base = peso)
 //   fgauss2d(n [, forma])                    n×n puntos de Gauss en el elemento de referencia y en el real (forma 0 rectángulo · 1 irregular)
 //   fbarra(n [, q])                          barra empotrada con n elementos, nudos numerados y carga repartida q
+//   ftrocito([t])                            el trocito dx de una barra con N(x), N(x + dx) y q·dx; con t en [0, 1] se achica (animación)
 //   fresorte(n)                             n resortes con variables simbólicas k, F, u (sin valores)
 //   fresorte(k1 [, k2, …], F)               resortes en serie con la pared a la izquierda: dibujo, cota del estiramiento u y flecha de la fuerza F
 //   fvolumen(f, x0, x1, y0, y1, n [, az, el])  doble integral: n×n prismas (n = 0 el sólido exacto)
 //   fvoxeles(f, x0, x1, y0, y1, n, m [, az, el])  triple integral de 1: n×n×m cubitos
 (function (G) {
   const HK = G.HK;
-  const TIPOS = { friemann: 'riemann', fgauss: 'gauss1', fgauss2d: 'gauss2', fvolumen: 'esc3', fvoxeles: 'esc3', tabla: 'tabla', mallanum: 'malla', fresorte: 'resorte', fresortesim: 'resorte', fbarra: 'barra', fmembrana: 'membrana' };
+  const TIPOS = { friemann: 'riemann', fgauss: 'gauss1', fgauss2d: 'gauss2', fvolumen: 'esc3', fvoxeles: 'esc3', tabla: 'tabla', mallanum: 'malla', fresorte: 'resorte', fresortesim: 'resorte', fbarra: 'barra', fmembrana: 'membrana', ftrocito: 'trocito' };
 
   // puntos y pesos de Gauss–Legendre en [-1, 1] (raíces de Legendre por Newton)
   function gaussLeg(n) {
@@ -50,6 +51,10 @@
       const me = HK.evalua(args[2], env); if (!HK.M.esM(me)) throw new Error('mallanum(X, Y, ELE, SUP)');
       const X = col(args[0]), Y = col(args[1]), el = []; for (let i = 0; i < me.r; i++) { const f = []; for (let j = 0; j < me.c; j++) f.push(Math.round(me.g(i, j)) - 1); el.push(f); }
       return { tipo: 'malla', d: { X, Y, el, sup: args.length > 3 ? col(args[3]).map(Math.round) : [], A: Math.max(1e-9, ...X), B: Math.max(1e-9, ...Y) } };
+    }
+    if (nombre === 'ftrocito') {          // ftrocito([t]): la barra con un trocito dx resaltado y, ampliado, el trocito con N(x), N(x + dx) y q·dx. t ∈ [0, 1] (animación): al crecer t el trocito se achica y la diferencia N(x + dx) − N(x) tiende a cero
+      const t = args.length ? Math.max(0, Math.min(1, num(args[0]) || 0)) : 0;
+      return { tipo: 'trocito', d: { t } };
     }
     if (nombre === 'fmembrana') {          // fmembrana(1): el panel de membrana (apoyo, tracción t, fuerza de volumen b) · fmembrana(2): el elemento de 4 nudos con u, v y el giro ψ en cada esquina (ITW 1990)
       const k = args.length ? Math.max(1, Math.min(2, Math.round(num(args[0])) || 1)) : 1;
@@ -377,6 +382,29 @@
     ls.forEach((t2, i) => txt(c, t2, 12, yi + i * 15 - (ls.length - 1) * 15, 12, '#222', 'left'));
     if (W > 420) txt(c, d.anim ? 'animación con variables: al crecer F el resorte se alarga' : d.simb ? 'dibujo con variables: sin valores' : 'misma escala en todos los cuadros: el resorte se alarga al subir F', W - 24, H - 6, 9, '#888', 'right');
   }
+  // ftrocito: el trocito de barra y su equilibrio, con letras (sin números)
+  function trocito(c, d, W, H) {
+    const lin = (a, b, e, f) => { c.beginPath(); c.moveTo(a, b); c.lineTo(e, f); c.stroke(); };
+    const flecha = (a, b, e, f, col, lw) => { const t = Math.atan2(f - b, e - a); c.strokeStyle = col; c.fillStyle = col; c.lineWidth = lw || 1.8; lin(a, b, e, f); c.beginPath(); c.moveTo(e, f); c.lineTo(e - 8 * Math.cos(t - 0.4), f - 8 * Math.sin(t - 0.4)); c.lineTo(e - 8 * Math.cos(t + 0.4), f - 8 * Math.sin(t + 0.4)); c.closePath(); c.fill(); };
+    c.lineCap = 'round'; c.lineJoin = 'round'; const t = d.t;
+    const x0 = 46, x1 = W - 36, yb = 46, hb = 12, L = x1 - x0;          // la barra entera, arriba
+    c.strokeStyle = '#444'; c.lineWidth = 3; lin(x0, yb - 20, x0, yb + 30); c.lineWidth = 1.2; for (let q = -20; q < 30; q += 8) lin(x0, yb + q + 8, x0 - 9, yb + q);
+    c.fillStyle = 'rgba(30,64,175,.07)'; c.fillRect(x0, yb - hb / 2, L, hb); c.strokeStyle = '#94a3b8'; c.lineWidth = 1.2; c.strokeRect(x0, yb - hb / 2, L, hb);
+    const dxp = 6 + 66 * (1 - t), xs = x0 + 0.52 * L, xe = xs + dxp;          // el trocito: se achica al crecer t
+    c.fillStyle = 'rgba(194,65,12,.30)'; c.fillRect(xs, yb - hb / 2, dxp, hb); c.strokeStyle = NAR; c.lineWidth = 1.8; c.strokeRect(xs, yb - hb / 2, dxp, hb);
+    txt(c, 'x', xs, yb + 22, 12, '#444', 'center'); txt(c, 'x + dx', xe + 14, yb + 22, 12, '#444', 'center');
+    const mx = W / 2, zw = 150, zl = mx - zw / 2, zr = mx + zw / 2, yz = 178, zh = 26;          // el trocito ampliado, abajo
+    c.setLineDash([4, 4]); c.strokeStyle = 'rgba(100,110,130,.8)'; c.lineWidth = 1; lin(xs, yb + hb / 2, zl, yz - zh / 2); lin(xe, yb + hb / 2, zr, yz - zh / 2); c.setLineDash([]);
+    c.fillStyle = 'rgba(194,65,12,.12)'; c.fillRect(zl, yz - zh / 2, zw, zh); c.strokeStyle = NAR; c.lineWidth = 2; c.strokeRect(zl, yz - zh / 2, zw, zh);
+    const nI = 44, nD = 44 + 18 * (1 - t);          // N(x + dx) − N(x) se reduce al achicar el trocito
+    flecha(zl, yz, zl - nI, yz, AZUL, 2.2); txt(c, 'N(x)', zl - nI / 2 - 4, yz - 14, 13, AZUL, 'center');
+    flecha(zr, yz, zr + nD, yz, AZUL, 2.2); txt(c, 'N(x + dx)', zr + nD / 2 + 4, yz - 14, 13, AZUL, 'center');
+    for (let i = 0; i < 5; i++) { const x = zl + 12 + (zw - 24) * i / 4; flecha(x, yz - zh / 2 - 34, x, yz - zh / 2 - 4, VERDE, 1.6); }
+    lin(zl + 12, yz - zh / 2 - 34, zr - 12, yz - zh / 2 - 34); txt(c, 'q·dx', mx, yz - zh / 2 - 46, 13, VERDE, 'center');
+    c.strokeStyle = '#444'; c.lineWidth = 1.2; lin(zl, yz + zh / 2 + 14, zr, yz + zh / 2 + 14); lin(zl, yz + zh / 2 + 9, zl, yz + zh / 2 + 19); lin(zr, yz + zh / 2 + 9, zr, yz + zh / 2 + 19); txt(c, 'dx', mx, yz + zh / 2 + 28, 12, '#444', 'center');
+    txt(c, 'trocito en equilibrio: N(x + dx) − N(x) + q·dx = 0', 12, H - 8, 11, '#64748b', 'left');
+    if (W > 520) txt(c, t > 0.02 ? 'al achicar dx: N(x + dx) − N(x) → dN' : 'un trocito de largo dx', W - 12, H - 8, 11, '#64748b', 'right');
+  }
   // fmembrana: el objeto de la membrana, con letras (sin números)
   function membrana(c, d, W, H) {
     const lin = (a, b, e, f) => { c.beginPath(); c.moveTo(a, b); c.lineTo(e, f); c.stroke(); };
@@ -427,13 +455,13 @@
     txt(c, 'EA', x0 + 14, y0 + 3, 10, AZUL, 'left');
   }
   function dibuja(r) {
-    let g = r.graf, cv = r.gel, dpr = window.devicePixelRatio || 1, pa = document.getElementById('hoja'), disp = pa ? pa.clientWidth - 24 : 600, W0 = Math.max(380, Math.min(disp, g.tipo === 'esc3' ? 560 : 680)), W = g.tipo === 'tabla' ? Math.min(W0, 60 + 92 * g.d.cols.length) : g.tipo === 'malla' ? Math.min(W0, 460) : W0, H = g.tipo === 'tabla' ? 40 + g.d.filas * 20 + (g.d.total > g.d.filas ? 18 : 0) : g.tipo === 'malla' ? Math.max(60, (W - 70) * g.d.B / g.d.A) + 30 : g.tipo === 'resorte' ? 230 : g.tipo === 'barra' ? 200 : g.tipo === 'membrana' ? 250 : g.tipo === 'gauss1' ? 340 : g.tipo === 'gauss2' ? 300 : g.tipo === 'esc3' ? 400 : 290;
+    let g = r.graf, cv = r.gel, dpr = window.devicePixelRatio || 1, pa = document.getElementById('hoja'), disp = pa ? pa.clientWidth - 24 : 600, W0 = Math.max(380, Math.min(disp, g.tipo === 'esc3' ? 560 : 680)), W = g.tipo === 'tabla' ? Math.min(W0, 60 + 92 * g.d.cols.length) : g.tipo === 'malla' ? Math.min(W0, 460) : W0, H = g.tipo === 'tabla' ? 40 + g.d.filas * 20 + (g.d.total > g.d.filas ? 18 : 0) : g.tipo === 'malla' ? Math.max(60, (W - 70) * g.d.B / g.d.A) + 30 : g.tipo === 'resorte' ? 230 : g.tipo === 'barra' ? 200 : g.tipo === 'membrana' ? 250 : g.tipo === 'trocito' ? 250 : g.tipo === 'gauss1' ? 340 : g.tipo === 'gauss2' ? 300 : g.tipo === 'esc3' ? 400 : 290;
     if (r.gw) { W = Math.max(180, Math.min((r.el.parentElement || r.el).clientWidth - 16, r.gw)); r.el.style.flex = '0 0 ' + (W + 8) + 'px'; } if (r.gh) H = Math.max(g.tipo === 'resorte' ? 160 : 120, r.gh);          // tamaño elegido arrastrando la esquina
     cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + 'px'; cv.style.height = H + 'px'; cv.style.margin = '4px 0 6px 6px';
     const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.fillStyle = '#fff'; c.fillRect(0, 0, W, H);
     if (g.tipo === 'resorte' && !g.d.simb) { const dm = Math.max(...g.d.du.map(Math.abs)); if (dm > 1e-9 && !(r.refR > 0)) r.refR = dm; g.d.ref = r.refR > 0 ? r.refR : dm; }          // la escala del estiramiento la fija el primer dibujo y no cambia con F
     HV = null; c.save(); c.beginPath(); c.rect(0, 0, W, H); c.clip();
-    ({ riemann, gauss1, gauss2, tabla, malla, resorte, barra, membrana, esc3: (cc, d, w, h) => escena(cc, d, w, h, r.orb) })[g.tipo](c, g.d, W, H);
+    ({ riemann, gauss1, gauss2, tabla, malla, resorte, barra, membrana, trocito, esc3: (cc, d, w, h) => escena(cc, d, w, h, r.orb) })[g.tipo](c, g.d, W, H);
     if (HK.grip) HK.grip(c, W, H);
     c.restore(); conectaHover(r);
   }
