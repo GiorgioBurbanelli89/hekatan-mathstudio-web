@@ -337,8 +337,8 @@
   }
   // fresorte: pared, resortes en zigzag (con carga, en azul), posición sin carga (gris, discontinua), nudos, cota del desplazamiento u y flecha de la fuerza F
   function resorte(c, d, W, H) {
-    const n = d.ks.length, x0 = 46, y0 = Math.round(H * 0.5), L0 = Math.min(120, (W - x0 - 120) / (n * 1.6)), dmax = Math.max(...d.du.map(Math.abs), 1e-12), s = 0.6 * L0 / dmax;
-    const xn0 = [], xn = []; for (let i = 0; i <= n; i++) { xn0.push(x0 + i * L0); xn.push(x0 + i * L0 + s * d.u[i]); }
+    const n = d.ks.length, x0 = 46, y0 = Math.round(H * 0.5), L0 = Math.min(110, (W - x0 - 130) / (n * 1.9)), dmax = Math.max(d.ref || 0, 1e-12), s = 0.35 * L0 / dmax;          // escala FIJA (la del primer dibujo): al subir F el resorte se alarga de verdad
+    const xn0 = [], xn = []; for (let i = 0; i <= n; i++) { xn0.push(x0 + i * L0); xn.push(x0 + i * L0 + Math.min(s * d.u[i], 0.9 * L0 * i)); }
     const lin = (x1, y1, x2, y2) => { c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke(); };
     const flecha = (x1, y1, x2, y2, col) => { const a = Math.atan2(y2 - y1, x2 - x1); c.strokeStyle = col; c.fillStyle = col; c.lineWidth = 2; lin(x1, y1, x2, y2); c.beginPath(); c.moveTo(x2, y2); c.lineTo(x2 - 9 * Math.cos(a - 0.4), y2 - 9 * Math.sin(a - 0.4)); c.lineTo(x2 - 9 * Math.cos(a + 0.4), y2 - 9 * Math.sin(a + 0.4)); c.closePath(); c.fill(); };
     c.lineCap = 'round'; c.lineJoin = 'round';
@@ -355,13 +355,14 @@
     flecha(xn[n] + 9, y0, xn[n] + 62, y0, NAR); txt(c, 'F = ' + f4(d.F), xn[n] + 36, y0 - 14, 12, NAR, 'center');
     const yi = H - 22; const ls = n === 1 ? ['u = F / k = ' + f4(d.F) + ' / ' + f4(d.ks[0]) + ' = ' + f4(d.u[1])] : d.du.map((v, i) => 'nudo ' + (i + 2) + ': u = ' + (i ? 'u' + '₂₃₄₅₆₇'[i - 1] + ' + ' : '') + 'F / k' + '₁₂₃₄₅₆'[i] + ' = ' + f4(d.u[i + 1]));
     ls.forEach((t2, i) => txt(c, t2, 12, yi + i * 15 - (ls.length - 1) * 15, 12, '#222', 'left'));
-    if (W > 420) txt(c, 'estiramiento dibujado en proporción (no a escala)', W - 24, H - 6, 9, '#888', 'right');
+    if (W > 420) txt(c, 'misma escala en todos los cuadros: el resorte se alarga al subir F', W - 24, H - 6, 9, '#888', 'right');
   }
   function dibuja(r) {
     let g = r.graf, cv = r.gel, dpr = window.devicePixelRatio || 1, pa = document.getElementById('hoja'), disp = pa ? pa.clientWidth - 24 : 600, W0 = Math.max(380, Math.min(disp, g.tipo === 'esc3' ? 560 : 680)), W = g.tipo === 'tabla' ? Math.min(W0, 60 + 92 * g.d.cols.length) : g.tipo === 'malla' ? Math.min(W0, 460) : W0, H = g.tipo === 'tabla' ? 40 + g.d.filas * 20 + (g.d.total > g.d.filas ? 18 : 0) : g.tipo === 'malla' ? Math.max(60, (W - 70) * g.d.B / g.d.A) + 30 : g.tipo === 'resorte' ? 230 : g.tipo === 'gauss1' ? 340 : g.tipo === 'gauss2' ? 300 : g.tipo === 'esc3' ? 400 : 290;
     if (r.gw) { W = Math.max(180, Math.min((r.el.parentElement || r.el).clientWidth - 16, r.gw)); r.el.style.flex = '0 0 ' + (W + 8) + 'px'; } if (r.gh) H = Math.max(g.tipo === 'resorte' ? 160 : 120, r.gh);          // tamaño elegido arrastrando la esquina
     cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + 'px'; cv.style.height = H + 'px'; cv.style.margin = '4px 0 6px 6px';
     const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.fillStyle = '#fff'; c.fillRect(0, 0, W, H);
+    if (g.tipo === 'resorte') { const dm = Math.max(...g.d.du.map(Math.abs)); if (dm > 1e-9 && !(r.refR > 0)) r.refR = dm; g.d.ref = r.refR > 0 ? r.refR : dm; }          // la escala del estiramiento la fija el primer dibujo y no cambia con F
     HV = null; c.save(); c.beginPath(); c.rect(0, 0, W, H); c.clip();
     ({ riemann, gauss1, gauss2, tabla, malla, resorte, esc3: (cc, d, w, h) => escena(cc, d, w, h, r.orb) })[g.tipo](c, g.d, W, H);
     if (HK.grip) HK.grip(c, W, H);
