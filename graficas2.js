@@ -9,7 +9,7 @@
 //   fvoxeles(f, x0, x1, y0, y1, n, m [, az, el])  triple integral de 1: n×n×m cubitos
 (function (G) {
   const HK = G.HK;
-  const TIPOS = { friemann: 'riemann', fgauss: 'gauss1', fgauss2d: 'gauss2', fvolumen: 'esc3', fvoxeles: 'esc3', tabla: 'tabla', mallanum: 'malla', fresorte: 'resorte', fresortesim: 'resorte', fbarra: 'barra' };
+  const TIPOS = { friemann: 'riemann', fgauss: 'gauss1', fgauss2d: 'gauss2', fvolumen: 'esc3', fvoxeles: 'esc3', tabla: 'tabla', mallanum: 'malla', fresorte: 'resorte', fresortesim: 'resorte', fbarra: 'barra', fmembrana: 'membrana' };
 
   // puntos y pesos de Gauss–Legendre en [-1, 1] (raíces de Legendre por Newton)
   function gaussLeg(n) {
@@ -50,6 +50,10 @@
       const me = HK.evalua(args[2], env); if (!HK.M.esM(me)) throw new Error('mallanum(X, Y, ELE, SUP)');
       const X = col(args[0]), Y = col(args[1]), el = []; for (let i = 0; i < me.r; i++) { const f = []; for (let j = 0; j < me.c; j++) f.push(Math.round(me.g(i, j)) - 1); el.push(f); }
       return { tipo: 'malla', d: { X, Y, el, sup: args.length > 3 ? col(args[3]).map(Math.round) : [], A: Math.max(1e-9, ...X), B: Math.max(1e-9, ...Y) } };
+    }
+    if (nombre === 'fmembrana') {          // fmembrana(1): el panel de membrana (apoyo, tracción t, fuerza de volumen b) · fmembrana(2): el elemento de 4 nudos con u, v y el giro ψ en cada esquina (ITW 1990)
+      const k = args.length ? Math.max(1, Math.min(2, Math.round(num(args[0])) || 1)) : 1;
+      return { tipo: 'membrana', d: { k } };
     }
     if (nombre === 'fbarra') {          // fbarra(n [, q]): barra empotrada a la izquierda, cortada en n elementos (n + 1 nudos), con una carga repartida q
       if (args.length < 1) throw new Error('fbarra(n [, q])');
@@ -373,6 +377,38 @@
     ls.forEach((t2, i) => txt(c, t2, 12, yi + i * 15 - (ls.length - 1) * 15, 12, '#222', 'left'));
     if (W > 420) txt(c, d.anim ? 'animación con variables: al crecer F el resorte se alarga' : d.simb ? 'dibujo con variables: sin valores' : 'misma escala en todos los cuadros: el resorte se alarga al subir F', W - 24, H - 6, 9, '#888', 'right');
   }
+  // fmembrana: el objeto de la membrana, con letras (sin números)
+  function membrana(c, d, W, H) {
+    const lin = (a, b, e, f) => { c.beginPath(); c.moveTo(a, b); c.lineTo(e, f); c.stroke(); };
+    const flecha = (a, b, e, f, col, lw) => { const t = Math.atan2(f - b, e - a); c.strokeStyle = col; c.fillStyle = col; c.lineWidth = lw || 1.6; lin(a, b, e, f); c.beginPath(); c.moveTo(e, f); c.lineTo(e - 7 * Math.cos(t - 0.4), f - 7 * Math.sin(t - 0.4)); c.lineTo(e - 7 * Math.cos(t + 0.4), f - 7 * Math.sin(t + 0.4)); c.closePath(); c.fill(); };
+    c.lineCap = 'round'; c.lineJoin = 'round';
+    const x0 = 64, y0 = 26, w = Math.min(300, W - 190), h = Math.min(170, H - 78), MOR = '#7c3aed';
+    const ejes = () => { const ox = 18, oy = H - 22; flecha(ox, oy, ox + 28, oy, '#444', 1.4); flecha(ox, oy, ox, oy - 28, '#444', 1.4); txt(c, 'x', ox + 36, oy, 11, '#444', 'center'); txt(c, 'y', ox, oy - 36, 11, '#444', 'center'); };
+    if (d.k === 1) {
+      c.fillStyle = 'rgba(30,64,175,.08)'; c.fillRect(x0, y0, w, h); c.strokeStyle = AZUL; c.lineWidth = 2; c.strokeRect(x0, y0, w, h);
+      c.strokeStyle = '#444'; c.lineWidth = 3; lin(x0, y0, x0, y0 + h); c.lineWidth = 1.2; for (let q = 0; q < h; q += 9) lin(x0, y0 + q + 9, x0 - 10, y0 + q);          // apoyo (u = 0) rayado
+      for (let i = 0; i < 6; i++) { const y = y0 + 12 + (h - 24) * i / 5; flecha(x0 + w + 4, y, x0 + w + 36, y, NAR); }          // tracción t en el borde derecho
+      txt(c, 't', x0 + w + 50, y0 + h / 2, 13, NAR, 'center');
+      for (let i = 0; i < 4; i++) for (let j = 0; j < 2; j++) { const x = x0 + w * (i + 1) / 5, y = y0 + h * (j + 0.8) / 3; flecha(x, y - 12, x, y + 8, VERDE, 1.3); }          // fuerza de volumen b
+      txt(c, 'b', x0 + w * 0.5 + 12, y0 + h * 0.8 / 3 - 2, 12, VERDE, 'left');
+      txt(c, 'Ω', x0 + w / 2, y0 + h * 0.42, 18, AZUL, 'center'); txt(c, 'Γu', x0 - 24, y0 + h / 2, 12, '#444', 'center');
+      txt(c, 'Γt', x0 + w + 20, y0 + h + 14, 12, NAR, 'center');
+      txt(c, 'panel de membrana: apoyo en Γu (u = 0), tracción t en Γt y fuerza de volumen b en Ω', 12, H - 8, 10, '#64748b', 'left');
+      ejes(); return;
+    }
+    const P = [[x0 + 14, y0 + h - 6], [x0 + w - 8, y0 + h - 22], [x0 + w - 36, y0 + 22], [x0 + 2, y0 + 36]];          // cuadrilátero algo irregular, antihorario
+    c.fillStyle = 'rgba(30,64,175,.08)'; c.beginPath(); P.forEach((q, i) => i ? c.lineTo(q[0], q[1]) : c.moveTo(q[0], q[1])); c.closePath(); c.fill(); c.strokeStyle = AZUL; c.lineWidth = 2; c.stroke();
+    for (let i = 0; i < 4; i++) { const a = P[i], b = P[(i + 1) % 4], m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; c.fillStyle = '#fff'; c.strokeStyle = '#64748b'; c.lineWidth = 1.4; c.beginPath(); c.arc(m[0], m[1], 4, 0, 7); c.fill(); c.stroke(); txt(c, String(i + 5), m[0] + (i === 1 ? 12 : i === 3 ? -12 : 0), m[1] + (i === 0 ? 14 : i === 2 ? -12 : 0), 10, '#64748b', 'center'); }          // nudos de lado 5-8, sin grados de libertad
+    P.forEach((q, i) => {
+      flecha(q[0], q[1], q[0] + 26, q[1], NAR, 1.6); flecha(q[0], q[1], q[0], q[1] - 26, VERDE, 1.6);          // u y v
+      c.strokeStyle = MOR; c.fillStyle = MOR; c.lineWidth = 1.8; c.beginPath(); c.arc(q[0], q[1], 14, -0.2 * Math.PI, 1.25 * Math.PI, false); c.stroke(); const ea = 1.25 * Math.PI; const ex = q[0] + 14 * Math.cos(ea), ey = q[1] + 14 * Math.sin(ea); c.beginPath(); c.moveTo(ex, ey); c.lineTo(ex + 6 * Math.cos(ea + 1.1), ey + 6 * Math.sin(ea + 1.1)); c.lineTo(ex - 6 * Math.cos(ea - 0.5), ey - 6 * Math.sin(ea - 0.5)); c.closePath(); c.fill();          // el giro ψ
+      c.fillStyle = '#1f2937'; c.strokeStyle = '#fff'; c.lineWidth = 1.3; c.beginPath(); c.arc(q[0], q[1], 4.5, 0, 7); c.fill(); c.stroke();
+      txt(c, String(i + 1), q[0] + (i === 0 || i === 3 ? -14 : 14), q[1] + (i < 2 ? 16 : -16), 12, '#111', 'center');
+    });
+    txt(c, 'uᵢ', x0 + w + 22, y0 + 20, 13, NAR, 'left'); txt(c, 'vᵢ', x0 + w + 22, y0 + 44, 13, VERDE, 'left'); txt(c, 'ψᵢ', x0 + w + 22, y0 + 68, 13, MOR, 'left');
+    txt(c, 'nudos 1-4: u, v y el giro ψ · nudos 5-8: solo geometría (sin grados de libertad)', 12, H - 8, 10, '#64748b', 'left');
+    ejes();
+  }
   // fbarra: la barra del objeto, con su apoyo, sus elementos y nudos y la carga repartida
   function barra(c, d, W, H) {
     const n = d.n, x0 = 46, x1 = W - 40, y0 = Math.round(H * 0.58), h = 14, L = x1 - x0;
@@ -391,13 +427,13 @@
     txt(c, 'EA', x0 + 14, y0 + 3, 10, AZUL, 'left');
   }
   function dibuja(r) {
-    let g = r.graf, cv = r.gel, dpr = window.devicePixelRatio || 1, pa = document.getElementById('hoja'), disp = pa ? pa.clientWidth - 24 : 600, W0 = Math.max(380, Math.min(disp, g.tipo === 'esc3' ? 560 : 680)), W = g.tipo === 'tabla' ? Math.min(W0, 60 + 92 * g.d.cols.length) : g.tipo === 'malla' ? Math.min(W0, 460) : W0, H = g.tipo === 'tabla' ? 40 + g.d.filas * 20 + (g.d.total > g.d.filas ? 18 : 0) : g.tipo === 'malla' ? Math.max(60, (W - 70) * g.d.B / g.d.A) + 30 : g.tipo === 'resorte' ? 230 : g.tipo === 'barra' ? 200 : g.tipo === 'gauss1' ? 340 : g.tipo === 'gauss2' ? 300 : g.tipo === 'esc3' ? 400 : 290;
+    let g = r.graf, cv = r.gel, dpr = window.devicePixelRatio || 1, pa = document.getElementById('hoja'), disp = pa ? pa.clientWidth - 24 : 600, W0 = Math.max(380, Math.min(disp, g.tipo === 'esc3' ? 560 : 680)), W = g.tipo === 'tabla' ? Math.min(W0, 60 + 92 * g.d.cols.length) : g.tipo === 'malla' ? Math.min(W0, 460) : W0, H = g.tipo === 'tabla' ? 40 + g.d.filas * 20 + (g.d.total > g.d.filas ? 18 : 0) : g.tipo === 'malla' ? Math.max(60, (W - 70) * g.d.B / g.d.A) + 30 : g.tipo === 'resorte' ? 230 : g.tipo === 'barra' ? 200 : g.tipo === 'membrana' ? 250 : g.tipo === 'gauss1' ? 340 : g.tipo === 'gauss2' ? 300 : g.tipo === 'esc3' ? 400 : 290;
     if (r.gw) { W = Math.max(180, Math.min((r.el.parentElement || r.el).clientWidth - 16, r.gw)); r.el.style.flex = '0 0 ' + (W + 8) + 'px'; } if (r.gh) H = Math.max(g.tipo === 'resorte' ? 160 : 120, r.gh);          // tamaño elegido arrastrando la esquina
     cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + 'px'; cv.style.height = H + 'px'; cv.style.margin = '4px 0 6px 6px';
     const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.fillStyle = '#fff'; c.fillRect(0, 0, W, H);
     if (g.tipo === 'resorte' && !g.d.simb) { const dm = Math.max(...g.d.du.map(Math.abs)); if (dm > 1e-9 && !(r.refR > 0)) r.refR = dm; g.d.ref = r.refR > 0 ? r.refR : dm; }          // la escala del estiramiento la fija el primer dibujo y no cambia con F
     HV = null; c.save(); c.beginPath(); c.rect(0, 0, W, H); c.clip();
-    ({ riemann, gauss1, gauss2, tabla, malla, resorte, barra, esc3: (cc, d, w, h) => escena(cc, d, w, h, r.orb) })[g.tipo](c, g.d, W, H);
+    ({ riemann, gauss1, gauss2, tabla, malla, resorte, barra, membrana, esc3: (cc, d, w, h) => escena(cc, d, w, h, r.orb) })[g.tipo](c, g.d, W, H);
     if (HK.grip) HK.grip(c, W, H);
     c.restore(); conectaHover(r);
   }
