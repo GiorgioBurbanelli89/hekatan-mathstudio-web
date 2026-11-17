@@ -86,7 +86,7 @@
     const c = contenedor(!!mismo), d = document.createElement('div'); d.className = 'slider';
     d.innerHTML = '<span class="nom"></span><button>▶</button><input type="range"><span class="val"></span>';
     const nom = d.children[0], bt = d.children[1], rg = d.children[2], vl = d.children[3];
-    nom.textContent = nombre; rg.min = min; rg.max = max; rg.step = inc || (max - min) / 100; rg.value = valor; vl.textContent = valor;
+    nom.textContent = nombre; rg.min = min; rg.max = max; rg.step = inc || (max - min) / 100; rg.value = valor; vl.textContent = HK.fmt ? HK.fmt(parseFloat(Number(valor).toPrecision(6))) : valor;
     const r = { t: 'slider', nombre, min, max, valor, inc: inc || (max - min) / 100, el: d };
     rg.addEventListener('input', () => { r.valor = parseFloat(rg.value); vl.textContent = HK.fmt(r.valor); resolver(); });
     let tm = null;
