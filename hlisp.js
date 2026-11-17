@@ -111,9 +111,10 @@
       const d = { t: 'eq', codigo: cod, orig: original.join('\n') }; if (oculto) d.oculto = true; items.push(d);
       bloque = []; original = [];
     }
-    const lin = fuente.replace(/\r/g, '').split('\n'); let i = 0;
+    const lin = fuente.replace(/\r/g, '').split('\n'); let i = 0; const misma = [];
     while (i < lin.length) {
-      const l = lin[i].replace(/\s+$/, ''), t = l.trim(); i++;
+      let l = lin[i].replace(/\s+$/, ''), t = l.trim(); i++;
+      if (/^&&(\s|$)/.test(t)) { vacia(); misma.push(items.length); l = l.replace(/^(\s*)&&\s?/, '$1'); t = l.trim(); }          // «&& …»: lo que sigue va en la MISMA fila que lo anterior (si no, cada bloque baja a una fila nueva)
       if (t === '') { if (prof === 0 && !oculto) vacia(); continue; }
       if (t === '#hide') { vacia(); oculto = true; continue; }
       if (t === '#show') { vacia(); oculto = false; continue; }
@@ -149,6 +150,7 @@
       if (prof === 0 && !oculto) vacia();
     }
     vacia();
+    for (const k of misma) if (items[k]) items[k].mismaLinea = true;
     return { formato: 'hmath 1', estilo: 'lisp', eq: 15.33, txt: 15, gap: 0, items };
   }
   // ---------------------------------------------------------------- hoja → texto de Hekatan LISP (lo inverso de importa): «# título» «## sección» «#: párrafo» · cálculo tal cual · #fplot · bloques LISP tal cual
@@ -157,8 +159,9 @@
     const ocultar = (x) => { if (!!x.oculto !== oc) { o.push(x.oculto ? '#hide' : '#show'); oc = !!x.oculto; } };
     const prm = (seg) => seg.map((g) => g.eq !== undefined ? g.eq : g.s !== undefined ? g.s : '').join('');
     const unaLinea = (s) => String(s).replace(/\s*\n\s*/g, ' ').trim();
+    const mis = new Set();          // posiciones de o que van en la misma fila que la anterior («&& …»)
     (d.items || []).forEach((x) => {
-      ocultar(x);
+      ocultar(x); const n0 = o.length;
       if (x.t === 'texto' || x.t === 'parrafo') {
         const t = unaLinea(x.t === 'texto' ? x.text : prm(x.seg || [])); if (!t) return;
         if (x.titulo) o.push('#'.repeat(Math.min(3, x.nivel || 1)) + ' ' + t); else o.push('#: ' + t);
@@ -169,9 +172,11 @@
       } else if (x.t === 'slider') o.push(x.nombre + ' = ' + x.valor + " 'deslizador " + x.min + ' … ' + x.max);
       else if (x.t === 'cad') o.push('#autolisp\n' + String(x.codigo || '').replace(/\s+$/, '') + '\n#fin');
       else if (x.t === 'raw') o.push(String(x.text || '').replace(/\s+$/, ''));
+      if (x.mismaLinea && o.length > n0 && n0 > 0 && !/^#(hide|show)$/.test(o[n0 - 1] || '')) { o[n0] = '&& ' + o[n0]; mis.add(n0); }
     });
     if (oc) o.push('#show');
-    return o.join('\n\n') + '\n';
+    let r = ''; o.forEach((s, k) => { r += (k ? (mis.has(k) ? '\n' : '\n\n') : '') + s; });
+    return r + '\n';
   }
   HK.hlisp = { importa, exporta, omitidas, esHlisp: (nombre, texto) => /\.(lisp|hlisp)$/i.test(nombre || '') || (!/^\s*[{\[]/.test(texto || '') && /^\s*#/m.test(texto || '')) };
 })(window);
