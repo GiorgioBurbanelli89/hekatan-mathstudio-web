@@ -41,6 +41,14 @@
     for (let k = 0; k < args.length - 1; k++) { const e = args[k].trim(), nm = /^([\p{L}_][\p{L}\p{N}_]*)\s*=\s*(.*)$/u.exec(e), expr = nm ? nm[2].trim() : e; if (expr.startsWith('[') && expr.includes(';')) return null; ex.push(expr); }
     return 'fplot(' + ex.join(', ') + ', [' + rg[1] + ', ' + rg[2] + '])';
   }
+  // «texto $ecuación$ texto» → párrafo del WPF [{s:texto,b}, {eq:código,m:2}, …]: Math Studio mezcla texto y expresión matemática en la misma línea
+  function parrafoMixto(tx) {
+    const seg = []; let b = false;
+    const texto = (s) => s.split('**').forEach((q, i) => { if (i) b = !b; if (q) seg.push(b ? { s: q, b: 1 } : { s: q }); });
+    const re = /\$([^$]+)\$/g; let k = 0, m;
+    while ((m = re.exec(tx))) { texto(tx.slice(k, m.index)); seg.push({ eq: lineaLisp(m[1].trim()).split(' % ')[0], m: 2 }); k = m.index + m[0].length; }
+    texto(tx.slice(k)); return { t: 'parrafo', seg };
+  }
   function lineaLisp(l) {
     const md = /\s*@@\((.*)\)\s*$/.exec(l); if (md) l = l.slice(0, md.index) + " '" + md[1].trim();          // «@@(descripción)» = comentario gris
     let enCad = false, k = -1;
@@ -118,6 +126,7 @@
       if (t === '') { if (prof === 0 && !oculto) vacia(); continue; }
       if (t === '#hide') { vacia(); oculto = true; continue; }
       if (t === '#show') { vacia(); oculto = false; continue; }
+      if (t.startsWith('#:') && /\$[^$]+\$/.test(t)) { vacia(); items.push(parrafoMixto(t.slice(2).trim())); continue; }          // «#: texto $ecuación$ texto»: las ecuaciones entre $…$ van dibujadas DENTRO de la frase
       if (t.startsWith('#:')) { vacia(); const tx = t.slice(2).trim(), ph = prosaHtml(tx); items.push(ph ? { t: 'texto', text: tx, html: ph } : { t: 'texto', text: tx }); continue; }
       if (t.startsWith('##')) { vacia(); const nv = t.match(/^#+/)[0].length; items.push({ t: 'texto', text: t.replace(/^#+/, '').trim(), titulo: true, nivel: Math.min(nv, 3) }); continue; }
       if (t.startsWith('# ') && primera) { vacia(); items.push({ t: 'texto', text: t.slice(1).trim(), titulo: true, nivel: 1 }); primera = false; continue; }
@@ -157,7 +166,7 @@
   function exporta(json) {
     const d = typeof json === 'string' ? JSON.parse(json) : json, o = []; let oc = false;
     const ocultar = (x) => { if (!!x.oculto !== oc) { o.push(x.oculto ? '#hide' : '#show'); oc = !!x.oculto; } };
-    const prm = (seg) => seg.map((g) => g.eq !== undefined ? g.eq : g.s !== undefined ? g.s : '').join('');
+    const prm = (seg) => seg.map((g) => g.eq !== undefined ? '$' + g.eq + '$' : g.s !== undefined ? (g.b ? '**' + g.s + '**' : g.s) : '').join('');
     const unaLinea = (s) => String(s).replace(/\s*\n\s*/g, ' ').trim();
     const mis = new Set();          // posiciones de o que van en la misma fila que la anterior («&& …»)
     (d.items || []).forEach((x) => {
