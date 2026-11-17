@@ -9,7 +9,7 @@
 //   fvoxeles(f, x0, x1, y0, y1, n, m [, az, el])  triple integral de 1: n×n×m cubitos
 (function (G) {
   const HK = G.HK;
-  const TIPOS = { friemann: 'riemann', fgauss: 'gauss1', fgauss2d: 'gauss2', fvolumen: 'esc3', fvoxeles: 'esc3', tabla: 'tabla', mallanum: 'malla', fresorte: 'resorte', fbarra: 'barra' };
+  const TIPOS = { friemann: 'riemann', fgauss: 'gauss1', fgauss2d: 'gauss2', fvolumen: 'esc3', fvoxeles: 'esc3', tabla: 'tabla', mallanum: 'malla', fresorte: 'resorte', fresortesim: 'resorte', fbarra: 'barra' };
 
   // puntos y pesos de Gauss–Legendre en [-1, 1] (raíces de Legendre por Newton)
   function gaussLeg(n) {
@@ -55,6 +55,11 @@
       if (args.length < 1) throw new Error('fbarra(n [, q])');
       const n = Math.max(1, Math.min(8, Math.round(num(args[0])))), q = args.length > 1 ? num(args[1]) : NaN;
       return { tipo: 'barra', d: { n, q } };
+    }
+    if (nombre === 'fresortesim') {          // fresortesim(n, t): n resortes con variables SIMBÓLICAS (k, F, u) que se estiran al crecer la carga t ∈ [0, 1] (parámetro de la animación, no un valor de F)
+      if (args.length < 2) throw new Error('fresortesim(n, t)');
+      const ns = Math.max(1, Math.min(6, Math.round(num(args[0])) || 1)), t = Math.max(0, Math.min(1, num(args[1]) || 0)), du = new Array(ns).fill(t), u = [0]; du.forEach((v) => u.push(u[u.length - 1] + v));
+      return { tipo: 'resorte', d: { simb: true, anim: true, t, ks: new Array(ns).fill(1), F: 1, du, u, ref: 0.45 } };
     }
     if (nombre === 'fresorte') {          // fresorte(k1 [, k2, …], F): resortes en serie, el primero pegado a la pared; la fuerza F jala del último nudo
       if (args.length === 1) {          // fresorte(n): n resortes en serie con variables SIMBÓLICAS (k, F, u), sin valores: el objeto antes de los números
@@ -363,10 +368,10 @@
     for (let i = 1; i <= n; i++) { c.fillStyle = '#1f2937'; c.strokeStyle = '#fff'; c.lineWidth = 1.4; c.beginPath(); c.arc(xn[i], y0, 6, 0, 7); c.fill(); c.stroke(); txt(c, String(i + 1), xn[i], y0 + 20, 11, '#111', 'center'); }
     txt(c, '1', x0 + 10, y0 + 20, 11, '#111', 'center');
     const yc = y0 - 46; c.strokeStyle = VERDE; c.fillStyle = VERDE; c.lineWidth = 1.6; lin(xn0[n], yc - 5, xn0[n], yc + 5); lin(xn[n], yc - 5, xn[n], yc + 5); if (Math.abs(xn[n] - xn0[n]) > 4) flecha(xn0[n], yc, xn[n], yc, VERDE); txt(c, d.simb ? 'u' + (n > 1 ? '₂₃₄₅₆₇'[n - 1] : '') : 'u = ' + f4(d.u[n]), (xn0[n] + xn[n]) / 2, yc - 11, 12, VERDE, 'center');          // la cota del estiramiento
-    flecha(xn[n] + 9, y0, xn[n] + 62, y0, NAR); txt(c, d.simb ? 'F' : 'F = ' + f4(d.F), xn[n] + 36, y0 - 14, 12, NAR, 'center');
+    flecha(xn[n] + 9, y0, xn[n] + 9 + (d.anim ? 10 + 44 * d.t : 53), y0, NAR); txt(c, d.simb ? 'F' : 'F = ' + f4(d.F), xn[n] + 36, y0 - 14, 12, NAR, 'center');
     const yi = H - 22; const ls = d.simb ? (n === 1 ? ['u = F / k'] : d.du.map((v, i) => 'nudo ' + (i + 2) + ': u' + '₂₃₄₅₆₇'[i] + ' = ' + (i ? 'u' + '₂₃₄₅₆₇'[i - 1] + ' + ' : '') + 'F / k' + '₁₂₃₄₅₆'[i])) : n === 1 ? ['u = F / k = ' + f4(d.F) + ' / ' + f4(d.ks[0]) + ' = ' + f4(d.u[1])] : d.du.map((v, i) => 'nudo ' + (i + 2) + ': u = ' + (i ? 'u' + '₂₃₄₅₆₇'[i - 1] + ' + ' : '') + 'F / k' + '₁₂₃₄₅₆'[i] + ' = ' + f4(d.u[i + 1]));
     ls.forEach((t2, i) => txt(c, t2, 12, yi + i * 15 - (ls.length - 1) * 15, 12, '#222', 'left'));
-    if (W > 420) txt(c, d.simb ? 'dibujo con variables: sin valores' : 'misma escala en todos los cuadros: el resorte se alarga al subir F', W - 24, H - 6, 9, '#888', 'right');
+    if (W > 420) txt(c, d.anim ? 'animación con variables: al crecer F el resorte se alarga' : d.simb ? 'dibujo con variables: sin valores' : 'misma escala en todos los cuadros: el resorte se alarga al subir F', W - 24, H - 6, 9, '#888', 'right');
   }
   // fbarra: la barra del objeto, con su apoyo, sus elementos y nudos y la carga repartida
   function barra(c, d, W, H) {
