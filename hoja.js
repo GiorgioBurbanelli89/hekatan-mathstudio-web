@@ -15,7 +15,17 @@
     const c = contenedor(!!mismo), d = document.createElement('div');
     d.className = 'txt' + (titulo ? ' titulo n' + (nivel || 1) : '') + (mismo ? ' lado' : ''); d.contentEditable = 'true'; d.textContent = texto; d.spellcheck = false;
     d.addEventListener('focus', () => { activo = null; redibuja(); });
-    c.appendChild(d); const r = { t: 'txt', el: d, titulo: !!titulo, nivel: nivel || 1, mismo: !!mismo }; reg.push(r); return r;
+    c.appendChild(d); const r = { t: 'txt', el: d, titulo: !!titulo, nivel: nivel || 1, mismo: !!mismo }; reg.push(r);
+    if (mismo) alineaLado(d);
+    return r;
+  }
+  // «Ec. (n)» y demás comentarios de la misma línea: se centran con la PRIMERA línea de la ecuación que tienen a la izquierda (no con el bloque entero, que incluye el resultado de abajo)
+  function alineaLado(d) {
+    const prev = d.previousElementSibling; if (!prev) return;
+    const eq = prev.classList.contains('grupo') ? prev.firstElementChild : prev; if (!eq || !eq.classList.contains('eq')) return;
+    d.style.alignSelf = 'flex-start';
+    const ajusta = () => { const h = eq.getBoundingClientRect().height, hc = d.getBoundingClientRect().height; d.style.marginTop = Math.max(0, Math.round((h - hc) / 2)) + 'px'; };
+    ajusta(); if (window.ResizeObserver) new ResizeObserver(ajusta).observe(eq);
   }
   // ---------------------------------------------------------------- ecuaciones DENTRO de un párrafo (como el WPF: texto + fórmulas en la misma línea, todo editable)
   let rangoTxt = null;          // último cursor dentro de un texto: { el, range }
