@@ -647,5 +647,15 @@
   // ---------------------------------------------------------------- arranque
   function motorEstado() { const m = $('motor'); if (HK.motor.listo) { m.textContent = 'motor simbólico: listo (Hekatan LISP · WASM)'; m.className = 'ok'; } else if (HK.motor.error) m.textContent = 'motor simbólico: no disponible (' + HK.motor.error + ')'; else setTimeout(motorEstado, 300); }
   motorEstado(); pintaCinta('Matemática'); pagina();
+  // «index.html#lisp=<base64url de UTF-8>»: abre ese script de Hekatan LISP en la hoja (lo usa el botón «Math Studio» de Hekatan Code; la misma importación del diálogo «Script Hekatan LISP»)
+  function abreDeHash() {
+    const m = /^#lisp=([A-Za-z0-9_-]+)$/.exec(location.hash || ''); if (!m) return;
+    try {
+      let b = m[1].replace(/-/g, '+').replace(/_/g, '/'); while (b.length % 4) b += '=';
+      const txt = new TextDecoder('utf-8').decode(Uint8Array.from(atob(b), (c) => c.charCodeAt(0)));
+      H().abre(JSON.stringify(HK.hlisp.importa(txt))); estado('Script de Hekatan Code abierto'); setTimeout(pagina, 50);
+    } catch (e) { estado('No se pudo abrir el script de la dirección: ' + e.message); }
+  }
+  setTimeout(abreDeHash, 0); window.addEventListener('hashchange', abreDeHash);
   HK.app = { setTxt, setEq, ponZoom, getZoom: () => zoom, estado, pagina, setTxt, setEq, abreEjemplo, nuevo, pintaCinta };
 })(window);
