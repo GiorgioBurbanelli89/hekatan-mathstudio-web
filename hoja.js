@@ -291,12 +291,14 @@
       globo(c, lin, mp.X, mp.Y, W, H); r.hoverTxt = lin.join(' | ');
     }
   }
+  // marca de agarre en la esquina inferior derecha de toda gráfica: arrastrándola cambian el ancho y el alto
+  HK.grip = (c, W, H) => { c.save(); c.strokeStyle = '#7b8699'; c.lineWidth = 1.3; for (let k = 0; k < 3; k++) { c.beginPath(); c.moveTo(W - 4 - k * 4, H - 2); c.lineTo(W - 2, H - 4 - k * 4); c.stroke(); } c.restore(); };
   function dibujaGraf(r) {
     if (!r.graf) { r.el.classList.remove('conGraf'); if (r.gel) { r.gel.remove(); r.gel = null; } if (r.hov) { r.hov.remove(); r.hov = null; } r.hv = null; return; }
     r.el.classList.add('conGraf'); r.hv = null; limpiaHover(r);          // con gráfica: en una fila con otras piezas se coloca AL LADO (estilo.css)
     if (!r.gel) {
       r.gel = document.createElement('canvas'); r.el.appendChild(r.gel);
-      r.gel.title = 'Arrastra: girar · rueda: zoom · doble clic: restablecer la vista';
+      r.gel.title = 'Arrastra la esquina inferior derecha para cambiar el ancho y el alto · en 3D: arrastra para girar, rueda para zoom, doble clic para restablecer';
       let arr = null;          // órbita de las gráficas 3D, como OrbitControls de Three.js
       r.gel.addEventListener('mousedown', (e) => { if (!(r.graf && (r.graf.tipo === 'sup' || r.graf.tipo === 'esc3'))) return; arr = { x: e.clientX, y: e.clientY }; e.preventDefault(); });
       document.addEventListener('mousemove', (e) => { if (!arr) return; const ob = r.orb || (r.orb = { az: 0, el: 0, z: 1 }); ob.az += (e.clientX - arr.x) * 0.5; ob.el = Math.max(-89, Math.min(89, ob.el + (e.clientY - arr.y) * 0.5)); arr = { x: e.clientX, y: e.clientY }; dibujaGraf(r); });
@@ -306,14 +308,16 @@
       r.gel.addEventListener('mousemove', (e) => { if (!arr) hover(r, e); });          // hover como el WPF
       r.gel.addEventListener('mouseleave', () => limpiaHover(r));
     }
-    if (!r.gel._rs) { r.gel._rs = 1; let rz = null; const cerca = (e) => { const b = r.gel.getBoundingClientRect(); return e.clientX > b.right - 16 && e.clientY > b.bottom - 16; };
-      r.gel.addEventListener('mousedown', (e) => { if (!cerca(e)) return; rz = { x: e.clientX, y: e.clientY, w: r.gel.offsetWidth, h: r.gel.offsetHeight }; e.preventDefault(); e.stopImmediatePropagation(); }, true);
-      r.gel.addEventListener('mousemove', (e) => { r.gel.style.cursor = cerca(e) ? 'nwse-resize' : ''; });
-      document.addEventListener('mousemove', (e) => { if (!rz) return; r.gw = Math.max(180, rz.w + e.clientX - rz.x); r.gh = Math.max(120, rz.h + e.clientY - rz.y); dibujaGraf(r); });
-      document.addEventListener('mouseup', () => { rz = null; }); }
-    if (r.graf.tipo && HK.graf2 && /^(riemann|gauss1|gauss2|esc3|tabla|malla)$/.test(r.graf.tipo)) { HK.graf2.dibuja(r); return; }
+    r.gel.classList.toggle('g3d', !!(r.graf && (r.graf.tipo === 'sup' || r.graf.tipo === 'esc3')));
+    if (!HK._rz) { HK._rz = 1; let rz = null;          // cambiar el ancho y el alto de CUALQUIER gráfica arrastrando su esquina inferior derecha (a nivel de documento y en captura: gana al «mover regiones»)
+      const agarre = (e) => { const cv = e.target; if (!cv || cv.tagName !== 'CANVAS' || cv.classList.contains('ghov')) return null; const q = reg.find((x) => x.gel === cv); if (!q || !q.graf) return null; const b = cv.getBoundingClientRect(); return e.clientX > b.right - 20 && e.clientY > b.bottom - 20 ? q : null; };
+      document.addEventListener('mousedown', (e) => { if (e.button !== 0) return; const q = agarre(e); if (!q) return; rz = { r: q, x: e.clientX, y: e.clientY, w: q.gel.offsetWidth, h: q.gel.offsetHeight }; e.preventDefault(); e.stopImmediatePropagation(); }, true);
+      document.addEventListener('mousemove', (e) => { if (rz) { rz.r.gw = Math.max(180, rz.w + e.clientX - rz.x); rz.r.gh = Math.max(120, rz.h + e.clientY - rz.y); dibujaGraf(rz.r); return; } const cv = e.target; if (cv && cv.tagName === 'CANVAS' && !cv.classList.contains('ghov')) cv.style.cursor = agarre(e) ? 'nwse-resize' : ''; }, true);
+      document.addEventListener('mouseup', () => { rz = null; }, true); }
+    if (r.graf.tipo && HK.graf2 && /^(riemann|gauss1|gauss2|esc3|tabla|malla|resorte)$/.test(r.graf.tipo)) { HK.graf2.dibuja(r); return; }
     if (r.graf.tipo) { dibujaMalla(r); return; }
-    const g = r.graf, cv = r.gel, dpr = window.devicePixelRatio || 1, W = Math.min(r.el.clientWidth - 8, 460), H = 230;
+    const g = r.graf, cv = r.gel, dpr = window.devicePixelRatio || 1, W = r.gw ? Math.max(180, Math.min((r.el.parentElement || r.el).clientWidth - 16, r.gw)) : Math.min(r.el.clientWidth - 8, 460), H = r.gh ? Math.max(120, r.gh) : 230;          // el ancho y el alto que eligió el usuario (arrastrando la esquina)
+    if (r.gw) r.el.style.flex = '0 0 ' + (W + 8) + 'px';
     cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + 'px'; cv.style.height = H + 'px'; cv.style.margin = '4px 0 6px 6px';
     const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0);
     const L = 46, T = 12, R = 12, B = 30, w = W - L - R, h = H - T - B;
@@ -327,7 +331,7 @@
     if (mn < 0 && mx > 0) { c.strokeStyle = '#999'; c.beginPath(); c.moveTo(L, Y(0)); c.lineTo(L + w, Y(0)); c.stroke(); }
     c.save(); c.beginPath(); c.rect(L, T, w, h); c.clip();
     g.ys.forEach((ys, k) => { c.strokeStyle = PAL[k % PAL.length]; c.lineWidth = 1.8; c.beginPath(); let on = false; ys.forEach((v, i) => { if (!isFinite(v)) { on = false; return; } if (!on) { c.moveTo(X(g.xs[i]), Y(v)); on = true; } else c.lineTo(X(g.xs[i]), Y(v)); }); c.stroke(); });
-    c.restore(); c.strokeStyle = '#222'; c.lineWidth = 1; c.strokeRect(L, T, w, h); r.hv = { k: 'curvas', L, T, w, h, mn, mx, x0, x1, g };
+    c.restore(); HK.grip(c, W, H); c.strokeStyle = '#222'; c.lineWidth = 1; c.strokeRect(L, T, w, h); r.hv = { k: 'curvas', L, T, w, h, mn, mx, x0, x1, g };
     g.nombres.forEach((nm, k) => { c.fillStyle = PAL[k % PAL.length]; c.fillRect(L + 8, T + 8 + k * 14, 16, 3); c.fillStyle = '#333'; c.textAlign = 'left'; c.fillText(nm, L + 30, T + 12 + k * 14); });
   }
 
@@ -522,20 +526,29 @@
   const unidadDeEl = (el) => (el && el.closest) ? el.closest('#hoja > .fila > *') : null;
   const ordenDoc = (l) => l.slice().sort((a, b) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) ? -1 : 1);
   function clona(r, mismo) {
-    if (r.t === 'eq') { const n = agregaEq(r.ed.texto(), { mismaLinea: mismo, modo: r.modo, oculto: r.oculto }); n.editado = true; return n; }
+    if (r.t === 'eq') { const n = agregaEq(r.ed.texto(), { mismaLinea: mismo, modo: r.modo, oculto: r.oculto }); n.editado = true; n.gw = r.gw; n.gh = r.gh; return n; }
     if (r.t === 'txt') { const n = agregaTxt(r.el.textContent, r.titulo, r.nivel, mismo); if (r.el.querySelector('*') && !r.el.querySelector('.ifx')) limpioHtml(n.el, r.el.innerHTML); return n; }
     if (r.t === 'slider') return agregaSlider(r.nombre, r.min, r.max, r.valor, r.inc, mismo);
     if (r.t === 'cad') return agregaCad(r.ta.value, r.titulo, mismo);
     if (r.t === 'raw') return agregaRaw(r.ta.value, r.oculto, mismo);
     return null;
   }
-  function duplica(us) {
-    us = ordenDoc(us); const ult = us[us.length - 1].parentElement, nuevos = []; let fa = null;
+  function duplica(us, dest) {
+    us = ordenDoc(us); const ult = (dest || us[us.length - 1]).parentElement, nuevos = []; let fa = null;
     for (const u of us) { const mismo = u.parentElement === fa; fa = u.parentElement; for (const r of reg.filter((x) => !x.enTexto && u.contains(x.el))) { const n = clona(r, mismo); if (n) nuevos.push(n); } }
     if (!nuevos.length) return; const filas = [...new Set(nuevos.map((n) => n.el.closest('.fila')))]; let ref = ult; for (const f of filas) { ref.after(f); ref = f; }
     for (const n of nuevos) reg.splice(reg.indexOf(n), 1); let k = 0; for (let i = 0; i < reg.length; i++) if (ult.contains(reg[i].el)) k = i + 1; reg.splice(k, 0, ...nuevos);
     const e = nuevos.filter((n) => n.t === 'eq').pop(); if (e) activo = e.ed; resolver(); redibuja();
   }
+  // Ctrl+C / Ctrl+V con regiones seleccionadas (clic en su franja izquierda o sobre una gráfica): copia las regiones y las pega debajo de la seleccionada
+  let regCopiadas = [];
+  document.addEventListener('keydown', (e) => {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey) return; const k = e.key.toLowerCase(); if (k !== 'c' && k !== 'v') return;
+    const M = HK.mover, sel = M ? M.seleccion() : []; if (!sel.length) return;
+    if (k === 'c') { regCopiadas = sel.slice(); e.preventDefault(); e.stopImmediatePropagation(); const s = document.getElementById('estado'); if (s) s.textContent = sel.length + ' región(es) copiada(s): selecciona otra y pulsa Ctrl+V'; return; }
+    if (!regCopiadas.length || !regCopiadas.every((u) => document.body.contains(u))) return;
+    e.preventDefault(); e.stopImmediatePropagation(); duplica(regCopiadas, ordenDoc(sel)[sel.length - 1]);
+  }, true);
   document.addEventListener('keydown', (e) => {
     if (!(e.ctrlKey || e.metaKey) || e.altKey) return; const k = e.key.toLowerCase(); if (k !== 'd' && k !== 'j') return;
     const M = HK.mover; let us = M ? M.seleccion() : [];

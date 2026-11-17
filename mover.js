@@ -23,10 +23,12 @@
   const enInline = (t) => !!(t && t.closest && t.closest('.ifx'));
   const interactivo = (t) => !!(t && t.closest && t.closest('button,input,textarea,select,a'));
   function izq(u, e) { return e.altKey || (e.clientX - u.getBoundingClientRect().left) <= FR * zoom(); }
+  const esGraf = (e) => { const cv = e.target; return !!(cv && cv.tagName === 'CANVAS' && !cv.classList.contains('ghov') && !cv.classList.contains('g3d') && cv.closest && cv.closest('.conGraf')); };
   function zona(u, e) {          // ¿el punto está en una franja de agarre? (izquierda 10 px · arriba y abajo 6 px · Alt en cualquier parte)
     if (e.altKey) return true;
     const b = u.getBoundingClientRect(), z = zoom(), x = e.clientX - b.left, y = e.clientY - b.top;
     if (x <= FR * z) return true;
+    if (esGraf(e)) return true;          // clic (o arrastre) sobre una gráfica 2D: la selecciona / la mueve; las 3D siguen girando
     if (enInline(e.target) || interactivo(e.target)) return false;
     return y <= BV * z || y >= b.height - BV * z;
   }
@@ -125,7 +127,7 @@
       if (e.shiftKey) { marca(u, !sel.has(u)); H().desactiva(); return; }          // Mayús+clic en la franja: suma / quita de la selección
       if (!sel.has(u)) limpiaSel();
       const grupo = sel.has(u) ? vivas() : [u];
-      arr = { u, l0: new Map(grupo.map((q) => [q, q.getBoundingClientRect().left])), oy: e.clientY - u.getBoundingClientRect().top, x0: e.clientX, y0: e.clientY, st0: area.scrollTop, sl0: area.scrollLeft, grupo: enOrden(grupo), movio: false, ult: e, d: null, tm: null, vert: !izq(u, e), tgt: e.target, fuera: !unidad(e.target) };
+      arr = { u, l0: new Map(grupo.map((q) => [q, q.getBoundingClientRect().left])), oy: e.clientY - u.getBoundingClientRect().top, x0: e.clientX, y0: e.clientY, st0: area.scrollTop, sl0: area.scrollLeft, grupo: enOrden(grupo), movio: false, ult: e, d: null, tm: null, vert: !izq(u, e) && !esGraf(e), tgt: e.target, fuera: !unidad(e.target) };
       document.body.classList.add('mv-arrastrando'); return;
     }
     if (e.target === papel || e.target === hoja || e.target === area || (e.target.classList && e.target.classList.contains('fila'))) {          // vacío: banda de selección (un clic suelto sigue como antes)

@@ -2,11 +2,12 @@
 //   friemann(f, a, b, n [, tipo])            integral de Riemann: curva, área exacta, n rectángulos (tipo 0 izq · 1 centro · 2 der)
 //   fgauss(f, a, b, n)                       cuadratura de Gauss: área con signo, n puntos, una barra por punto (base = peso)
 //   fgauss2d(n [, forma])                    n×n puntos de Gauss en el elemento de referencia y en el real (forma 0 rectángulo · 1 irregular)
+//   fresorte(k1 [, k2, …], F)               resortes en serie con la pared a la izquierda: dibujo, cota del estiramiento u y flecha de la fuerza F
 //   fvolumen(f, x0, x1, y0, y1, n [, az, el])  doble integral: n×n prismas (n = 0 el sólido exacto)
 //   fvoxeles(f, x0, x1, y0, y1, n, m [, az, el])  triple integral de 1: n×n×m cubitos
 (function (G) {
   const HK = G.HK;
-  const TIPOS = { friemann: 'riemann', fgauss: 'gauss1', fgauss2d: 'gauss2', fvolumen: 'esc3', fvoxeles: 'esc3', tabla: 'tabla', mallanum: 'malla' };
+  const TIPOS = { friemann: 'riemann', fgauss: 'gauss1', fgauss2d: 'gauss2', fvolumen: 'esc3', fvoxeles: 'esc3', tabla: 'tabla', mallanum: 'malla', fresorte: 'resorte' };
 
   // puntos y pesos de Gauss–Legendre en [-1, 1] (raíces de Legendre por Newton)
   function gaussLeg(n) {
@@ -47,6 +48,13 @@
       const me = HK.evalua(args[2], env); if (!HK.M.esM(me)) throw new Error('mallanum(X, Y, ELE, SUP)');
       const X = col(args[0]), Y = col(args[1]), el = []; for (let i = 0; i < me.r; i++) { const f = []; for (let j = 0; j < me.c; j++) f.push(Math.round(me.g(i, j)) - 1); el.push(f); }
       return { tipo: 'malla', d: { X, Y, el, sup: args.length > 3 ? col(args[3]).map(Math.round) : [], A: Math.max(1e-9, ...X), B: Math.max(1e-9, ...Y) } };
+    }
+    if (nombre === 'fresorte') {          // fresorte(k1 [, k2, …], F): resortes en serie, el primero pegado a la pared; la fuerza F jala del último nudo
+      if (args.length < 2) throw new Error('fresorte(k1 [, k2, …], F)');
+      const ks = args.slice(0, -1).map(num), F = num(args[args.length - 1]);
+      if (ks.length > 6 || ks.some((k) => !(k > 0)) || !isFinite(F)) throw new Error('fresorte: las rigideces deben ser positivas (máx. 6 resortes) y F un número');
+      const du = ks.map((k) => F / k), u = [0]; du.forEach((v) => u.push(u[u.length - 1] + v));
+      return { tipo: 'resorte', d: { ks, F, du, u } };
     }
     const tipo = TIPOS[nombre], cl = (v, a, b) => Math.max(a, Math.min(b, Math.round(v)));
     const exacto1 = (f, a, b, cs) => { let s = 0; for (let c = 0; c < cs; c++) { const x0 = a + (b - a) * c / cs, x1 = a + (b - a) * (c + 1) / cs; for (let u = 0; u < 4; u++) s += G4W[u] * (x1 - x0) / 2 * ev(f, { x: (x0 + x1) / 2 + (x1 - x0) / 2 * G4X[u] }); } return s; };
@@ -327,12 +335,36 @@
     d.sup.forEach((j1) => { const j = j1 - 1, p = P(d.X[j], d.Y[j]); const hor = Math.abs(d.Y[j]) < 1e-9 || Math.abs(d.Y[j] - d.B) < 1e-9; c.beginPath(); if (hor) { c.moveTo(p[0] - 4 * rr, p[1]); c.lineTo(p[0] + 4 * rr, p[1]); } else { c.moveTo(p[0], p[1] - 4 * rr); c.lineTo(p[0], p[1] + 4 * rr); } c.stroke(); c.beginPath(); c.arc(p[0], p[1], rr, 0, 7); c.fill(); c.stroke(); });
     c.restore();
   }
+  // fresorte: pared, resortes en zigzag (con carga, en azul), posición sin carga (gris, discontinua), nudos, cota del desplazamiento u y flecha de la fuerza F
+  function resorte(c, d, W, H) {
+    const n = d.ks.length, x0 = 46, y0 = Math.round(H * 0.5), L0 = Math.min(120, (W - x0 - 120) / (n * 1.6)), dmax = Math.max(...d.du.map(Math.abs), 1e-12), s = 0.6 * L0 / dmax;
+    const xn0 = [], xn = []; for (let i = 0; i <= n; i++) { xn0.push(x0 + i * L0); xn.push(x0 + i * L0 + s * d.u[i]); }
+    const lin = (x1, y1, x2, y2) => { c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke(); };
+    const flecha = (x1, y1, x2, y2, col) => { const a = Math.atan2(y2 - y1, x2 - x1); c.strokeStyle = col; c.fillStyle = col; c.lineWidth = 2; lin(x1, y1, x2, y2); c.beginPath(); c.moveTo(x2, y2); c.lineTo(x2 - 9 * Math.cos(a - 0.4), y2 - 9 * Math.sin(a - 0.4)); c.lineTo(x2 - 9 * Math.cos(a + 0.4), y2 - 9 * Math.sin(a + 0.4)); c.closePath(); c.fill(); };
+    c.lineCap = 'round'; c.lineJoin = 'round';
+    c.strokeStyle = '#444'; c.lineWidth = 3; lin(x0, y0 - 36, x0, y0 + 36); c.lineWidth = 1.2; for (let q = -36; q < 36; q += 9) lin(x0, y0 + q + 9, x0 - 10, y0 + q);          // la pared, rayada
+    c.setLineDash([4, 4]); c.strokeStyle = 'rgba(100,110,130,.7)'; c.lineWidth = 1; for (let i = 1; i <= n; i++) lin(xn0[i], y0 - 34, xn0[i], y0 + 34); c.setLineDash([]);          // dónde estaría cada nudo sin carga
+    for (let i = 1; i <= n; i++) {
+      const xa = xn[i - 1], xb = xn[i], lead = Math.min(14, (xb - xa) * 0.18), bob = 7, amp = 10, m = 2 * bob; c.strokeStyle = AZUL; c.lineWidth = 2.2; c.beginPath(); c.moveTo(xa, y0); c.lineTo(xa + lead, y0);
+      for (let j = 1; j < m; j++) c.lineTo(xa + lead + (xb - xa - 2 * lead) * j / m, y0 + (j % 2 ? -amp : amp)); c.lineTo(xb - lead, y0); c.lineTo(xb, y0); c.stroke();
+      txt(c, 'k' + '₁₂₃₄₅₆'[i - 1] + ' = ' + f4(d.ks[i - 1]), (xa + xb) / 2, y0 + 44, 11, AZUL, 'center');
+    }
+    for (let i = 1; i <= n; i++) { c.fillStyle = '#1f2937'; c.strokeStyle = '#fff'; c.lineWidth = 1.4; c.beginPath(); c.arc(xn[i], y0, 6, 0, 7); c.fill(); c.stroke(); txt(c, String(i + 1), xn[i], y0 + 20, 11, '#111', 'center'); }
+    txt(c, '1', x0 + 10, y0 + 20, 11, '#111', 'center');
+    const yc = y0 - 46; c.strokeStyle = VERDE; c.fillStyle = VERDE; c.lineWidth = 1.6; lin(xn0[n], yc - 5, xn0[n], yc + 5); lin(xn[n], yc - 5, xn[n], yc + 5); if (Math.abs(xn[n] - xn0[n]) > 4) flecha(xn0[n], yc, xn[n], yc, VERDE); txt(c, 'u = ' + f4(d.u[n]), (xn0[n] + xn[n]) / 2, yc - 11, 12, VERDE, 'center');          // la cota del estiramiento
+    flecha(xn[n] + 9, y0, xn[n] + 62, y0, NAR); txt(c, 'F = ' + f4(d.F), xn[n] + 36, y0 - 14, 12, NAR, 'center');
+    const yi = H - 22; const ls = n === 1 ? ['u = F / k = ' + f4(d.F) + ' / ' + f4(d.ks[0]) + ' = ' + f4(d.u[1])] : d.du.map((v, i) => 'nudo ' + (i + 2) + ': u = ' + (i ? 'u' + '₂₃₄₅₆₇'[i - 1] + ' + ' : '') + 'F / k' + '₁₂₃₄₅₆'[i] + ' = ' + f4(d.u[i + 1]));
+    ls.forEach((t2, i) => txt(c, t2, 12, yi + i * 15 - (ls.length - 1) * 15, 12, '#222', 'left'));
+    if (W > 420) txt(c, 'estiramiento dibujado en proporción (no a escala)', W - 24, H - 6, 9, '#888', 'right');
+  }
   function dibuja(r) {
-    const g = r.graf, cv = r.gel, dpr = window.devicePixelRatio || 1, pa = document.getElementById('hoja'), disp = pa ? pa.clientWidth - 24 : 600, W0 = Math.max(380, Math.min(disp, g.tipo === 'esc3' ? 560 : 680)), W = g.tipo === 'tabla' ? Math.min(W0, 60 + 92 * g.d.cols.length) : g.tipo === 'malla' ? Math.min(W0, 460) : W0, H = g.tipo === 'tabla' ? 40 + g.d.filas * 20 + (g.d.total > g.d.filas ? 18 : 0) : g.tipo === 'malla' ? Math.max(60, (W - 70) * g.d.B / g.d.A) + 30 : g.tipo === 'gauss1' ? 340 : g.tipo === 'gauss2' ? 300 : g.tipo === 'esc3' ? 400 : 290;
+    let g = r.graf, cv = r.gel, dpr = window.devicePixelRatio || 1, pa = document.getElementById('hoja'), disp = pa ? pa.clientWidth - 24 : 600, W0 = Math.max(380, Math.min(disp, g.tipo === 'esc3' ? 560 : 680)), W = g.tipo === 'tabla' ? Math.min(W0, 60 + 92 * g.d.cols.length) : g.tipo === 'malla' ? Math.min(W0, 460) : W0, H = g.tipo === 'tabla' ? 40 + g.d.filas * 20 + (g.d.total > g.d.filas ? 18 : 0) : g.tipo === 'malla' ? Math.max(60, (W - 70) * g.d.B / g.d.A) + 30 : g.tipo === 'resorte' ? 230 : g.tipo === 'gauss1' ? 340 : g.tipo === 'gauss2' ? 300 : g.tipo === 'esc3' ? 400 : 290;
+    if (r.gw) { W = Math.max(180, Math.min((r.el.parentElement || r.el).clientWidth - 16, r.gw)); r.el.style.flex = '0 0 ' + (W + 8) + 'px'; } if (r.gh) H = Math.max(g.tipo === 'resorte' ? 160 : 120, r.gh);          // tamaño elegido arrastrando la esquina
     cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + 'px'; cv.style.height = H + 'px'; cv.style.margin = '4px 0 6px 6px';
     const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.fillStyle = '#fff'; c.fillRect(0, 0, W, H);
     HV = null; c.save(); c.beginPath(); c.rect(0, 0, W, H); c.clip();
-    ({ riemann, gauss1, gauss2, tabla, malla, esc3: (cc, d, w, h) => escena(cc, d, w, h, r.orb) })[g.tipo](c, g.d, W, H);
+    ({ riemann, gauss1, gauss2, tabla, malla, resorte, esc3: (cc, d, w, h) => escena(cc, d, w, h, r.orb) })[g.tipo](c, g.d, W, H);
+    if (HK.grip) HK.grip(c, W, H);
     c.restore(); conectaHover(r);
   }
   HK.graf2 = { TIPOS, calcula, dibuja, gaussLeg, es3d: (g) => !!g && g.tipo === 'esc3' };
