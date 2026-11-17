@@ -3,6 +3,7 @@
 //   fgauss(f, a, b, n)                       cuadratura de Gauss: área con signo, n puntos, una barra por punto (base = peso)
 //   fgauss2d(n [, forma])                    n×n puntos de Gauss en el elemento de referencia y en el real (forma 0 rectángulo · 1 irregular)
 //   fbarra(n [, q])                          barra empotrada con n elementos, nudos numerados y carga repartida q
+//   fresorte(n)                             n resortes con variables simbólicas k, F, u (sin valores)
 //   fresorte(k1 [, k2, …], F)               resortes en serie con la pared a la izquierda: dibujo, cota del estiramiento u y flecha de la fuerza F
 //   fvolumen(f, x0, x1, y0, y1, n [, az, el])  doble integral: n×n prismas (n = 0 el sólido exacto)
 //   fvoxeles(f, x0, x1, y0, y1, n, m [, az, el])  triple integral de 1: n×n×m cubitos
@@ -56,6 +57,10 @@
       return { tipo: 'barra', d: { n, q } };
     }
     if (nombre === 'fresorte') {          // fresorte(k1 [, k2, …], F): resortes en serie, el primero pegado a la pared; la fuerza F jala del último nudo
+      if (args.length === 1) {          // fresorte(n): n resortes en serie con variables SIMBÓLICAS (k, F, u), sin valores: el objeto antes de los números
+        const ns = Math.max(1, Math.min(6, Math.round(num(args[0])) || 1)), du = new Array(ns).fill(1), u = [0]; du.forEach((v) => u.push(u[u.length - 1] + v));
+        return { tipo: 'resorte', d: { simb: true, ks: new Array(ns).fill(1), F: 1, du, u, ref: 1 } };
+      }
       if (args.length < 2) throw new Error('fresorte(k1 [, k2, …], F)');
       const ks = args.slice(0, -1).map(num), F = num(args[args.length - 1]);
       if (ks.length > 6 || ks.some((k) => !(k > 0)) || !isFinite(F)) throw new Error('fresorte: las rigideces deben ser positivas (máx. 6 resortes) y F un número');
@@ -353,15 +358,15 @@
     for (let i = 1; i <= n; i++) {
       const xa = xn[i - 1], xb = xn[i], lead = Math.min(14, (xb - xa) * 0.18), bob = 7, amp = 10, m = 2 * bob; c.strokeStyle = AZUL; c.lineWidth = 2.2; c.beginPath(); c.moveTo(xa, y0); c.lineTo(xa + lead, y0);
       for (let j = 1; j < m; j++) c.lineTo(xa + lead + (xb - xa - 2 * lead) * j / m, y0 + (j % 2 ? -amp : amp)); c.lineTo(xb - lead, y0); c.lineTo(xb, y0); c.stroke();
-      txt(c, 'k' + '₁₂₃₄₅₆'[i - 1] + ' = ' + f4(d.ks[i - 1]), (xa + xb) / 2, y0 + 44, 11, AZUL, 'center');
+      txt(c, d.simb ? 'k' + (n > 1 ? '₁₂₃₄₅₆'[i - 1] : '') : 'k' + '₁₂₃₄₅₆'[i - 1] + ' = ' + f4(d.ks[i - 1]), (xa + xb) / 2, y0 + 44, 12, AZUL, 'center');
     }
     for (let i = 1; i <= n; i++) { c.fillStyle = '#1f2937'; c.strokeStyle = '#fff'; c.lineWidth = 1.4; c.beginPath(); c.arc(xn[i], y0, 6, 0, 7); c.fill(); c.stroke(); txt(c, String(i + 1), xn[i], y0 + 20, 11, '#111', 'center'); }
     txt(c, '1', x0 + 10, y0 + 20, 11, '#111', 'center');
-    const yc = y0 - 46; c.strokeStyle = VERDE; c.fillStyle = VERDE; c.lineWidth = 1.6; lin(xn0[n], yc - 5, xn0[n], yc + 5); lin(xn[n], yc - 5, xn[n], yc + 5); if (Math.abs(xn[n] - xn0[n]) > 4) flecha(xn0[n], yc, xn[n], yc, VERDE); txt(c, 'u = ' + f4(d.u[n]), (xn0[n] + xn[n]) / 2, yc - 11, 12, VERDE, 'center');          // la cota del estiramiento
-    flecha(xn[n] + 9, y0, xn[n] + 62, y0, NAR); txt(c, 'F = ' + f4(d.F), xn[n] + 36, y0 - 14, 12, NAR, 'center');
-    const yi = H - 22; const ls = n === 1 ? ['u = F / k = ' + f4(d.F) + ' / ' + f4(d.ks[0]) + ' = ' + f4(d.u[1])] : d.du.map((v, i) => 'nudo ' + (i + 2) + ': u = ' + (i ? 'u' + '₂₃₄₅₆₇'[i - 1] + ' + ' : '') + 'F / k' + '₁₂₃₄₅₆'[i] + ' = ' + f4(d.u[i + 1]));
+    const yc = y0 - 46; c.strokeStyle = VERDE; c.fillStyle = VERDE; c.lineWidth = 1.6; lin(xn0[n], yc - 5, xn0[n], yc + 5); lin(xn[n], yc - 5, xn[n], yc + 5); if (Math.abs(xn[n] - xn0[n]) > 4) flecha(xn0[n], yc, xn[n], yc, VERDE); txt(c, d.simb ? 'u' + (n > 1 ? '₂₃₄₅₆₇'[n - 1] : '') : 'u = ' + f4(d.u[n]), (xn0[n] + xn[n]) / 2, yc - 11, 12, VERDE, 'center');          // la cota del estiramiento
+    flecha(xn[n] + 9, y0, xn[n] + 62, y0, NAR); txt(c, d.simb ? 'F' : 'F = ' + f4(d.F), xn[n] + 36, y0 - 14, 12, NAR, 'center');
+    const yi = H - 22; const ls = d.simb ? (n === 1 ? ['u = F / k'] : d.du.map((v, i) => 'nudo ' + (i + 2) + ': u' + '₂₃₄₅₆₇'[i] + ' = ' + (i ? 'u' + '₂₃₄₅₆₇'[i - 1] + ' + ' : '') + 'F / k' + '₁₂₃₄₅₆'[i])) : n === 1 ? ['u = F / k = ' + f4(d.F) + ' / ' + f4(d.ks[0]) + ' = ' + f4(d.u[1])] : d.du.map((v, i) => 'nudo ' + (i + 2) + ': u = ' + (i ? 'u' + '₂₃₄₅₆₇'[i - 1] + ' + ' : '') + 'F / k' + '₁₂₃₄₅₆'[i] + ' = ' + f4(d.u[i + 1]));
     ls.forEach((t2, i) => txt(c, t2, 12, yi + i * 15 - (ls.length - 1) * 15, 12, '#222', 'left'));
-    if (W > 420) txt(c, 'misma escala en todos los cuadros: el resorte se alarga al subir F', W - 24, H - 6, 9, '#888', 'right');
+    if (W > 420) txt(c, d.simb ? 'dibujo con variables: sin valores' : 'misma escala en todos los cuadros: el resorte se alarga al subir F', W - 24, H - 6, 9, '#888', 'right');
   }
   // fbarra: la barra del objeto, con su apoyo, sus elementos y nudos y la carga repartida
   function barra(c, d, W, H) {
@@ -385,7 +390,7 @@
     if (r.gw) { W = Math.max(180, Math.min((r.el.parentElement || r.el).clientWidth - 16, r.gw)); r.el.style.flex = '0 0 ' + (W + 8) + 'px'; } if (r.gh) H = Math.max(g.tipo === 'resorte' ? 160 : 120, r.gh);          // tamaño elegido arrastrando la esquina
     cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + 'px'; cv.style.height = H + 'px'; cv.style.margin = '4px 0 6px 6px';
     const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.fillStyle = '#fff'; c.fillRect(0, 0, W, H);
-    if (g.tipo === 'resorte') { const dm = Math.max(...g.d.du.map(Math.abs)); if (dm > 1e-9 && !(r.refR > 0)) r.refR = dm; g.d.ref = r.refR > 0 ? r.refR : dm; }          // la escala del estiramiento la fija el primer dibujo y no cambia con F
+    if (g.tipo === 'resorte' && !g.d.simb) { const dm = Math.max(...g.d.du.map(Math.abs)); if (dm > 1e-9 && !(r.refR > 0)) r.refR = dm; g.d.ref = r.refR > 0 ? r.refR : dm; }          // la escala del estiramiento la fija el primer dibujo y no cambia con F
     HV = null; c.save(); c.beginPath(); c.rect(0, 0, W, H); c.clip();
     ({ riemann, gauss1, gauss2, tabla, malla, resorte, barra, esc3: (cc, d, w, h) => escena(cc, d, w, h, r.orb) })[g.tipo](c, g.d, W, H);
     if (HK.grip) HK.grip(c, W, H);
