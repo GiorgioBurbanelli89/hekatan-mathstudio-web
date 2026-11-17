@@ -125,6 +125,10 @@
         vacia(); primera = false; const nombre = (/^#(\w+)/.exec(t) || [])[1] || '', txt = [l];
         if (nombre === 'numerico' || nombre === 'simbolico') { cuenta('#' + nombre + ' (sin efecto)'); continue; }
         if (nombre === 'fplot') { const cod = traduceFplot(t); if (cod) { items.push(oculto ? { t: 'eq', codigo: cod, modo: 0, oculto: true, orig: '' } : { t: 'eq', codigo: cod, modo: 0, orig: '' }); cuenta('#fplot (nativa)'); continue; } }
+        if (nombre === 'slider') {          // #slider fplot(f1, f2, [a b]), n = lo:hi → un deslizador de la hoja (n) y la gráfica nativa que lo usa: al moverlo la curva se redibuja
+          const ms = /^#slider\s+fplot\s*\((.*)\)\s*,\s*([\p{L}_][\p{L}\p{N}_]*)\s*=\s*(-?[\d.eE+-]+)\s*:\s*(-?[\d.eE+-]+)\s*$/u.exec(t), cod = ms && traduceFplot('#fplot(' + ms[1] + ')');
+          if (ms && cod) { const lo = parseFloat(ms[3]), hi = parseFloat(ms[4]); items.push({ t: 'slider', nombre: ms[2], min: lo, max: hi, valor: (lo + hi) / 2, inc: (hi - lo) / 50 }, oculto ? { t: 'eq', codigo: cod, modo: 0, oculto: true, orig: '' } : { t: 'eq', codigo: cod, modo: 0, orig: '' }); cuenta('#slider fplot (nativa)'); continue; }
+        }
         if (t.startsWith('#|')) while (i < lin.length && lin[i].trimStart().startsWith('#|')) { txt.push(lin[i].replace(/\s+$/, '')); i++; }
         let cierre = Cierres[nombre] || null; if (!cierre && nombre === 'anim' && /^#anim\s*\(/.test(t)) cierre = '#finanim';
         if (cierre) while (i < lin.length) { const q = lin[i].replace(/\s+$/, ''); txt.push(q); i++; if (q.trim() === cierre) break; }
