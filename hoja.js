@@ -445,8 +445,8 @@
           }
           if (s.l.t === 'call' && s.l.args.every((a) => a.t === 'id')) env.f[s.l.f] = { p: s.l.args.map((a) => a.n), b: cuerpo };
           else if (s.l.t === 'id') {
-            if (simbolica) env.l[s.l.n] = cuerpo;
-            else { try { env.v[s.l.n] = HK.evalua(cuerpo, env); delete env.l[s.l.n]; } catch (e) { if (e.pesado) throw e; env.l[s.l.n] = cuerpo; } }
+            if (simbolica) { env.l[s.l.n] = cuerpo; if (s.muestra) r.ed.resultado = { sim: r.modo === 1 ? '→' : '=', fila: HK.aFilas(cuerpo) }; }          // «k = ∫∫… =»: define Y enseña el resultado simbólico (antes quedaba sin nada)
+            else { try { env.v[s.l.n] = HK.evalua(cuerpo, env); delete env.l[s.l.n]; } catch (e) { if (e.pesado) throw e; env.l[s.l.n] = cuerpo; if (s.muestra) r.ed.resultado = { sim: '=', fila: HK.aFilas(sim(cuerpo)) }; } }
           }
         }
       } catch (e) {
