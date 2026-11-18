@@ -163,26 +163,44 @@
     return { formato: 'hmath 1', estilo: 'lisp', eq: 15.33, txt: 15, gap: 0, items };
   }
   // ---------------------------------------------------------------- hoja → texto de Hekatan LISP (lo inverso de importa): «# título» «## sección» «#: párrafo» · cálculo tal cual · #fplot · bloques LISP tal cual
+  const GrafSlider = /^(fplot|fresorte|fresortesim|ftrocito|friemann)\s*\(/;
   function exporta(json) {
     const d = typeof json === 'string' ? JSON.parse(json) : json, o = []; let oc = false;
     const ocultar = (x) => { if (!!x.oculto !== oc) { o.push(x.oculto ? '#hide' : '#show'); oc = !!x.oculto; } };
-    const prm = (seg) => seg.map((g) => g.eq !== undefined ? '$' + g.eq + '$' : g.s !== undefined ? (g.b ? '**' + g.s + '**' : g.s) : '').join('');
+    const prm = (seg) => seg.map((g) => g.eq !== undefined ? '$' + adiff(g.eq) + '$' : g.s !== undefined ? (g.b ? '**' + g.s + '**' : g.s) : '').join('');
     const unaLinea = (s) => String(s).replace(/\s*\n\s*/g, ' ').trim();
+    // diff(a, v) / pdiff(a, v) (lo que guarda la hoja) -> Derivate{a @ v} / Partial{a @ v} (como se escribe en Hekatan LISP)
+    const adiff = (s) => { let r = String(s); for (let g = 0; g < 30; g++) { const m = /(?<![\p{L}\p{N}_])(pdiff|diff)\(/u.exec(r); if (!m) break; const ini = m.index + m[0].length; let p = 1, k = ini, com = -1; for (; k < r.length && p > 0; k++) { const c = r[k]; if (c === '(' || c === '[' || c === '{') p++; else if (c === ')' || c === ']' || c === '}') p--; else if (c === ',' && p === 1 && com < 0) com = k; } if (p !== 0 || com < 0) break; r = r.slice(0, m.index) + (m[1] === 'pdiff' ? 'Partial' : 'Derivate') + '{' + r.slice(ini, com).trim() + ' @ ' + r.slice(com + 1, k - 1).trim() + '}' + r.slice(k); } return r; };
+    // el texto con html (negritas/cursivas) vuelve a markdown: <b>x</b> -> **x**, <i>x</i> -> *x*
+    const dehtml = (h) => String(h).replace(/<b>(.*?)<\/b>/gis, '**$1**').replace(/<i>(.*?)<\/i>/gis, '*$1*').replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]+>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+    let pend = null;          // un deslizador espera a la grafica que sigue: se escribe como «#slider grafica, n = lo:hi»
+    let ultNom = null, ultEq = -1;          // nombre de la ultima «x = ...» y su posicion en o: el eco «x» y la nota de la misma linea se pegan a ella
     const mis = new Set();          // posiciones de o que van en la misma fila que la anterior («&& …»)
     (d.items || []).forEach((x) => {
-      ocultar(x); const n0 = o.length;
+      ocultar(x);
+      if (pend && !(x.t === 'eq' && GrafSlider.test(String(x.codigo || '').trim()))) { o.push(pend.nombre + ' = ' + pend.valor + " 'deslizador " + pend.min + ' … ' + pend.max); pend = null; }
+      const n0 = o.length;
+      if (pend && x.t === 'eq') {          // el deslizador + su grafica vuelven a ser UNA directiva
+        const cg = adiff(String(x.codigo || '').trim()).replace(/^fplot\s*\((.*)\[\s*([^\],]+?)\s*[, ]\s*([^\],]+?)\s*\]\s*\)\s*$/, 'fplot($1[$2 $3])');
+        o.push('#slider ' + cg + ', ' + pend.nombre + ' = ' + pend.min + ':' + pend.max); pend = null; ultNom = null; ultEq = -1; return;
+      }
       if (x.t === 'texto' || x.t === 'parrafo') {
-        const t = unaLinea(x.t === 'texto' ? x.text : prm(x.seg || [])); if (!t) return;
+        const t = unaLinea(x.t === 'texto' ? (x.html && !x.titulo ? dehtml(x.html) : x.text) : prm(x.seg || [])); if (!t) return;
+        if (x.mismaLinea && x.t === 'texto' && !x.titulo && ultEq >= 0 && ultEq === o.length - 1 && !o[ultEq].includes('\n')) { o[ultEq] += " '" + t; return; }          // «f = ... 'nota»: la nota va al final de la linea de la formula
         if (x.titulo) o.push('#'.repeat(Math.min(3, x.nivel || 1)) + ' ' + t); else o.push('#: ' + t);
       } else if (x.t === 'eq') {
         let ls = String(x.codigo || '').replace(/\r/g, '').split('\n'); if (!ls.length || !ls.join('').trim()) return;
+        if (ultNom && String(x.codigo || '').trim() === ultNom && !x.mismaLinea) return;          // el eco «x» de «x = expr» lo pone la importacion
         ls = ls.filter((l, i) => !(l.trim() === '' && (i === 0 || i === ls.length - 1))); { let q = ls.length - 1; while (q > 0 && ls[q].trim() === '') q--; const m = q > 0 ? /^([\p{L}_][\p{L}\p{N}_]*)\s*=/u.exec(ls[q - 1]) : null; if (m && ls[q].trim() === m[1]) ls = ls.slice(0, q).concat(ls.slice(q + 1)); }          // «x = expr» + «x»: el eco lo pone la importación
-        o.push(ls.map((l) => { l = l.replace(/^(\s*)fplot\s*\((.*)\[\s*([^\],]+?)\s*[, ]\s*([^\],]+?)\s*\]\s*\)\s*$/, '$1#fplot($2[$3 $4])'); return l.replace(/\s+%\s*(.*)$/, " '$1"); }).join('\n'));
-      } else if (x.t === 'slider') o.push(x.nombre + ' = ' + x.valor + " 'deslizador " + x.min + ' … ' + x.max);
+        { const mnom = /^([\p{L}_][\p{L}\p{N}_]*)\s*=[^=]/u.exec(ls[ls.length - 1] || ''); ultNom = mnom && ls.length === 1 ? mnom[1] : null; }
+        o.push(ls.map((l) => { l = adiff(l).replace(/^(\s*)fplot\s*\((.*)\[\s*([^\],]+?)\s*[, ]\s*([^\],]+?)\s*\]\s*\)\s*$/, '$1#fplot($2[$3 $4])'); return l.replace(/\s+%\s*(.*)$/, " '$1"); }).join('\n'));
+      } else if (x.t === 'slider') pend = x;
       else if (x.t === 'cad') o.push('#autolisp\n' + String(x.codigo || '').replace(/\s+$/, '') + '\n#fin');
       else if (x.t === 'raw') o.push(String(x.text || '').replace(/\s+$/, ''));
+      if (x.t === 'eq' && o.length > n0) ultEq = o.length - 1; else if (x.t !== 'texto' || !x.mismaLinea) { ultEq = -1; if (x.t !== 'eq') ultNom = null; }
       if (x.mismaLinea && o.length > n0 && n0 > 0 && !/^#(hide|show)$/.test(o[n0 - 1] || '')) { o[n0] = '&& ' + o[n0]; mis.add(n0); }
     });
+    if (pend) o.push(pend.nombre + ' = ' + pend.valor + " 'deslizador " + pend.min + ' … ' + pend.max);
     if (oc) o.push('#show');
     let r = ''; o.forEach((s, k) => { r += (k ? (mis.has(k) ? '\n' : '\n\n') : '') + s; });
     return r + '\n';
