@@ -56,8 +56,11 @@
   }
   const neg = (x) => esM(x) ? new Mat(x.r, x.c, x.a.map(negU)) : negU(x);
   function transpose(m) { const o = new Mat(m.c, m.r); for (let i = 0; i < m.r; i++) for (let j = 0; j < m.c; j++) o.s(j, i, m.g(i, j)); return o; }
+  // PUENTE A C# (solo dentro de Hekatan Math Studio WV, el WPF con la web en un WebView2): el sistema se resuelve con MKL de Intel. En el navegador no existe y todo sigue en JS.
+  const nativo = () => { try { const h = window.chrome && window.chrome.webview && window.chrome.webview.hostObjects; return (h && h.sync && h.sync.nativo) || null; } catch (e) { return null; } };
   function lsolve(K, F) {          // K·u = F (eliminación gaussiana con pivoteo)
     K = SQ(K); F = SQ(F); const n = K.r; if (K.c !== n || F.r !== n) throw new Error('lsolve: K debe ser cuadrada y F de igual altura');
+    { const NV = nativo(); if (NV && n >= (HK.nativoMin || 400)) { try { const b64 = (v) => { const u = new Uint8Array(new Float64Array(v).buffer); let s = ''; for (let i = 0; i < u.length; i += 32768) s += String.fromCharCode.apply(null, u.subarray(i, i + 32768)); return btoa(s); }; const r = NV.LsolveB(n, F.c, b64(K.a), b64(F.a)); if (typeof r === 'string' && !r.startsWith('ERR:')) { const bin = atob(r), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); HK.nativoUltimo = 'MKL'; return new Mat(n, F.c, Array.from(new Float64Array(u.buffer))); } } catch (e) { /* sin puente: sigue en JS */ } } }
     const A = []; for (let i = 0; i < n; i++) { A.push([]); for (let j = 0; j < n; j++) A[i].push(K.g(i, j)); for (let j = 0; j < F.c; j++) A[i].push(F.g(i, j)); }
     for (let c = 0; c < n; c++) {
       let p = c; for (let i = c + 1; i < n; i++) if (Math.abs(A[i][c]) > Math.abs(A[p][c])) p = i;
