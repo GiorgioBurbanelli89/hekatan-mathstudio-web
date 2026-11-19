@@ -43,8 +43,8 @@ html, body { height:100%; margin:0; overflow:hidden; font:12.5px "Segoe UI", sys
 /* marco de cada página (como el WPF): un rectángulo punteado por página, justo en los márgenes, y entre páginas la franja del margen inferior + superior */
 #papel .marco { position:absolute; box-sizing:border-box; border:1px dashed #B4C6E4; pointer-events:none; }
 /* sin páginas (hoja continua, vista web/borrador/esquema, hoja LISP): un solo marco alrededor de la hoja */
-body.sinpag #hoja, body[data-vista=web] #hoja, body[data-vista=borrador] #hoja, body[data-vista=esquema] #hoja, body.lisp #hoja { outline:1px dashed #B4C6E4; outline-offset:12px; }
-body.sinpag #papel .marco, body[data-vista=web] #papel .marco, body[data-vista=borrador] #papel .marco, body[data-vista=esquema] #papel .marco, body.lisp #papel .marco { display:none; }
+body.sinpag #hoja, body[data-vista=web] #hoja, body[data-vista=borrador] #hoja, body[data-vista=esquema] #hoja { outline:1px dashed #B4C6E4; outline-offset:12px; }
+body.sinpag #papel .marco, body[data-vista=web] #papel .marco, body[data-vista=borrador] #papel .marco, body[data-vista=esquema] #papel .marco { display:none; }
 body.cuad #hoja { background-image:linear-gradient(#0000000d 1px, transparent 1px), linear-gradient(90deg, #0000000d 1px, transparent 1px); background-size:20px 20px; }
 .fila { display:flex; gap:12px; align-items:flex-start; margin:2px 0 var(--margfila, 2px); padding-bottom:var(--gapfila, 14px); flex-wrap:wrap; }          /* 16 px de aire debajo de cada bloque como el «gap» del WPF; en el relleno (no en el margen) para que el paginado lo cuente y no se solape con el margen del siguiente */          /* la línea respeta el margen: al llegar a él, sigue en la fila de abajo */
 .eq { flex:0 0 auto; max-width:100%; border-radius:2px; }
@@ -152,7 +152,7 @@ body:has(#coment) #area { margin-right:240px; }
 .raw.oculto { display:none; } .ver-ocultos .raw.oculto { display:block; opacity:.55; }
 
 /* hoja de Hekatan LISP (estilo «lisp» del WPF): continua, sin marco de página y con poco aire */
-body.lisp #papel { width:auto; max-width:900px; padding:24px 40px; min-height:0; box-shadow:none; }
+/* body.lisp #papel: sin regla propia → la hoja de LISP usa el papel con sus páginas (Jorge, 19-nov-2026) */
 body.lisp .fila { margin:0; padding-bottom:0; }
 body.lisp .txt { line-height:1.45; }
 body.lisp .txt.titulo { margin-top:10px; }

@@ -754,7 +754,7 @@
     if (Array.isArray(d.items) && d.items.length > 3000) throw new Error('hoja demasiado grande (maximo 3000 regiones)');
     if ((d.items || []).some((q) => q && q.t === 'eq' && typeof q.codigo === 'string' && q.codigo.length > 100000)) throw new Error('una ecuacion es demasiado larga (maximo 100000 caracteres)');
     limpia();
-    { const lisp = d.estilo === 'lisp'; document.body.classList.toggle('lisp', lisp); document.body.classList.toggle('sinpag', lisp);          // hoja de Hekatan LISP: continua y compacta, como en el WPF (estilo «lisp»)
+    { const lisp = d.estilo === 'lisp'; document.body.classList.toggle('lisp', lisp); document.body.classList.remove('sinpag');          // hoja de Hekatan LISP: compacta (estilo «lisp») pero CON páginas: se ven el límite de hoja y los saltos de página (Jorge, 19-nov-2026); «Hoja con páginas» la vuelve continua
       if (HK.app) { if (lisp) { HK.app.setTxt(Math.round(d.txt || 15)); HK.app.setEq(Math.round(d.eq || 15)); } else if (HK.app.estiloLisp) { HK.app.setTxt(13); HK.app.setEq(14); } HK.app.estiloLisp = lisp; } }
     { const gp = typeof d.gap === 'number' ? d.gap : 6; document.documentElement.style.setProperty('--gapfila', Math.max(0, gp + 8) + 'px'); document.documentElement.style.setProperty('--margfila', Math.min(2, 2 + (gp - 6) * 0.9) + 'px'); }          // interlineado de la hoja (campo «gap» del .hmath, como el WPF): 6 → 14 px (como antes), -4 → 4 px
     const dxs = [];
