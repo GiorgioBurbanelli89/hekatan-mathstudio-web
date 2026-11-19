@@ -110,6 +110,28 @@
     if (a.rows.length > 6 || a.rows.some((r) => r.length !== a.rows.length)) throw new Error('matriz simbólica: cuadrada, de hasta 6 × 6');
     return '(vector ' + a.rows.map((r) => '(vector ' + r.map((x) => "'" + T(x, c)).join(' ') + ')').join(' ') + ')';
   }
+  // ¿la expresión lleva matrices (literal [..] o transpose) aunque sea a través de nombres definidos en la hoja?
+  function conMatriz(a, c, prof) {
+    if (!a || typeof a !== 'object' || prof > 30) return false;
+    if (a.t === 'mat' || (a.t === 'call' && a.f === 'transpose')) return true;
+    if (a.t === 'id') return !!(c.env.l && a.n in c.env.l) && conMatriz(c.env.l[a.n], c, prof + 1);
+    return ['a', 'b'].some((k) => a[k] && conMatriz(a[k], c, prof + 1)) || (a.args || []).some((x) => conMatriz(x, c, prof + 1));
+  }
+  // la misma expresión en la forma que entiende meval del motor: (vector (vector …)), mtransp, area-under (integral de matrices)
+  function TM(a, c) {
+    switch (a.t) {
+      case 'paren': return TM(a.a, c);
+      case 'id': return c.env.l && a.n in c.env.l && conMatriz(c.env.l[a.n], c, 0) ? TM(c.env.l[a.n], c) : T(a, c);
+      case 'mat': return '(vector ' + a.rows.map((r) => '(vector ' + r.map((x) => T(x, c)).join(' ') + ')').join(' ') + ')';
+      case 'neg': return '(* -1 ' + TM(a.a, c) + ')';
+      case 'bin': { const op = { '+': '+', '-': '-', '*': '*', imp: '*' }[a.op]; return op ? '(' + op + ' ' + TM(a.a, c) + ' ' + TM(a.b, c) + ')' : T(a, c); }
+      case 'call':
+        if (a.f === 'transpose' && a.args.length === 1) return '(mtransp ' + TM(a.args[0], c) + ')';
+        if (a.f === 'integral' && a.args.length === 4) return "(area-under '" + TM(a.args[0], c) + " '" + simb(a.args[1].n) + ' ' + T(a.args[2], c) + ' ' + T(a.args[3], c) + ')';
+        return T(a, c);
+    }
+    return T(a, c);
+  }
   function nombre(n, c) {
     const e = c.env;
     if (e.l && n in e.l) return T(e.l[n], c);
@@ -171,6 +193,10 @@
         if (ck !== '0') ts.push('(* (/ ' + ck + ' ' + fact + ') (expt (- ' + sv + ' ' + pt + ') ' + k + '))');
       }
       return lisp("(simplify '" + (ts.reduce((s, t) => s === null ? t : '(+ ' + s + ' ' + t + ')', null) || '0') + ')');          // sumas de dos en dos: el simplify del motor pierde sumandos en (+ a b c)
+    }
+    if (f === 'integral' && a.args.length === 4 && conMatriz(a.args[0], c, 0)) {          // ∫∫ Bᵀ·D·B·detJ con matrices de letras: lo hace el motor entero (meval + area-under + mtransp), como Hekatan LISP
+      const r = lisp("(let ((x (meval '" + TM(a, c) + "))) (loop while (and (vectorp x) (= (length x) 1)) do (setf x (aref x 0))) x)");
+      return r.replace(/#\(/g, '(vec ');
     }
     if (f === 'integral') {
       const v = a.args[1].n, sv = simb(v), crudo = lisp("(simplify '" + T(a.args[0], c) + ')'), cuerpo = leeArbol(crudo);

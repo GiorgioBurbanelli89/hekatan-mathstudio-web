@@ -383,22 +383,7 @@
     const sim = (e) => S.resuelve(e, env);
     const hechos = new Set();
     agrupaProgramas();          // for / while / if … end tecleados fila por fila en nodos
-    for (const r of reg) {
-      if (r.t === 'slider') { env.v[r.nombre] = r.valor; continue; }
-      if (r.t !== 'eq') continue;
-      if (!r.prog) r.ed.resultado = null; r.graf = null; r.ed.modo = r.modo; limpiaMarcas(r.ed.fila);
-      { const u = r.ed.fila[r.ed.fila.length - 1]; if (!r.prog && u && u.t === 'c' && u.s === '≔') continue; }          // «a ≔» sin lado derecho: definición a medias, no una evaluación «a =» (no muestra resultado)
-      if (r.modo === 2 && !r.prog) continue;          // solo notación: se dibuja, no se calcula ni define nada
-      if (r.prog) {          // programa: todas las líneas del bloque se ejecutan juntas
-        if (hechos.has(r.prog)) continue; hechos.add(r.prog);
-        const grupo = reg.filter((x) => x.prog === r.prog); grupo.forEach((x) => { x.ed.resultado = null; });
-        grupo.forEach((x, i) => x.el.classList.toggle('progl', i > 0 && i < grupo.length - 1));          // barra vertical a la izquierda del cuerpo del programa (como el bloque de Mathcad/WPF)
-        try {
-          const ult = HK.M.programa(grupo.map((x) => x.ed.texto() + (x.sil ? ';' : '')), env);
-          if (ult && !grupo[0].prog.tecleado) grupo[grupo.length - 1].ed.resultado = valorRes(ult.v);
-        } catch (e) { grupo[grupo.length - 1].ed.resultado = { kind: 'err', texto: e.message }; }
-        continue;
-      }
+    function paso(r) {          // el cálculo de UNA fila (sale aparte para que tic … toc pueda repetir el tramo)
       const txt = r.ed.texto();
       let s; try { s = HK.sentencia(txt); } catch (e) { s = { k: 'vacia' }; }
       try {
@@ -434,14 +419,14 @@
           if (simbolica && s.l.t === 'id' && r.modo !== 1 && soloIntegral(s.r)) {          // «K = … integral(…)»: numérica (Gauss) si todo se puede evaluar; si no, queda simbólica
             env.numInt = true; try { env.v[s.l.n] = HK.evalua(s.r, env); delete env.l[s.l.n]; simbolica = null; } catch (e) { if (e.pesado) throw e; simbolica = true; } finally { env.numInt = false; }
           }
-          if (simbolica === null) continue;
+          if (simbolica === null) return;
           if (s.muestra && s.l.t === 'id' && !simbolica) {          // «a = expr =»: define y enseña el valor
-            try { const v = HK.evalua(s.r, env); env.v[s.l.n] = v; delete env.l[s.l.n]; r.ed.resultado = valorRes(v); marcaIgual(r.ed, 'define'); continue; } catch (e) { if (!/^indef:/.test(e.message)) throw e; }
+            try { const v = HK.evalua(s.r, env); env.v[s.l.n] = v; delete env.l[s.l.n]; r.ed.resultado = valorRes(v); marcaIgual(r.ed, 'define'); return; } catch (e) { if (!/^indef:/.test(e.message)) throw e; }
           }
           let cuerpo = s.r;
           if (simbolica) {
             try { cuerpo = sim(s.r); }
-            catch (e) { if (e.message === 'motor:cargando' || s.l.t !== 'id' || r.modo === 1) throw e; let v; env.numInt = true; try { v = HK.evalua(s.r, env); } catch (e2) { throw e2.pesado ? e2 : e; } finally { env.numInt = false; } env.v[s.l.n] = v; delete env.l[s.l.n]; continue; }          // integral de una matriz (Nv, Bm…): el motor simbólico no puede → numérica (Gauss)
+            catch (e) { if (e.message === 'motor:cargando' || s.l.t !== 'id' || r.modo === 1) throw e; let v; env.numInt = true; try { v = HK.evalua(s.r, env); } catch (e2) { throw e2.pesado ? e2 : e; } finally { env.numInt = false; } env.v[s.l.n] = v; delete env.l[s.l.n]; return; }          // integral de una matriz (Nv, Bm…): el motor simbólico no puede → numérica (Gauss)
           }
           if (s.l.t === 'call' && s.l.args.every((a) => a.t === 'id')) env.f[s.l.f] = { p: s.l.args.map((a) => a.n), b: cuerpo };
           else if (s.l.t === 'id') {
@@ -454,6 +439,34 @@
         r.ed.resultado = e.message === 'motor:cargando' ? { kind: 'aviso', texto: 'cargando el motor simbólico…' } : m ? { kind: 'aviso', texto: 'sin definir: ' + m[1] } : e.pesado ? { kind: 'aviso', texto: '⚠ ' + e.message } : { kind: 'err', texto: e.message };
         if (e.pesado) hayPesado = e.message;
       }
+    }
+    let tramo = null;
+    function cronometra(filas) {          // 1 pasada de prueba y repite hasta ~2 s (máx. 10 000); la pasada normal ya fue el calentamiento
+      const t1 = performance.now(); filas.forEach(paso); const una = performance.now() - t1;
+      const n = Math.max(1, Math.min(10000, Math.floor(2000 / Math.max(una, 0.01))));
+      const t2 = performance.now(); for (let i = 0; i < n; i++) filas.forEach(paso); const ms = (performance.now() - t2) / n;
+      return { kind: 'val', texto: '⏱ ' + (ms >= 1 ? ms.toFixed(3) + ' ms' : (ms * 1000).toFixed(3) + ' µs') + ' por pasada (promedio de ' + n + (n === 1 ? ' pasada)' : ' pasadas)'), cu: -1 };
+    }
+    for (const r of reg) {
+      if (r.t === 'slider') { env.v[r.nombre] = r.valor; continue; }
+      if (r.t !== 'eq') continue;
+      if (!r.prog) r.ed.resultado = null; r.graf = null; r.ed.modo = r.modo; limpiaMarcas(r.ed.fila);
+      { const u = r.ed.fila[r.ed.fila.length - 1]; if (!r.prog && u && u.t === 'c' && u.s === '≔') continue; }          // «a ≔» sin lado derecho: definición a medias, no una evaluación «a =» (no muestra resultado)
+      if (r.modo === 2 && !r.prog) continue;          // solo notación: se dibuja, no se calcula ni define nada
+      if (r.prog) {          // programa: todas las líneas del bloque se ejecutan juntas
+        if (hechos.has(r.prog)) continue; hechos.add(r.prog);
+        const grupo = reg.filter((x) => x.prog === r.prog); grupo.forEach((x) => { x.ed.resultado = null; });
+        grupo.forEach((x, i) => x.el.classList.toggle('progl', i > 0 && i < grupo.length - 1));          // barra vertical a la izquierda del cuerpo del programa (como el bloque de Mathcad/WPF)
+        try {
+          const ult = HK.M.programa(grupo.map((x) => x.ed.texto() + (x.sil ? ';' : '')), env);
+          if (ult && !grupo[0].prog.tecleado) grupo[grupo.length - 1].ed.resultado = valorRes(ult.v);
+        } catch (e) { grupo[grupo.length - 1].ed.resultado = { kind: 'err', texto: e.message }; }
+        continue;
+      }
+      const t0 = r.ed.texto().trim();
+      if (t0 === 'tic') { tramo = []; continue; }          // tic … toc: cronómetro como el de Hekatan LISP (Jorge, 19-nov-2026)
+      if (t0 === 'toc') { r.ed.resultado = tramo ? cronometra(tramo) : { kind: 'aviso', texto: 'toc sin tic' }; tramo = null; continue; }
+      paso(r); if (tramo && !r.prog) tramo.push(r);
     }
     avisoPesado(hayPesado);
     redibuja();
