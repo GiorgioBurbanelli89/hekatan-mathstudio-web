@@ -249,3 +249,20 @@ body.mv-arrastrando { user-select:none; cursor:move; }
 
 .fila .eq.progl { border-left:2px solid #222; padding-left:6px; position:relative; }
 .fila .eq.progl::after { content:''; position:absolute; left:-2px; top:100%; width:2px; height:calc(var(--gapfila, 14px) + 4px); background:#222; }          /* cuerpo de un programa: barra vertical, como el WPF */
+/* #dibujo de Hekatan LISP (dibujo.js, puerto de LispDibujo.cs): mismos colores y clases que el HTML de Hekatan LISP (LispConverter ROOT_LIGHT) */
+.hk-dib { --bg:#FBF7EC; --fg:#171310; --mut:#544d3a; --nary:#7a1fa8; --dib-rojo:#c62828; --dib-azul:#1c5fbf; --dib-verde:#2b8a3e; --dib-nar:#d9480f; --dib-acero:#b3141c; margin:.6em 0 1em; break-inside:avoid; page-break-inside:avoid; }
+.hk-dib-tit { font-family:'Segoe UI',sans-serif; font-size:10pt; color:var(--fg); margin-bottom:.3em; }
+.hk-dib-esc { color:var(--mut); font-size:.92em; }
+.hk-dib-svg { display:block; margin:0 auto; }
+.hk-dib-ley { display:flex; flex-wrap:wrap; gap:.2em 1.3em; font-family:'Segoe UI',sans-serif; font-size:9.5pt; color:var(--fg); margin:.35em 0 .2em; }
+.hk-dib-li { display:inline-flex; align-items:center; gap:.35em; }
+.hk-dib-err { color:#c62828; font-family:'Segoe UI',sans-serif; font-size:9.5pt; margin:.3em 0; }
+.hk-obs-n { display:inline-block; min-width:1.5em; border-radius:1em; color:#fff; font-weight:700; text-align:center; }
+.raw.dib { background:transparent; border-color:transparent; border-left-color:transparent; }
+.raw.dib .raw-bar { background:transparent; opacity:0; transition:opacity .15s; } .raw.dib:hover .raw-bar { opacity:1; }
+.raw.dib .raw-bar button { margin-left:auto; border:1px solid #cdd5e3; background:#fff; border-radius:3px; font-size:11px; cursor:pointer; padding:0 6px; }
+.raw.dib textarea { background:#f6f3ff; border-top:1px solid #e3dcf7; }
+.dib-vista { padding:2px 8px; }
+
+.fila.dib-der { float:right; clear:right; width:46%; margin-left:14px; }          /* #dibujo(…, lado = derecha): al lado de los datos que siguen */
+.fila:has(> .txt.titulo) { clear:both; }

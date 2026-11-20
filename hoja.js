@@ -105,7 +105,19 @@
     const c = contenedor(!!mismo), d = document.createElement('div'); d.className = 'raw' + (oculto ? ' oculto' : '');
     d.innerHTML = '<div class="raw-bar"><b>Bloque Hekatan LISP</b><span>se dibuja con el motor de Hekatan LISP (WPF o Hekatan LISP web); aquí se conserva y se guarda igual</span></div>';
     const ta = document.createElement('textarea'); ta.spellcheck = false; ta.value = texto; ta.rows = Math.min(14, Math.max(2, texto.split('\n').length)); d.appendChild(ta); c.appendChild(d);
-    const r = { t: 'raw', el: d, ta, oculto: !!oculto }; reg.push(r); return r;
+    const r = { t: 'raw', el: d, ta, oculto: !!oculto }; reg.push(r);
+    if (HK.dibujo && HK.dibujo.esDibujo(texto)) {          // «#dibujo(…) … #fin»: se dibuja AQUÍ (SVG, puerto de LispDibujo.cs) con los valores de la hoja; el código queda plegado debajo
+      d.classList.add('dib');
+      if (/lado\s*=\s*der/i.test(texto.split(String.fromCharCode(10))[0])) c.classList.add('dib-der');          // «lado = derecha»: flota a la derecha de lo que sigue (sus datos), como en Hekatan LISP y en el WPF
+      d.querySelector('.raw-bar').innerHTML = '<b>Dibujo</b><span>#dibujo de Hekatan LISP · con los valores de la hoja</span><button type="button" class="dib-cod" title="Mostrar / ocultar el código del dibujo">‹› código</button>';
+      const vista = document.createElement('div'); vista.className = 'dib-vista'; d.insertBefore(vista, ta); ta.style.display = 'none';
+      d.querySelector('.dib-cod').addEventListener('click', () => { ta.style.display = ta.style.display === 'none' ? '' : 'none'; });
+      r.vals = null;          // variables de la hoja en el punto del bloque (las pone resolver)
+      r.dibuja = () => { try { vista.innerHTML = HK.dibujo.render(ta.value, HK.dibujo.lookupDe(r.vals || (HK.entorno && HK.entorno.v) || {})); } catch (e) { vista.innerHTML = '<div class="hk-dib-err">⚠ #dibujo: ' + String(e.message).replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</div>'; } };
+      ta.addEventListener('input', () => { clearTimeout(r.tm); r.tm = setTimeout(r.dibuja, 200); });
+      r.dibuja();
+    }
+    return r;
   }
   const CAD_CAB = ';; Dibujo AutoLISP (Hekatan Math Studio): cada línea agrega una entidad; abajo se dibuja.';
   function agregaCad(codigo, titulo, mismo) {
@@ -449,6 +461,7 @@
     }
     for (const r of reg) {
       if (r.t === 'slider') { env.v[r.nombre] = r.valor; continue; }
+      if (r.t === 'raw' && r.dibuja) { r.vals = env.v; setTimeout(r.dibuja, 0); continue; }          // #dibujo: se redibuja con los valores de TODA la hoja (como Hekatan LISP: puede ir antes de las líneas que dibuja, p. ej. «lado = derecha» al lado de sus datos)
       if (r.t !== 'eq') continue;
       if (!r.prog) r.ed.resultado = null; r.graf = null; r.ed.modo = r.modo; limpiaMarcas(r.ed.fila);
       { const u = r.ed.fila[r.ed.fila.length - 1]; if (!r.prog && u && u.t === 'c' && u.s === '≔') continue; }          // «a ≔» sin lado derecho: definición a medias, no una evaluación «a =» (no muestra resultado)
