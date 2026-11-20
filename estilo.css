@@ -5,9 +5,6 @@ html, body { height:100%; margin:0; overflow:hidden; font:12.5px "Segoe UI", sys
 #app { height:100%; display:flex; flex-direction:column; }
 #titulo { background:var(--azul); color:#fff; font-weight:600; font-size:13px; padding:8px 14px; flex:none; display:flex; align-items:center; gap:8px; }
 #titulo img { display:block; border-radius:50%; }
-#descargar { margin-left:auto; background:#fff; color:var(--azul); text-decoration:none; font-weight:600; font-size:12px; padding:3px 10px; border-radius:12px; white-space:nowrap; }
-#descargar:hover { background:#E0E7FF; }
-#descargar small { font-weight:500; opacity:.7; }
 #menu { background:var(--menu); display:flex; gap:2px; padding:0 4px; flex:none; border-bottom:1px solid #E5E7EB; position:relative; z-index:20; }
 .mi { position:relative; }
 .mi > span { display:block; padding:4px 7px; cursor:default; }
