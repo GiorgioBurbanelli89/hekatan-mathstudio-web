@@ -52,6 +52,7 @@
         if (!q) break;
         if (q.k === 'op' && (q.s === '*' || q.s === '/' || q.s === '·')) { nx(); a = { t: 'bin', op: q.s === '/' ? '/' : '*', a, b: unary() }; }
         else if (q.k === 'op' && (q.s === '.*' || q.s === './')) { nx(); a = { t: 'bin', op: q.s, a, b: unary() }; }
+        else if (q.k === 'op' && q.s === '\\') { nx(); a = { t: 'call', f: 'lsolve', args: [a, unary()] }; }          // 21-nov-2026: A\b (MATLAB) = lsolve(A, b); antes quedaba simbólico
         else if (q.k === 'num' || q.k === 'unit' || (q.k === 'id' && q.s !== 'and' && q.s !== 'or') || (q.k === 'op' && q.s === '(')) a = { t: 'bin', op: 'imp', a, b: power() };
         else break;
       }
