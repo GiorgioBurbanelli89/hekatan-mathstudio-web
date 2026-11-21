@@ -50,6 +50,9 @@
       case '-': return map2(x, y, esM(x) || esM(y) ? restaZ : restaU);
       case '*': case 'imp': return esM(x) && esM(y) ? mmul(x, y) : map2(x, y, mulU);
       case '/': if (esM(y)) throw new Error('no se divide entre una matriz'); return map2(x, y, divU);
+      case '.*': return map2(x, y, mulU);          // elemento a elemento (MATLAB / Hekatan LISP)
+      case './': return map2(x, y, divU);
+      case '.^': return map2(x, y, (a, b) => nn(a) && nn(b) ? Math.pow(a, b) : HK.U.pow(a, b));
       case '^': if (esM(y)) throw new Error('potencia de matrices: el exponente debe ser un número'); return esM(x) ? mpow(x, y) : nn(x) && nn(y) ? Math.pow(x, y) : HK.U.pow(x, y);
     }
     throw new Error('operador ' + op);
@@ -77,7 +80,7 @@
   const FM = {
     mod: (a, b) => map2(a, b, (x, y) => x - y * Math.floor(x / y)), rem: (a, b) => map2(a, b, (x, y) => x - y * Math.trunc(x / y)),
     gausspts: (n) => { const g = HK.gaussLeg(n), o = new Mat(g.x.length, 2); g.x.forEach((v, i) => { o.a[2 * i] = v; o.a[2 * i + 1] = g.w[i]; }); return o; },          // [ξᵢ wᵢ] de Gauss–Legendre en [−1, 1]
-    zeros: (n, m) => { tam(n, m); return new Mat(n, m === undefined ? n : m); }, ones: (n, m) => { tam(n, m); const o = new Mat(n, m === undefined ? n : m); o.a.fill(1); return o; },
+    zeros: (n, m) => { tam(n, m); return new Mat(n, m === undefined ? n : m); }, ones: (n, m) => { tam(n, m); const o = new Mat(n, m === undefined ? n : m); o.a.fill(1); return o; }, eye: (n, m) => { tam(n, m); const c = m === undefined ? n : m, o = new Mat(n, c); for (let i = 0; i < Math.min(n, c); i++) o.s(i, i, 1); return o; },          // identidad (MATLAB / Hekatan LISP)
     transpose, lsolve, abs: elem(absU), sqrt: elem(sqrtU), sin: elemN(Math.sin), cos: elemN(Math.cos), exp: elemN(Math.exp),
     max: (x, y) => y !== undefined ? map2(x, y, maxU) : esM(x) ? (hayQ(x) ? x.a.reduce(maxU) : Math.max(...x.a)) : x, min: (x, y) => y !== undefined ? map2(x, y, minU) : esM(x) ? (hayQ(x) ? x.a.reduce(minU) : Math.min(...x.a)) : x, sum: (x) => esM(x) ? (hayQ(x) ? x.a.reduce(sumaU) : x.a.reduce((p, q) => p + q, 0)) : x,
     col: (m, j) => { const o = new Mat(m.r, 1); for (let i = 0; i < m.r; i++) o.s(i, 0, m.g(i, j - 1)); return o; },
@@ -218,6 +221,11 @@
           else { const r = programa(cuerpo, { v: Object.assign({}, env.v), f: env.f, l: env.l }); env.v[m[1].trim()] = r ? r.v : 0; ultimo = null; }
           continue;
         }
+        if ((m = /^function\s*([A-Za-z_]\w*?)\s*=\s*([A-Za-z_]\w*)\s*\((.*)\)\s*;?$/.exec(raw)) || (m = /^function\s+()([A-Za-z_]\w*)\s*\((.*)\)\s*;?$/.exec(raw))) {          // «function R = nombre(a, b) … end» (MATLAB / Hekatan LISP): función con cuerpo; devuelve R
+          const ini = ++i; saltaBloque(); const cuerpo = lineas.slice(ini, i); i++;
+          env.f[m[2]] = { p: m[3].split(',').map((x) => x.trim()).filter((x) => x), lines: m[1] ? cuerpo.concat(['return ' + m[1]]) : cuerpo };
+          ultimo = null; continue;
+        }
         if (/^prog\b/.test(raw)) { i++; bloque(); i++; continue; }          // «prog … end»: varias líneas juntas
         if (/^return\b/.test(raw)) { const e = raw.replace(/^return\s*/, '').replace(/;\s*$/, ''); if (e) ultimo = { v: ev(HK.parse(e)) }; i = lineas.length; return; }          // «return e»: devuelve y termina
         if ((m = /^while\s+(.+)$/.exec(raw))) {
@@ -239,7 +247,7 @@
       let prof = 0;
       while (i < lineas.length) {
         const t = lineas[i].trim();
-        if (/^(for|while|if|prog)\b/.test(t)) prof++;
+        if (/^(for|while|if|prog|function)\b/.test(t)) prof++;
         else if (/^end\b/.test(t)) { if (prof === 0) return; prof--; }
         else if (hastaElse && prof === 0 && /^else\b/.test(t)) return;
         i++;
@@ -257,7 +265,7 @@
           asigna(env.v[s.l.f], s.l.args.map((a) => ev(a)), ev(s.r)); ultimo = null; return;
         }
         if (s.l.t === 'id' && !(s.l.n in env.v) && HK.elemSub && HK.elemSub(s.l.n, env)) { const el = HK.elemSub(s.l.n, env); el.m.a[el.k] = ev(s.r); ultimo = null; return; }          // M_i,j = e
-        if (s.l.t === 'id') { env.v[s.l.n] = ev(s.r); ultimo = muestra ? { nombre: s.l.n, v: env.v[s.l.n] } : null; return; }
+        if (s.l.t === 'id') { let v = ev(s.r); if (esM(v) && s.r.t === 'id') v = new Mat(v.r, v.c, v.a.slice()); env.v[s.l.n] = v; ultimo = muestra ? { nombre: s.l.n, v } : null; return; }          // «TH = fx» COPIA (como MATLAB): si no, cambiar TH(j) cambiaba también fx
         if (s.l.t === 'call') { env.f[s.l.f] = { p: s.l.args.map((a) => a.n), b: s.r }; return; }
       }
       if (s.k === 'expr' || s.k === 'muestra') { const v = ev(s.e); ultimo = muestra ? { v } : null; }

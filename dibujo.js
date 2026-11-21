@@ -230,7 +230,7 @@
   // ---------------- primitivas ----------------
   const Known = new Set(['linea', 'polilinea', 'poligono', 'rect', 'circulo', 'arco', 'flecha', 'flechamomento', 'texto', 'cota', 'cotas', 'cotasx', 'cotasy',
     'ejex', 'ejey', 'ejesx', 'ejesy', 'hueco', 'achurado', 'varilla', 'varillas', 'fila', 'estribo', 'seccion',
-    'leyenda', 'obs', 'observacion', 'carga', 'curva', 'empotramiento', 'empotre']);
+    'leyenda', 'obs', 'observacion', 'carga', 'curva', 'empotramiento', 'empotre', 'hover']);
 
   const Pos = (p, i) => { const pos = p.A.filter((a) => a.Name == null); return i < pos.length ? pos[i] : null; };
   const Named = (p, n) => p.A.find((a) => a.Name === n) || null;
@@ -365,8 +365,60 @@
   // ---------------- 2ª pasada: dibujar ----------------
   const StyS = (p) => { const n = Named(p, 'estilo'); if (n && n.Str != null) return n.Str; const a = p.A.find((q) => q.Name == null && q.Str != null); return a ? a.Str : null; };
 
+  // ---------------- HOVER (globo con el cursor), igual que LispDibujo.cs ----------------
+  // hover(x, y, "barra {#1:0}: M = {#2:2} kN·m", barra, M [, radio = 16]): x, y = puntos de anclaje (vectores del mismo largo);
+  // {#k} o {#k:d} = k-ésimo vector que sigue al texto en el punto i (un escalar vale para todos), d decimales (2 si falta); la secuencia \n del texto = salto de línea.
+  // No dibuja: deja <g class="hk-hv" data-h="[[px,py,"texto"],…]"> y el escucha de abajo muestra el globo del punto más cercano (≤ radio px).
+  const HoverNum = (v, d) => { if (!isFinite(v)) return '—'; const r = v.toFixed(d); return /^-0(\.0+)?$/.test(r) ? r.slice(1) : r; };
+  function DrawHover(c, p) {
+    const nums = p.A.filter((a) => a.Name == null && a.Str == null), ta = p.A.find((a) => a.Name == null && a.Str != null);
+    if (nums.length < 2 || !ta) throw new Error('hover(x, y, "texto {#1:2}", v1, v2…)');
+    const xs = Vals(c, nums[0]), ys = Vals(c, nums[1]);
+    if (xs.length !== ys.length) throw new Error('hover: x e y de distinto largo');
+    const vs = nums.slice(2).map((a) => Vals(c, a)), tpl = ta.Str.replace(/\\n/g, '\n'), out = [];
+    for (let i = 0; i < xs.length; i++) {
+      if (isNaN(xs[i]) || isNaN(ys[i])) continue;
+      const txt = tpl.replace(/\{#(\d+)(?::(\d))?\}/g, (m0, k0, d0) => {
+        const k = parseInt(k0, 10) - 1; if (k < 0 || k >= vs.length) return m0;
+        const v = vs[k], x = v.length === 1 ? v[0] : i < v.length ? v[i] : NaN;
+        return HoverNum(x, d0 !== undefined ? parseInt(d0, 10) : 2);
+      });
+      out.push([+F(c.Px(xs[i])), +F(c.Py(ys[i])), txt]);
+    }
+    const rad = NumNamed(c, p, 'radio', 16);
+    c.Sb.push('<g class="hk-hv" data-r="' + F(rad) + '" data-h="' + JSON.stringify(out).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;') + '"/>');
+  }
+  (function instalaHover() {          // delegación en el documento (una vez): el SVG se pone con innerHTML y ahí no corren scripts
+    if (typeof document === 'undefined' || window.__hkDibHv) return; window.__hkDibHv = 1;
+    let tip = null, mk = null;
+    const T = () => { if (!tip) { tip = document.createElement('div'); tip.style.cssText = 'position:fixed;z-index:9999;display:none;pointer-events:none;background:#fffffff2;border:1px solid #888;border-radius:4px;padding:3px 6px;font:12px/1.35 Consolas,monospace;color:#111;box-shadow:0 2px 6px rgba(0,0,0,.25);white-space:pre'; document.body.appendChild(tip); } return tip; };
+    const off = () => { if (tip) tip.style.display = 'none'; if (mk && mk.parentNode) mk.parentNode.removeChild(mk); mk = null; };
+    document.addEventListener('pointermove', (e) => {
+      const s = e.target && e.target.closest ? e.target.closest('svg.hk-dib-svg') : null;
+      if (!s) { off(); return; }
+      const gs = s.querySelectorAll('g.hk-hv'); if (!gs.length) return;
+      const m = s.getScreenCTM(); if (!m) return;
+      const pt = s.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY; const q = pt.matrixTransform(m.inverse()), sc = m.a;
+      let best = null, bd = 1e18;
+      for (const g of gs) {
+        let d = g.__h; if (!d) { try { d = JSON.parse(g.getAttribute('data-h')); } catch (x) { d = []; } g.__h = d; }
+        const r = +g.getAttribute('data-r') || 16;
+        for (const h of d) { const dx = (h[0] - q.x) * sc, dy = (h[1] - q.y) * sc, dd = dx * dx + dy * dy; if (dd < bd && dd <= r * r) { bd = dd; best = h; } }
+      }
+      if (!best) { off(); return; }
+      const t = T(); t.textContent = best[2]; t.style.display = 'block';
+      const w = t.offsetWidth, h2 = t.offsetHeight; let L = e.clientX + 14, Tp = e.clientY + 14;
+      if (L + w > window.innerWidth - 4) L = Math.max(2, e.clientX - w - 14); if (Tp + h2 > window.innerHeight - 4) Tp = Math.max(2, e.clientY - h2 - 14);
+      t.style.left = L + 'px'; t.style.top = Tp + 'px';
+      if (!mk || mk.parentNode !== s) { off(); mk = document.createElementNS('http://www.w3.org/2000/svg', 'circle'); mk.setAttribute('style', 'fill:none;stroke:#c00;pointer-events:none'); s.appendChild(mk); }
+      mk.setAttribute('cx', best[0]); mk.setAttribute('cy', best[1]); mk.setAttribute('r', 4 / sc); mk.style.strokeWidth = (1.6 / sc) + 'px';
+    });
+    document.documentElement.addEventListener('mouseleave', off);
+  })();
+
   function Draw(c, p) {
     switch (p.Name) {
+      case 'hover': DrawHover(c, p); break;
       case 'linea': Line(c, V(c, Pos(p, 0)), V(c, Pos(p, 1)), V(c, Pos(p, 2)), V(c, Pos(p, 3)), Style(StyS(p))); break;
       case 'polilinea': case 'poligono': { const [xs, ys] = XY(c, p); Poly(c, xs, ys, p.Name === 'poligono', Style(StyS(p))); break; }
       case 'rect': for (const [x, y, b, h] of Rects(c, p)) Poly(c, [x, x + b, x + b, x], [y, y, y + h, y + h], true, Style(StyS(p))); break;
@@ -741,7 +793,7 @@
   // lookup sobre las variables de la hoja (env.v de hoja.js): número → [v]; cantidad con unidades {v (SI), d} → [v];
   // matriz/vector (HK.M) → sus componentes. Los nombres latinos de las directivas (phi_1, gamma) se buscan también en griego
   // (φ_1, γ), porque hlisp.js pasa a griego las líneas de cálculo pero NO las que empiezan por «#».
-  const GR = { alpha: 'α', beta: 'β', delta: 'δ', epsilon: 'ε', zeta: 'ζ', eta: 'η', theta: 'θ', kappa: 'κ', mu: 'μ', nu: 'ν', xi: 'ξ', rho: 'ρ', sigma: 'σ', tau: 'τ', phi: 'φ', psi: 'ψ', omega: 'ω' };
+  const GR = { alpha: 'α', beta: 'β', gamma: 'γ', delta: 'δ', epsilon: 'ε', zeta: 'ζ', eta: 'η', theta: 'θ', kappa: 'κ', lambda: 'λ', mu: 'μ', nu: 'ν', xi: 'ξ', rho: 'ρ', sigma: 'σ', tau: 'τ', phi: 'φ', psi: 'ψ', omega: 'ω' };
   const RxGr = new RegExp('(?<![A-Za-z0-9À-ɏ])(' + Object.keys(GR).join('|') + ')(?![A-Za-z0-9À-ɏ(])', 'g');
   const aNum = (x) => typeof x === 'number' ? x : typeof x === 'boolean' ? (x ? 1 : 0) : x && typeof x.v === 'number' ? x.v : NaN;
   function lookupDe(vars) {

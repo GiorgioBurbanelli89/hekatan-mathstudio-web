@@ -252,19 +252,24 @@
   let enPag = false;
   function empaqueta() {
     const hoja = $('hoja'), papel = $('papel'), hijos = [...hoja.children];
-    hijos.forEach((c) => { c.style.marginTop = ''; c.classList.remove('ini-pag'); });
+    hijos.forEach((c) => { c.style.marginTop = ''; c.style.paddingTop = ''; c.classList.remove('ini-pag'); });
     const vista = document.body.getAttribute('data-vista');
     if (document.body.classList.contains('sinpag') || vista === 'web' || vista === 'borrador' || vista === 'esquema') return;
     const cs = getComputedStyle(papel), mt = parseFloat(cs.paddingTop) || 96, mb = parseFloat(cs.paddingBottom) || 96, util = PGH - mt - mb;
     const nat = hijos.map((c) => ({ c, top: c.offsetTop, h: c.offsetHeight, m0: parseFloat(getComputedStyle(c).marginTop) || 0 }));
-    let extra = 0;
+    let extra = 0, gFin = -1;          // gFin: lo que está AL LADO de un dibujo flotante («lado = derecha») se mueve con él, no por separado
+    const cierra = (x) => x.c.classList.contains('dib-der') || !!x.c.querySelector(':scope > .txt.titulo');
     for (let i = 0; i < nat.length; i++) {
-      const n = nat[i]; if (!n.h) continue;
+      const n = nat[i]; if (!n.h || i < gFin) continue;
       const pe = n.c.children.length === 1 ? n.c.firstElementChild : null, esTit = pe && (pe.classList.contains('titulo') || /^\s*Figura(?![A-Za-z])/.test(pe.textContent)) && nat[i + 1];          // título o leyenda «Figura…»: va con lo que sigue          // un título va siempre con lo que sigue (como el WPF): nunca queda solo al pie de la página
-      const y0 = n.top + extra, y1 = esTit ? nat[i + 1].top + extra + nat[i + 1].h : y0 + n.h, k = Math.max(0, Math.floor(y0 / PGH)), ini = k * PGH + mt, fin = (k + 1) * PGH - mb;
+      let jG = -1;          // dibujo flotante: el bloque es el dibujo + todo lo que tiene al lado (hasta el próximo título u otro dibujo, que van debajo)
+      if (n.c.classList.contains('dib-der')) { jG = i + 1; while (jG < nat.length && !cierra(nat[jG])) jG++; gFin = jG; }
+      const y0 = n.top + extra, y1 = jG > 0 ? Math.max(n.top + n.h, jG - 1 > i ? nat[jG - 1].top + nat[jG - 1].h : 0) + extra : esTit ? nat[i + 1].top + extra + nat[i + 1].h : y0 + n.h, k = Math.max(0, Math.floor(y0 / PGH)), ini = k * PGH + mt, fin = (k + 1) * PGH - mb;
       let d = 0;
       if (y0 < ini) d = ini - y0;                                                    // cae en el margen superior: baja al comienzo de la página
       else if (y0 >= fin || (y1 > fin + 0.5 && y1 - y0 <= util)) d = (k + 1) * PGH + mt - y0;          // cae en el margen inferior o no cabe: pasa entera a la página siguiente
+      if (d > 0.5 && n.c.classList.contains('dib-der') && nat[i + 1]) nat[i + 1].c.style.marginTop = (nat[i + 1].m0 + d) + 'px';          // dibujo «lado = derecha» que no cabe: su margen NO mueve el texto de al lado (flota) → el texto baja con él a la página siguiente (antes quedaba angosto y se salía de la página)
+      if (d > 0.5 && getComputedStyle(n.c).clear !== 'none') { n.c.style.paddingTop = ((parseFloat(getComputedStyle(n.c).paddingTop) || 0) + d) + 'px'; extra += d; continue; }          // va debajo de un dibujo flotante (clear): el margen se lo come el espacio bajo el dibujo y NO lo mueve → se empuja con relleno
       if (d > 0.5) { n.c.style.marginTop = (n.m0 + d) + 'px'; extra += d; const t0 = n.c.firstElementChild; if (t0 && t0.classList.contains('titulo')) { const a0 = parseFloat(getComputedStyle(t0).marginTop) || 0; n.c.classList.add('ini-pag'); extra += (parseFloat(getComputedStyle(t0).marginTop) || 0) - a0; } }          // un título al comienzo de página pierde su aire de arriba: lo que sigue sube lo mismo
     }
   }

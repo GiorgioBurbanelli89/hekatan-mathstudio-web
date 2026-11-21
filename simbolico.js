@@ -143,6 +143,7 @@
     const f = a.f, e = c.env;
     if (e.f[f]) {
       const u = e.f[f]; if (u.p.length !== a.args.length) throw new Error(f + ' espera ' + u.p.length + ' argumento(s)');
+      if (u.lines) throw new Error('función sin forma simbólica: ' + f);          // «function R = f(…) … end»: se calcula con números, no tiene fórmula de una línea
       let cuerpo = u.b;
       if (derivaParam(cuerpo, u.p)) cuerpo = aAst(lisp("(simplify '" + T(cuerpo, c) + ')'));          // s(x) = diff(u(x), x): primero se deriva, DESPUÉS se reemplaza x
       const m = {}; u.p.forEach((p, i) => { m[p] = a.args[i]; });

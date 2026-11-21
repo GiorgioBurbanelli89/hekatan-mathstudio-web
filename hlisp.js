@@ -112,7 +112,11 @@
       if (!bloque.length) return; let cod = bloque.join('\n');
       if (!oculto && bloque.length === 1) {          // «x = expr» se ve con su resultado: se define y se muestra (como «x = expr» + «x»)
         const sc1 = cod.split('%')[0].trim(), md1 = /^([\p{L}_][\p{L}\p{N}_]*)\s*=\s*[^=]/u.exec(sc1);
-        if (md1 && !RxBloque.test(sc1) && !sc1.endsWith(';')) cod += '\n' + md1[1];
+        if (md1 && !RxBloque.test(sc1) && !sc1.endsWith(';')) {          // UNA sola línea (no repetir la variable debajo): «x = 8» se queda así; «R = √(…)» → «R = √(…) = 23.4» con el resultado al final
+          const der = sc1.slice(sc1.indexOf('=') + 1).trim(), com = cod.indexOf(' % ') >= 0 ? cod.slice(cod.indexOf(' % ')) : '';
+          if (der === md1[1]) cod = md1[1] + ' =' + com;          // «F = F» (volver a mostrar una variable) → «F = 1.44»
+          else if (!/^-?[\d.]+([eE][+-]?\d+)?$/.test(der)) cod = sc1 + ' =' + com;
+        }
       }
       const bal = (s) => { let p = 0; for (const k of s.split('%')[0].replace(/"[^"]*"/g, '')) { if (k === '(') p++; else if (k === ')') p--; } return p; };
       if (!bloque.every(lineaValida) || bloque.reduce((s, x) => s + bal(x), 0) !== 0) { omitidas['(codigo)'] = (omitidas['(codigo)'] || 0) + 1; raw(original.join('\n'), oculto); bloque = []; original = []; return; }          // lo que los nodos no entienden queda como bloque LISP (como el WPF)

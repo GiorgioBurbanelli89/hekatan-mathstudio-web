@@ -387,6 +387,35 @@
     }
     b.querySelector('.t').textContent = '⚠ ' + msg + '. Puede tardar y congelar la pestaña unos segundos.'; b.style.display = 'flex';
   }
+  // Al abrir: primero se pinta la hoja (fórmulas, textos, dibujos) y DESPUÉS se calcula. Mientras calcula, arriba a la derecha
+  // «calculando… N s»: un contador de CSS (tiras de dígitos con transform + steps) que pinta el compositor, así sigue corriendo
+  // aunque el cálculo ocupe la página; al terminar, «listo en N s» unos segundos (como Hekatan LISP web).
+  let avisoCalcT = 0;
+  function calculaConAviso() {
+    redibuja();
+    let b = document.getElementById('hk-calc');
+    if (!b) {
+      const st = document.createElement('style');
+      st.textContent = '#hk-calc .hkc{display:inline-block;height:1.25em;line-height:1.25em;overflow:hidden;vertical-align:-0.3em}' +
+        '#hk-calc .hks{display:block;will-change:transform;animation-name:hkodo;animation-iteration-count:infinite;animation-timing-function:steps(10,end)}' +
+        '#hk-calc .hks i{display:block;font-style:normal;height:1.25em}@keyframes hkodo{from{transform:translateY(0)}to{transform:translateY(-12.5em)}}';
+      document.head.appendChild(st);
+      b = document.createElement('div'); b.id = 'hk-calc';
+      b.style.cssText = 'position:fixed;top:188px;right:26px;z-index:60;background:#b08a2e;color:#fff;font:600 13px Segoe UI,sans-serif;padding:4px 10px;border-radius:12px;display:none;font-variant-numeric:tabular-nums;box-shadow:0 1px 4px #0003';
+      document.body.appendChild(b);
+    }
+    const tira = (dur) => '<span class="hkc"><span class="hks" style="animation-duration:' + dur + 's">' + '0123456789'.split('').map((d) => '<i>' + d + '</i>').join('') + '</span></span>';
+    clearTimeout(avisoCalcT); b.innerHTML = 'calculando… ' + tira(100) + tira(10) + '.' + tira(1) + ' s'; b.style.display = 'block';
+    requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => {          // dos cuadros: la hoja y el aviso ya pintados
+      const t0 = performance.now();
+      try { resolver(); }
+      finally {
+        const s = (performance.now() - t0) / 1000;
+        b.textContent = 'listo en ' + (s < 1 ? Math.round(s * 1000) + ' ms' : s.toFixed(1) + ' s');
+        avisoCalcT = setTimeout(() => { b.style.display = 'none'; }, s > 1 ? 4000 : 1500);
+      }
+    }, 0)));
+  }
   let calcManual = false;
   function resolver(forzar) {
     if (calcManual && !forzar) return;          // «Celdas a mano»: solo se calcula al ejecutar
@@ -433,7 +462,7 @@
           }
           if (simbolica === null) return;
           if (s.muestra && s.l.t === 'id' && !simbolica) {          // «a = expr =»: define y enseña el valor
-            try { const v = HK.evalua(s.r, env); env.v[s.l.n] = v; delete env.l[s.l.n]; r.ed.resultado = valorRes(v); marcaIgual(r.ed, 'define'); return; } catch (e) { if (!/^indef:/.test(e.message)) throw e; }
+            try { const v = HK.evalua(s.r, env); env.v[s.l.n] = v; delete env.l[s.l.n]; r.ed.resultado = valorRes(v); marcaIgual(r.ed, 'define'); return; } catch (e) { if (e.pesado) throw e; }          // si el atajo no puede (funciones con cuerpo, simbólico…), sigue por la definición normal y muestra como lo hacía la línea de eco
           }
           let cuerpo = s.r;
           if (simbolica) {
@@ -443,7 +472,7 @@
           if (s.l.t === 'call' && s.l.args.every((a) => a.t === 'id')) env.f[s.l.f] = { p: s.l.args.map((a) => a.n), b: cuerpo };
           else if (s.l.t === 'id') {
             if (simbolica) { env.l[s.l.n] = cuerpo; if (s.muestra) r.ed.resultado = { sim: r.modo === 1 ? '→' : '=', fila: HK.aFilas(cuerpo) }; }          // «k = ∫∫… =»: define Y enseña el resultado simbólico (antes quedaba sin nada)
-            else { try { env.v[s.l.n] = HK.evalua(cuerpo, env); delete env.l[s.l.n]; } catch (e) { if (e.pesado) throw e; env.l[s.l.n] = cuerpo; if (s.muestra) r.ed.resultado = { sim: '=', fila: HK.aFilas(sim(cuerpo)) }; } }
+            else { try { env.v[s.l.n] = HK.evalua(cuerpo, env); delete env.l[s.l.n]; } catch (e) { if (e.pesado) throw e; env.l[s.l.n] = cuerpo; } if (s.muestra) { const idn = { t: 'id', n: s.l.n }; try { r.ed.resultado = valorRes(HK.evalua(idn, env)); } catch (e) { if (e.pesado) throw e; r.ed.resultado = { sim: '=', fila: HK.aFilas(sim(idn)) }; } } }          // «x = expr =»: el valor (o su forma simbólica) como lo mostraba la línea de eco «x»
           }
         }
       } catch (e) {
@@ -802,7 +831,7 @@
       else if (it.t === 'eq') {
         if (it.teclas != null && it.codigo == null) { const tc = HK.teclasACodigo(it.ini, it.teclas); it = Object.assign({}, it, { codigo: tc.codigo, modo: tc.notacion ? 2 : it.modo }); }          // formato nuevo del WPF: lo tecleado
         const todas = String(it.codigo || '').split(String.fromCharCode(10)).map((l) => l.split(String.fromCharCode(13)).join('')).filter((l) => l.trim());
-        const esProg = todas.some((l) => /^\s*(for|while|if|prog|else|end|return)\b|=\s*prog\s*$/.test(l));
+        const esProg = todas.some((l) => /^\s*(for|while|if|prog|function|else|end|return)\b|=\s*prog\s*$/.test(l));
         const c = contenedor(it.mismaLinea); let grupo = c;
         if (todas.length > 1) { grupo = document.createElement('div'); grupo.className = 'grupo'; c.appendChild(grupo); }
         let comentario = null;
@@ -811,11 +840,11 @@
           const sil = /;\s*$/.test(l), r = agregaEq(l.trim().replace(/;\s*$/, ''), { modo: it.modo, grupo, oculto: it.oculto });
           r.original = it; r.sil = sil; r.auto = true; if (esProg) { r.prog = it; r.ed.sangria = (l.match(/^\s*/)[0].length) * 2; r.el.style.marginLeft = r.ed.sangria * 5 + 'px'; }
         });
-        if (comentario) { const tc = agregaTxt(comentario, false, 1, true); tc.el.contentEditable = 'true'; }
+        if (comentario) { const tc = agregaTxt(comentario, false, 1, true); tc.el.contentEditable = 'true'; tc.el.classList.add('nota'); }          // nota de Hekatan LISP («x = 8 'centro…»): pegada a su ecuación, como el WPF
       }
     }
     for (const [i, x, y] of dxs) { const r = reg[i]; if (!r || !r.el) continue; const u = r.el.parentElement && r.el.parentElement.classList.contains('grupo') ? r.el.parentElement : r.el; if (x) { if (u.classList.contains('txt') || u.classList.contains('slider')) u.style.marginLeft = x + 'px'; else u.style.left = x + 'px'; } if (y) u.style.marginTop = y + 'px'; }
-    resolver();
+    calculaConAviso();          // la hoja se VE ya (fórmulas y textos); los resultados llegan después, con «calculando… N s» arriba
   }
   // formato del texto (negrita, tamaño, tabla…): solo etiquetas y estilos de una lista corta
   const ETQ = /^(B|I|U|S|STRIKE|SUB|SUP|A|BR|SPAN|FONT|DIV|P|UL|OL|LI|TABLE|TBODY|TR|TD|TH|IMG)$/;

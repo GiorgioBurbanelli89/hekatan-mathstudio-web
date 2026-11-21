@@ -9,8 +9,9 @@
       if (m) { t.push({ k: 'num', s: m[0] }); i += m[0].length; continue; }
       m = /^'([A-Za-zµμΩ°%Å]+)/.exec(s.slice(i));          // unidad: SIEMPRE con apóstrofo ('kN, 'm^2, 10'kN)
       if (m) { t.push({ k: 'unit', s: m[1].replace('μ', 'µ') }); i += m[0].length; continue; }
-      m = /^[A-Za-zͰ-Ͽ℀-⅏][A-Za-zͰ-Ͽ0-9]*(_\{[^{}]+\}|_[A-Za-z0-9Ͱ-Ͽ]+)?/.exec(s.slice(i));
+      m = /^[A-Za-zͰ-Ͽ℀-⅏][A-Za-zͰ-Ͽ0-9]*(_\{[^{}]+\}|_[A-Za-z0-9Ͱ-Ͽ]+(?:_[A-Za-z0-9Ͱ-Ͽ]+)*)?/.exec(s.slice(i));          // T_C_x: varios «_» (Hekatan LISP los usa en nombres)
       if (m) { t.push({ k: 'id', s: m[0].replace(/[{}]/g, '') }); i += m[0].length; continue; }          // M_{i,j}: subíndice con coma (elemento de matriz)
+      if (s.startsWith('.*', i) || s.startsWith('./', i) || s.startsWith('.^', i)) { t.push({ k: 'op', s: s.substr(i, 2) }); i += 2; continue; }          // elemento a elemento (MATLAB / Hekatan LISP)
       if (s.startsWith('==', i)) { t.push({ k: 'op', s: '==' }); i += 2; continue; }
       if (s.startsWith('<=', i)) { t.push({ k: 'op', s: '≤' }); i += 2; continue; }
       if (s.startsWith('>=', i)) { t.push({ k: 'op', s: '≥' }); i += 2; continue; }
@@ -50,6 +51,7 @@
         const q = pk();
         if (!q) break;
         if (q.k === 'op' && (q.s === '*' || q.s === '/' || q.s === '·')) { nx(); a = { t: 'bin', op: q.s === '/' ? '/' : '*', a, b: unary() }; }
+        else if (q.k === 'op' && (q.s === '.*' || q.s === './')) { nx(); a = { t: 'bin', op: q.s, a, b: unary() }; }
         else if (q.k === 'num' || q.k === 'unit' || (q.k === 'id' && q.s !== 'and' && q.s !== 'or') || (q.k === 'op' && q.s === '(')) a = { t: 'bin', op: 'imp', a, b: power() };
         else break;
       }
@@ -73,6 +75,7 @@
       if (b.t === 'unit') return unitPow(b);
       if (b.t === 'num' && T[p] && T[p].k === 'unit') return { t: 'bin', op: 'imp', a: b, b: unitPow({ t: 'unit', n: nx().s }) };          // 10'kN, 4'm^2: UN solo átomo (12'kN/3'm = (12 kN)/(3 m))
       if (isOp('^')) { nx(); return { t: 'bin', op: '^', a: b, b: unary() }; }
+      if (isOp('.^')) { nx(); return { t: 'bin', op: '.^', a: b, b: unary() }; }
       return b;
     }
     function argExpr() {          // argumento de llamada o elemento de vector: «:» solo, rango «a:b» o «a:paso:b» (como MATLAB)
@@ -192,7 +195,7 @@
   }
   function llama(u, vals, env, nom) {          // función del usuario: f(x,y) = … o con cuerpo de varias líneas
     if (u.p.length !== vals.length) throw new Error(nom + ' espera ' + u.p.length + ' argumento(s)');
-    const v2 = Object.assign({}, env.v); u.p.forEach((n, i) => { v2[n] = vals[i]; });
+    const v2 = Object.assign({}, env.v); u.p.forEach((n, i) => { const x = vals[i]; v2[n] = u.lines && HK.M && HK.M.esM(x) ? new HK.M.Mat(x.r, x.c, x.a.slice()) : x; });          // los vectores van COPIADOS a una función con cuerpo (si los cambia, no cambian los de la hoja)
     if (u.lines) { const r = HK.M.programa(u.lines, { v: v2, f: env.f, l: env.l }); if (!r) throw new Error(nom + ' no devuelve nada (falta return)'); return r.v; }
     return evalua(u.b, { v: v2, f: env.f, l: env.l });
   }
@@ -225,7 +228,7 @@
         if (a.op === '^' && HK.M && HK.M.esM(x)) { const e = a.b.t === 'paren' ? a.b.a : a.b; if (e.t === 'id' && e.n === 'T' && !('T' in env.v)) return HK.M.FM.transpose(x); }          // A^T: la transpuesta
         const y = evalua(a.b, env);
         switch (a.op) {
-          case '+': case '-': case '*': case 'imp': case '/': case '^': return HK.M.arit(a.op, x, y);
+          case '+': case '-': case '*': case 'imp': case '/': case '^': case '.*': case './': case '.^': return HK.M.arit(a.op, x, y);
           case '==': return igual(x, y) ? 1 : 0;          // (p==2) vale 1 o 0, como en el WPF
         }
         break;
@@ -343,6 +346,7 @@
         if (a.op === '^') return aFilas(a.a).concat([{ t: 'sup', r: aFilas(SP(a.b)) }]);
         if (a.op === 'imp') return aFilas(a.a).concat(aFilas(a.b));
         if (a.op === '==') return aFilas(a.a).concat([ch('==')], aFilas(a.b));
+        if (a.op === '.*' || a.op === './' || a.op === '.^') return aFilas(a.a).concat([ch(a.op)], aFilas(a.b));          // se dibuja tal cual: el texto vuelve igual al motor
         return aFilas(a.a).concat([ch(a.op === '*' ? '·' : a.op === '-' ? '−' : '+')], aFilas(a.b));
     }
     return [];

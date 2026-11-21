@@ -105,6 +105,7 @@ body.sinpag #papel { min-height:0; }
 .txt table td { min-width:40px; padding:2px 6px; }
 
 /* «Ec. (n)»: texto en la misma línea que la ecuación, pegado al margen derecho (como en el WPF) */
+.fila > .txt.lado.nota { margin-left:-6px !important; }          /* nota de una ecuación de Hekatan LISP: junto a ella (como el WPF y Hekatan LISP), no al margen derecho */
 .fila > .txt.lado { flex:0 0 auto; margin-left:auto; color:#666; font-size:calc(var(--txtpx,13px) * 0.8); align-self:center; white-space:nowrap; }
 .eq.oculto { display:none; }          /* bloques «oculto» del WPF (ayudas de cálculo) */
 
