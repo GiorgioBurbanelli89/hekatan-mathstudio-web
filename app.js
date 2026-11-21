@@ -655,6 +655,10 @@
   // «index.html#lisp=<base64url de UTF-8>»: abre ese script de Hekatan LISP en la hoja (lo usa el botón «Math Studio» de Hekatan Code; la misma importación del diálogo «Script Hekatan LISP»)
   function abreDeHash() {
     const ej = /^#ej=(.+)$/.exec(location.hash || '');          // «index.html#ej=<nombre del ejemplo>»: enlace CORTO a un ejemplo de la lista (como la web de Hekatan LISP)
+    if (ej && /^\d+[a-z]?$/i.test(ej[1])) {          // «#ej=174»: enlace CORTO por número (como Hekatan LISP web): la hoja de la lista que empieza por ese número
+      fetch('ejemplos/hlisp/lista.json').then((r) => r.json()).then((l) => { const f = (l || []).find((x) => x.startsWith(ej[1] + ' ')); if (f) abreEjemplo('ejemplos/hlisp/' + f); else estado('No hay ejemplo ' + ej[1]); }).catch(() => estado('No pude leer la lista de ejemplos'));
+      return;
+    }
     if (ej) { let n = ''; try { n = decodeURIComponent(ej[1]); } catch (e) { return; } if (!n || /[\\/]|\.\./.test(n)) return; abreEjemplo((/\.(lisp|hlisp)$/i.test(n) ? 'ejemplos/hlisp/' : 'ejemplos/') + n); return; }
     const m = /^#lisp=([A-Za-z0-9_-]+)$/.exec(location.hash || ''); if (!m) return;
     try {
