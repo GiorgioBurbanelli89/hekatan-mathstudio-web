@@ -204,7 +204,7 @@
   function guarda() { H().descarga(); recuerda('hoja.hmath', H().guarda()); }
   function nuevo() { H().limpia(); estado('Hoja nueva'); pagina(); H().nuevaEq(''); }
   const comoHmath = (nombre, t) => HK.hlisp && HK.hlisp.esHlisp(nombre, t) ? JSON.stringify(HK.hlisp.importa(t)) : t;          // .lisp / .hlisp → la misma conversión que el WPF
-  async function abreEjemplo(f) { try { const t = comoHmath(f, await (await fetch(f)).text()); H().abre(t); estado('Abierto: ' + f.split('/').pop()); setTimeout(pagina, 50); } catch (e) { estado('No se pudo abrir ' + f + ' (la página debe servirse por http)'); } }
+  async function abreEjemplo(f) { try { const rs = await fetch(f); if (!rs.ok) { estado('No existe el ejemplo ' + f.split('/').pop()); return; } const tx = await rs.text(); if (/^\s*<!DOCTYPE html/i.test(tx)) { estado('No existe el ejemplo ' + f.split('/').pop()); return; } const t = comoHmath(f, tx); H().abre(t);          // una página de error (404) no se abre como hoja estado('Abierto: ' + f.split('/').pop()); setTimeout(pagina, 50); } catch (e) { estado('No se pudo abrir ' + f + ' (la página debe servirse por http)'); } }
   function cuadricula() { document.body.classList.toggle('cuad'); $('m-cuadricula').classList.toggle('activa', document.body.classList.contains('cuad')); }
   $('m-cuadricula').onclick = cuadricula;
   $('m-compartir').onclick = () => { capturaPng('hoja', true); };
