@@ -110,7 +110,13 @@
       d.classList.add('dib'); d.querySelector('.raw-bar').innerHTML = '<b>Gráfica</b><span>de Hekatan LISP · con los valores de la hoja</span><button type="button" class="dib-cod" title="Mostrar / ocultar el código">‹› código</button>';
       const vista = document.createElement('div'); vista.className = 'dib-vista'; d.insertBefore(vista, ta); ta.style.display = 'none';
       d.querySelector('.dib-cod').addEventListener('click', () => { ta.style.display = ta.style.display === 'none' ? '' : 'none'; });
-      r.vals = null; r.dibuja = () => { try { HK.graf3.pinta(vista, ta.value); } catch (e) { vista.innerHTML = '<div class="hk-dib-err">⚠ ' + String(e.message).replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</div>'; } };
+      // PEREZOSO: la gráfica se calcula y se dibuja cuando llega a la vista (con 400 px de adelanto). Una hoja FEM trae varias y juntas
+      // bloqueaban la pestaña ~2-3 s al abrir (en un equipo cargado parecía colgada); así se ve la hoja enseguida y cada gráfica aparece al llegar.
+      vista.style.minHeight = '140px'; let pend = true;
+      const pintar = () => { pend = false; vista.style.minHeight = ''; try { HK.graf3.pinta(vista, ta.value); } catch (e) { vista.innerHTML = '<div class="hk-dib-err">⚠ ' + String(e.message).replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</div>'; } };
+      const cerca = () => { const rc = vista.getBoundingClientRect(); return rc.bottom > -400 && rc.top < (window.innerHeight || 900) + 400; };
+      if ('IntersectionObserver' in window) new IntersectionObserver((en) => { if (pend && en.some((x) => x.isIntersecting)) pintar(); }, { rootMargin: '400px 0px' }).observe(vista);
+      r.vals = null; r.dibuja = () => { pend = true; if (!('IntersectionObserver' in window) || cerca()) pintar(); };
       ta.addEventListener('input', () => { clearTimeout(r.tm); r.tm = setTimeout(r.dibuja, 300); });
       return r;
     }
@@ -531,7 +537,7 @@
   function redibuja() {
     if (previo && previo !== activo && reg.some((r) => r.ed === previo)) normaliza(previo);
     previo = activo;
-    for (const r of reg) if (r.t === 'eq') { r.ed.foco = (r.ed === activo); r.ed.dibuja(); dibujaGraf(r); }
+    for (const r of reg) if (r.t === 'eq') { r.ed.foco = (r.ed === activo); if (r.oculto && r.el.offsetParent === null && r.ed !== activo) { r.sinDibujar = true; continue; } r.sinDibujar = false; r.ed.dibuja(); dibujaGraf(r); }          // las regiones OCULTAS (cientos de líneas de bucles en una hoja FEM) no se dibujan mientras no se vean: así la hoja no se cuelga
   }
 
   // ---------------------------------------------------------------- teclado
