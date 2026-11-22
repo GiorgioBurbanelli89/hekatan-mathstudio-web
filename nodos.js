@@ -69,7 +69,8 @@
         // Igual que BigOpNode del WPF (HekatanVisualNodes/Nodes2.cs): ∫ ∑ ∏ del mismo tamaño, la TINTA centrada en el eje matemático,
         // límite superior APILADO arriba y el inferior abajo (nunca al costado), el ∫ ×0.7 en X y recostado 7°.
         const big = it.s === '∫', hi = medirFila(it.hi, tam * .7), lo = medirFila(it.lo, tam * .7), bd = medirFila(it.body, tam), vv = big ? medirFila(it.v, tam) : null;
-        const symH = Math.max(bd.a + bd.d, tam * 1.2) * (big ? 1.15 : 1), size = Math.max(tam * 2, symH * .95);
+        const symH = Math.max(bd.a + bd.d, tam * 1.2) * (big ? 1.15 : 1); let size = Math.max(tam * 2, symH * .95);          // ∫∫∫ anidadas: el signo de afuera toma el tamaño del de adentro (todas iguales, como Hekatan LISP), no crece con cada nivel
+        if (big && it.body.length && it.body[0].t === 'bigop' && it.body[0].s === '∫') { const inn = medirItem(it.body[0], tam, it.body); if (inn && inn.size) size = inn.size; }
         mc.font = '300 ' + size + 'px ' + FUENTE_SIGNO; const mm = mc.measureText(it.s);
         const w0 = mm.width, asc = mm.actualBoundingBoxAscent || size * .8, des = mm.actualBoundingBoxDescent || size * .2;
         const sw = w0 * (big ? .7 : 1), axis = -tam * .28, base = axis - (des - asc) / 2, iTop = base - asc, iBot = base + des;
@@ -159,7 +160,8 @@
         // Igual que BigOpNode del WPF (HekatanVisualNodes/Nodes2.cs): ∫ ∑ ∏ del mismo tamaño, la TINTA centrada en el eje matemático,
         // límite superior APILADO arriba y el inferior abajo (nunca al costado), el ∫ ×0.7 en X y recostado 7°.
         const big = it.s === '∫', hi = medirFila(it.hi, tam * .7), lo = medirFila(it.lo, tam * .7), bd = medirFila(it.body, tam), vv = big ? medirFila(it.v, tam) : null;
-        const symH = Math.max(bd.a + bd.d, tam * 1.2) * (big ? 1.15 : 1), size = Math.max(tam * 2, symH * .95);
+        const symH = Math.max(bd.a + bd.d, tam * 1.2) * (big ? 1.15 : 1); let size = Math.max(tam * 2, symH * .95);          // ∫∫∫ anidadas: el signo de afuera toma el tamaño del de adentro (todas iguales, como Hekatan LISP), no crece con cada nivel
+        if (big && it.body.length && it.body[0].t === 'bigop' && it.body[0].s === '∫') { const inn = medirItem(it.body[0], tam, it.body); if (inn && inn.size) size = inn.size; }
         mc.font = '300 ' + size + 'px ' + FUENTE_SIGNO; const mm = mc.measureText(it.s);
         const w0 = mm.width, asc = mm.actualBoundingBoxAscent || size * .8, des = mm.actualBoundingBoxDescent || size * .2;
         const sw = w0 * (big ? .7 : 1), axis = -tam * .28, base = axis - (des - asc) / 2, iTop = base - asc, iBot = base + des;
