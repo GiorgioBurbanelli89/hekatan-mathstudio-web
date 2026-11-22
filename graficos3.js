@@ -10,7 +10,10 @@
   const es = (t) => RX.test(String(t).trim());
   function partes(s, sep) { const r = []; let p = 0, ini = 0, cad = false; for (let i = 0; i < s.length; i++) { const c = s[i]; if (c === '"') cad = !cad; if (cad) continue; if ('([{'.includes(c)) p++; else if (')]}'.includes(c)) p--; else if (c === sep && p === 0) { r.push(s.slice(ini, i).trim()); ini = i + 1; } } r.push(s.slice(ini).trim()); return r; }
   function cierre(s, a) { let p = 0, cad = false; for (let i = a; i < s.length; i++) { const c = s[i]; if (c === '"') cad = !cad; if (cad) continue; if (c === '(') p++; else if (c === ')') { p--; if (p === 0) return i; } } return -1; }
-  const norm = (e) => String(e).replace(/·/g, '*').replace(/\bpi\b/g, 'π');
+  // nombres griegos con letras latinas (sigma_z, phi, nu…): el importador los pasa a su letra en las líneas de cálculo (σ_z), así que aquí también
+  const GR = { alpha: 'α', beta: 'β', delta: 'δ', epsilon: 'ε', zeta: 'ζ', eta: 'η', theta: 'θ', kappa: 'κ', mu: 'μ', nu: 'ν', xi: 'ξ', rho: 'ρ', sigma: 'σ', tau: 'τ', phi: 'φ', psi: 'ψ', omega: 'ω' };
+  const RXG = new RegExp('(?<![A-Za-z0-9À-ɏ])(' + Object.keys(GR).join('|') + ')(?![A-Za-z0-9À-ɏ(])', 'g');
+  const norm = (e) => String(e).replace(/·/g, '*').replace(/\bpi\b/g, 'π').replace(RXG, (x) => GR[x]);
   function entorno(vals) { const E = HK.entorno || { v: {}, f: {}, l: {} }; return { v: Object.assign({}, E.v, vals || {}), f: E.f, l: E.l }; }
   const ev = (txt, env) => HK.evalua(HK.parse(norm(txt)), env);
   const num = (v) => typeof v === 'number' ? v : (v && typeof v === 'object' && HK.U && HK.U.esQ && HK.U.esQ(v)) ? HK.U.num(v) : NaN;

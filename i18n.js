@@ -29,6 +29,8 @@
     [/arrastra para girar, rueda para acercar, cursor para leer/, 'drag to rotate, wheel to zoom, hover to read'], [/arrastra para girar/, 'drag to rotate'],
     [/^losa: /, 'slab: '], [/ · barras: /, ' · bars: '], [/^malla del modelo: nudos, elementos y apoyos$/, 'model mesh: nodes, elements and supports'],
     [/^sólido de hexaedros \(se gira con el ratón\)$/, 'hexahedral solid (rotate with the mouse)'],
+    [/^Gráfica$/, 'Chart'], [/^de Hekatan LISP · con los valores de la hoja$/, 'from Hekatan LISP · with the values of the sheet'], [/^‹› código$/, '‹› code'],
+    [/^Dibujo$/, 'Drawing'], [/^#dibujo de Hekatan LISP · con los valores de la hoja$/, 'Hekatan LISP #drawing · with the values of the sheet'],
   ];
   function traduceRes(t) { if (!t) return null; let r = t, c = false; for (const [re, en] of RES) if (re.test(r)) { r = r.replace(re, en); c = true; } return c ? r : null; }
   let D = null;
