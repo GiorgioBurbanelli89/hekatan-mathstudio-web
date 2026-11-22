@@ -58,6 +58,7 @@
         return { w: Math.max(n.w, d.w) + tam * .3, a: eje + gap + n.d + n.a, d: d.a + d.d + gap - eje, eje, gap };
       }
       case 'sup': { const r = medirFila(it.r, tam * .7), up = tam * .45; return { w: r.w + 1, a: r.a + up, d: Math.max(0, r.d - up), up }; }
+      case 'trans': { const r = medirFila(it.r, tam), t = medirFila(it.T || (it.T = [{ t: 'c', s: 'T' }]), tam * .7), up = tam * .45; return { w: r.w + t.w + 1, a: Math.max(r.a, t.a + up), d: r.d, up, rw: r.w }; }          // transpose(x) → xᵀ (notación matemática)
       case 'sub': { const r = medirFila(it.r, tam * .7), dn = tam * .2; return { w: r.w + 1, a: Math.max(0, r.a - dn), d: r.d + dn, dn }; }
       case 'sqrt': {          // como SqrtNode del WPF: radical de 0.6·fs, barra a 0.1·fs sobre la tinta, el signo llega al menos a la línea base
         const r = medirFila(it.r, tam), t = Math.max(1, tam / 14), c = tam * .1, rad = tam * .6;
@@ -148,6 +149,7 @@
         break;
       }
       case 'sup': dibujarFila(ctx, it.r, x, y - b.up, tam * .7, reg, { fila, it }); break;
+      case 'trans': dibujarFila(ctx, it.r, x, y, tam, reg, { fila, it }); dibujarFila(ctx, it.T, x + b.rw, y - b.up, tam * .7, [], { fila, it }); break;
       case 'sub': dibujarFila(ctx, it.r, x, y + b.dn, tam * .7, reg, { fila, it }); break;
       case 'sqrt': {
         const h = b.a + b.d, top = y - b.a, x0 = x;
@@ -240,6 +242,7 @@
         break;
       }
       case 'sup': dibujarFila(ctx, it.r, x, y - b.up, tam * .7, reg, { fila, it }); break;
+      case 'trans': dibujarFila(ctx, it.r, x, y, tam, reg, { fila, it }); dibujarFila(ctx, it.T, x + b.rw, y - b.up, tam * .7, [], { fila, it }); break;
       case 'sub': dibujarFila(ctx, it.r, x, y + b.dn, tam * .7, reg, { fila, it }); break;
       case 'sqrt': {
         const r = it.r._b, top = y - b.a + tam * .05, h = b.a + b.d;
