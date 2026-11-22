@@ -1,0 +1,22 @@
+// Desplazar un dibujo CAD.  node tests/mover_grafica.mjs
+import { createRequire } from 'node:module'; import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path'; import { fileURLToPath } from 'node:url';
+const AQUI = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'); const require = createRequire(import.meta.url);
+const puppeteer = require(path.resolve(AQUI, '..', 'hekatan-struct', 'node_modules', 'puppeteer'));
+const T = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.wasm': 'application/wasm', '.css': 'text/css', '.json': 'application/json', '.hmath': 'application/json' };
+const srv = http.createServer((q, r) => { const f = path.join(AQUI, decodeURIComponent(q.url.split('?')[0]).replace(/^\/+/, '') || 'index.html'); const ok = fs.existsSync(f) && fs.statSync(f).isFile(); r.writeHead(ok ? 200 : 404, { 'Content-Type': T[path.extname(f)] || 'application/octet-stream' }); if (ok) fs.createReadStream(f).pipe(r); else r.end(); });
+await new Promise((o) => srv.listen(0, '127.0.0.1', o));
+const nav = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] }); const pg = await nav.newPage(); await pg.setViewport({ width: 1200, height: 900 }); const err = []; pg.on('pageerror', (e) => err.push(e.message));
+await pg.goto('http://127.0.0.1:' + srv.address().port + '/index.html'); await pg.waitForFunction('HK.motor.listo || HK.motor.error', { timeout: 60000 });
+let fallos = 0; const ok = (c, m) => { console.log((c ? '  ✅ ' : '  ❌ ') + m); if (!c) fallos++; }; const sleep = (ms) => new Promise((o) => setTimeout(o, ms));
+await pg.evaluate(() => { HK.hoja.nuevaEq('v = 3'); HK.hoja.nuevoCad(); HK.hoja.nuevaEq('w = 4'); }); await sleep(1200);
+const info = () => pg.evaluate(() => { const g = [...document.querySelectorAll('#hoja .fila > *')].find((e) => /cad/i.test(e.className) && e.getBoundingClientRect().height > 20); if (!g) return null; const r = g.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height, left: g.style.left, mt: g.style.marginTop, fila: [...g.parentElement.children].length }; });
+let g0 = await info(); console.log('antes', JSON.stringify(g0)); ok(!!g0, 'hay un bloque CAD');
+const sy = g0.y + g0.h / 2;
+await pg.mouse.move(g0.x + 4, sy); await sleep(100); await pg.mouse.down(); await pg.mouse.move(g0.x + 40, sy + 30, { steps: 6 }); const fin = await pg.evaluate(() => { const f = [...document.querySelectorAll('#hoja > .fila')].pop().getBoundingClientRect(); return f.bottom; }); await pg.mouse.move(g0.x + 150, fin + 60, { steps: 12 }); await sleep(100); await pg.mouse.up(); await sleep(700);
+const g1 = await info(); console.log('después', JSON.stringify(g1));
+ok(g1 && (Math.abs(g1.y - g0.y) > 60 && g1.fila === 1 || g1.left || g1.mt), 'el dibujo CAD se movió en x e y (' + (g1 && (g1.y - g0.y).toFixed(0)) + ' px en y)');
+const dump = () => pg.evaluate(() => [...document.querySelectorAll('#hoja > .fila')].map((f) => Math.round(f.getBoundingClientRect().top) + ':' + Math.round(f.getBoundingClientRect().height) + ':' + f.children.length + ':' + (f.children[0] && f.children[0].className.slice(0, 8)) + ':' + (f.className) + ':' + f.style.marginTop).join(' | ')); 
+const js = await pg.evaluate(() => HK.hoja.guarda()); const it = JSON.parse(js).items.find((i) => i.t === 'cad'); ok(it && it.dx > 100 && (it.dy > 0 || (g1.y - g0.y) > 30), 'se guarda en el .hmath: dx=' + (it && it.dx) + ' dy=' + (it && it.dy));
+await pg.evaluate((t) => HK.hoja.abre(t), js); await sleep(900); const g2 = await info(); ok(g2 && Math.abs(g2.x - g1.x) < 4 && g2.mt === g1.mt, 'al reabrir conserva x y el hueco (' + (g2 && g2.x.toFixed(0)) + ',' + (g2 && g2.y.toFixed(0)) + ')');
+ok(!err.length, 'sin errores de JS ' + err.join(' | ').slice(0, 200)); console.log(fallos ? '\nHay fallos' : '\nTodo bien');
+await nav.close(); srv.close();

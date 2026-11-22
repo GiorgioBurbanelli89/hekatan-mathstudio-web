@@ -1,0 +1,26 @@
+// Prueba del MCP de Math Studio web: lo arranca por stdio como lo haría Claude y llama a sus herramientas.  node probar.mjs [carpeta_png]
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import fs from "node:fs"; import path from "node:path"; import { fileURLToPath } from "node:url";
+const AQUI = path.dirname(fileURLToPath(import.meta.url)); const SAL = path.resolve(process.argv[2] || path.join(AQUI, "..", "tests", "salida")); fs.mkdirSync(SAL, { recursive: true });
+const cli = new Client({ name: "probar", version: "0" });
+await cli.connect(new StdioClientTransport({ command: process.execPath, args: [path.join(AQUI, "server.mjs")] }));
+let fallos = 0; const ok = (c, m) => { console.log((c ? "  ✅ " : "  ❌ ") + m); if (!c) fallos++; };
+const llama = async (name, args = {}) => { const r = await cli.callTool({ name, arguments: args }); const t = r.content.find((c) => c.type === "text"); return { err: !!r.isError, txt: t ? t.text : "", img: r.content.find((c) => c.type === "image") }; };
+const tools = (await cli.listTools()).tools.map((t) => t.name); console.log("herramientas:", tools.join(", "));
+ok(["abrir", "captura", "estado", "teclear", "clic", "arrastrar", "pestana", "boton", "menu", "medir", "hoja", "errores", "cerrar"].every((n) => tools.includes(n)), "están las herramientas principales");
+let r = await llama("abrir"); ok(!r.err, "abrir: " + r.txt);
+r = await llama("estado"); let e = JSON.parse(r.txt); ok(e.regiones.length >= 2 && /listo/.test(e.motor || ""), "estado: " + e.regiones.length + " regiones, motor «" + e.motor + "»");
+r = await llama("pestana", { nombre: "Matemática" }); ok(!r.err && /Ecuación/.test(r.txt), "pestaña Matemática: " + r.txt.replace(/\s+/g, " ").slice(0, 80));
+r = await llama("boton", { texto: "Ecuación" }); ok(!r.err, "botón Ecuación: " + r.txt);
+r = await llama("teclear", { texto: "a:x^2~/(y+1)~~+`2~~" }); ok(!r.err, "teclear");
+r = await llama("nueva_ecuacion", { codigo: "b = 123.5*3", modo: 2 });
+r = await llama("estado"); e = JSON.parse(r.txt); const eqs = e.regiones.filter((x) => x.tipo === "eq"); ok(eqs.some((x) => /sqrt/.test(x.texto)), "la ecuación tecleada quedó: " + eqs.map((x) => x.texto).join(" | "));
+r = await llama("medir"); const m = JSON.parse(r.txt); const mm = m.filter((x) => x.texto); ok(mm.length >= 2 && mm.every((x) => x.tinta && x.tinta[0] > 20), "medir: " + JSON.stringify(m.map((x) => [x.texto, x.tinta])));
+const idx = e.regiones.findIndex((x) => x.tipo === "eq"); r = await llama("clic", { region: idx, donde: "derecha" }); ok(!r.err, "clic a la derecha de una ecuación: " + r.txt);
+r = await llama("estado"); ok(JSON.parse(r.txt).regiones.length === e.regiones.length, "ese clic no crea regiones nuevas");
+r = await llama("menu", { menu: "Archivo" }); ok(/Guardar como/.test(r.txt), "menú Archivo: " + r.txt.replace(/\n/g, " ").slice(0, 90));
+r = await llama("captura", { hoja: true }); ok(!!r.img, "captura de la hoja"); if (r.img) fs.writeFileSync(path.join(SAL, "mcp_captura.png"), Buffer.from(r.img.data, "base64"));
+r = await llama("hoja"); ok(/hmath 1/.test(r.txt), "hoja: formato hmath 1");
+r = await llama("errores"); ok(/sin errores/.test(r.txt), "errores: " + r.txt);
+await llama("cerrar"); await cli.close(); console.log(fallos ? fallos + " fallo(s)" : "Todo bien"); process.exit(fallos ? 1 : 0);

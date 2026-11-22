@@ -106,6 +106,14 @@
     d.innerHTML = '<div class="raw-bar"><b>Bloque Hekatan LISP</b><span>se dibuja con el motor de Hekatan LISP (WPF o Hekatan LISP web); aquí se conserva y se guarda igual</span></div>';
     const ta = document.createElement('textarea'); ta.spellcheck = false; ta.value = texto; ta.rows = Math.min(14, Math.max(2, texto.split('\n').length)); d.appendChild(ta); c.appendChild(d);
     const r = { t: 'raw', el: d, ta, oculto: !!oculto }; reg.push(r);
+    if (HK.graf3 && HK.graf3.es(texto)) {          // #contourf/#map, #surf, #tabla, #modelo3d: se dibujan AQUÍ con los valores de la hoja (graficos3.js, mismos scripts que Hekatan LISP)
+      d.classList.add('dib'); d.querySelector('.raw-bar').innerHTML = '<b>Gráfica</b><span>de Hekatan LISP · con los valores de la hoja</span><button type="button" class="dib-cod" title="Mostrar / ocultar el código">‹› código</button>';
+      const vista = document.createElement('div'); vista.className = 'dib-vista'; d.insertBefore(vista, ta); ta.style.display = 'none';
+      d.querySelector('.dib-cod').addEventListener('click', () => { ta.style.display = ta.style.display === 'none' ? '' : 'none'; });
+      r.vals = null; r.dibuja = () => { try { HK.graf3.pinta(vista, ta.value); } catch (e) { vista.innerHTML = '<div class="hk-dib-err">⚠ ' + String(e.message).replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</div>'; } };
+      ta.addEventListener('input', () => { clearTimeout(r.tm); r.tm = setTimeout(r.dibuja, 300); });
+      return r;
+    }
     if (HK.dibujo && HK.dibujo.esDibujo(texto)) {          // «#dibujo(…) … #fin»: se dibuja AQUÍ (SVG, puerto de LispDibujo.cs) con los valores de la hoja; el código queda plegado debajo
       d.classList.add('dib');
       if (/lado\s*=\s*der/i.test(texto.split(String.fromCharCode(10))[0])) c.classList.add('dib-der');          // «lado = derecha»: flota a la derecha de lo que sigue (sus datos), como en Hekatan LISP y en el WPF
@@ -408,8 +416,10 @@
     clearTimeout(avisoCalcT); b.innerHTML = 'calculando… ' + tira(100) + tira(10) + '.' + tira(1) + ' s'; b.style.display = 'block';
     requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => {          // dos cuadros: la hoja y el aviso ya pintados
       const t0 = performance.now();
+      HK.M.limite(5e7);          // al ABRIR una hoja (con «calculando… N s» a la vista) un ejemplo pesado —p. ej. el suelo por FEM de la 176/177— termina solo, sin el aviso de «Continuar»
       try { resolver(); }
       finally {
+        HK.M.limite(1e6);
         const s = (performance.now() - t0) / 1000;
         b.textContent = 'listo en ' + (s < 1 ? Math.round(s * 1000) + ' ms' : s.toFixed(1) + ' s');
         avisoCalcT = setTimeout(() => { b.style.display = 'none'; }, s > 1 ? 4000 : 1500);

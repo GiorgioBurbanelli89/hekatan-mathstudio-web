@@ -143,6 +143,14 @@
     length: (x) => M1(x).a.length, rows: (x) => M1(x).r, cols: (x) => M1(x).c,
     cada: (x, p, d) => { const m = M1(x); p = redond(p); const d0 = redond(d) - 1, n = Math.floor((m.a.length - d0 + p - 1) / p); tam(n, 1); return vec(Array.from({ length: n }, (_, i) => m.a[d0 + i * p])); },
     el: (x, i, j) => { const m = M1(x); i = redond(i) - 1; if (j === undefined) { const n = m.a.length; if (i < 0 || i >= n) throw new Error('el(): índice ' + (i + 1) + ' fuera de 1…' + n); return m.r === 1 ? m.a[i] : m.g(i % m.r, Math.floor(i / m.r)); } j = redond(j) - 1; if (i < 0 || j < 0 || i >= m.r || j >= m.c) throw new Error('el(): fuera de la matriz'); return m.g(i, j); },
+    // spline de Calcpad (Matrix.Spline / Vector.Spline), el MISMO de Hekatan LISP (engine.lisp hnb-spline): spline(u, v, M) = M en la fila u y la columna v (1-based, fraccionarias); spline(u, v) con v vector = 1-D
+    spline: (u, v, m) => {
+      const spl = (y0, y1, ym, yp, t0, first, last) => { const dy = y1 - y0, sg = Math.sign(dy); let a = dy, b = dy; if (ym !== null) a = (y1 - ym) * (Math.sign(y0 - ym) === sg ? 0.5 : 0.25); if (yp !== null) b = (yp - y0) * (Math.sign(yp - y1) === sg ? 0.5 : 0.25); if (first) a += (a - b) / 2; if (last) b += (b - a) / 2; return y0 + ((y1 - y0) * (3 - 2 * t0) * t0 + ((a + b) * t0 - a) * (t0 - 1)) * t0; };
+      const vec = (get, n, d) => { if (d < 1 - 1e-12 || d > n * (1 + 1e-12)) throw new Error('spline: la posición ' + d + ' cae fuera de 1..' + n); const i = Math.floor(d) - 1; if (i + 1 === d || d >= n) return get(Math.min(i, n - 1)); return spl(get(i), get(i + 1), i > 0 ? get(i - 1) : null, i < n - 2 ? get(i + 2) : null, d - i - 1, i === 0, i === n - 2); };
+      const du = numU(u), dv = numU(v);
+      if (m === undefined) { const V = SQ(v); return vec((k) => numU(V.a[k]), V.a.length, du); }
+      const M = SQ(m); return vec((r) => vec((c) => numU(M.g(r, c)), M.c, dv), M.r, du);
+    },
     linterp: (xs, ys, x) => {          // interpolación lineal; fuera del rango da el valor del extremo
       const X = elementos(xs), Y = elementos(ys), n = X.length; if (n < 2) return Y[0]; paso(n);
       for (let k = 0; k < n - 1; k++) if ((x >= X[k] && x <= X[k + 1]) || (x <= X[k] && x >= X[k + 1])) return Y[k] + (Y[k + 1] - Y[k]) * (x - X[k]) / (X[k + 1] - X[k]);
@@ -264,7 +272,7 @@
         if (s.l.t === 'call' && env.v[s.l.f] instanceof Mat) {          // M(i,j) = e · M(:,j) = v · M(a:b, :) = B · M(g,g) = B
           asigna(env.v[s.l.f], s.l.args.map((a) => ev(a)), ev(s.r)); ultimo = null; return;
         }
-        if (s.l.t === 'id' && !(s.l.n in env.v) && HK.elemSub && HK.elemSub(s.l.n, env)) { const el = HK.elemSub(s.l.n, env); el.m.a[el.k] = ev(s.r); ultimo = null; return; }          // M_i,j = e
+        if (s.l.t === 'id' && !(s.l.n in env.v) && HK.elemSub && HK.elemSub(s.l.n, env)) { const val = ev(s.r); if (!esM(val)) { const el = HK.elemSub(s.l.n, env); el.m.a[el.k] = val; ultimo = null; return; } env.v[s.l.n] = val; ultimo = null; return; }          // «K_2 = zeros(…)» con una matriz K ya definida: si el lado derecho es una MATRIZ no es un elemento de K sino una variable nueva (como Hekatan LISP)          // M_i,j = e
         if (s.l.t === 'id') { let v = ev(s.r); if (esM(v) && s.r.t === 'id') v = new Mat(v.r, v.c, v.a.slice()); env.v[s.l.n] = v; ultimo = muestra ? { nombre: s.l.n, v } : null; return; }          // «TH = fx» COPIA (como MATLAB): si no, cambiar TH(j) cambiaba también fx
         if (s.l.t === 'call') { env.f[s.l.f] = { p: s.l.args.map((a) => a.n), b: s.r }; return; }
       }

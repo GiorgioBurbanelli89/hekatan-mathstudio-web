@@ -1,0 +1,32 @@
+// Selección con el ratón dentro de una ecuación en línea (doble clic = palabra, arrastre = rango).
+import { createRequire } from 'node:module'; import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path'; import { fileURLToPath } from 'node:url';
+const AQUI = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'); const require = createRequire(import.meta.url);
+const puppeteer = require(path.resolve(AQUI, '..', 'hekatan-struct', 'node_modules', 'puppeteer'));
+const T = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.wasm': 'application/wasm', '.css': 'text/css', '.hmath': 'application/json' };
+const srv = http.createServer((q, r) => { const f = path.join(AQUI, decodeURIComponent(q.url.split('?')[0]).replace(/^\/+/, '') || 'index.html'); const ok = fs.existsSync(f) && fs.statSync(f).isFile(); r.writeHead(ok ? 200 : 404, { 'Content-Type': T[path.extname(f)] || 'application/octet-stream', 'Cache-Control': 'no-store' }); if (ok) fs.createReadStream(f).pipe(r); else r.end(); });
+await new Promise((o) => srv.listen(0, '127.0.0.1', o));
+const nav = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] }); const pg = await nav.newPage(); await pg.setViewport({ width: 1100, height: 900 }); const err = []; pg.on('pageerror', (e) => err.push(e.message));
+await pg.goto('http://127.0.0.1:' + srv.address().port + '/index.html'); await pg.waitForFunction('HK.motor.listo || HK.motor.error', { timeout: 60000 });
+let fallos = 0; const ok = (c, m) => { console.log((c ? '  ✅ ' : '  ❌ ') + m); if (!c) fallos++; };
+const sleep = (ms) => new Promise((o) => setTimeout(o, ms));
+const abre = async (h) => { await pg.evaluate((t) => { HK.hoja.abre(t); }, fs.readFileSync(path.resolve(AQUI, h), 'utf8')); await sleep(3500); };
+await abre('ejemplos/Funciones_de_forma_1D_hipotesis_graficas.hmath');
+const info = await pg.evaluate(() => { const o = []; HK.hoja.reg.forEach((r, i) => { (r.eds || []).forEach(() => {}); }); const c = [...document.querySelectorAll('.ifx canvas')]; return c.length; });
+console.log('canvas inline:', info);
+// busca el inline "grado = nudos - 1"
+const k = await pg.evaluate(() => { const c = [...document.querySelectorAll('.ifx canvas')]; return c.findIndex((x) => { const s = x.closest('.ifx'); return s && /grado/.test(s.dataset.cod || s.textContent || ''); }); });
+console.log('indice', k);
+const caja = await pg.evaluate(() => { const c = [...document.querySelectorAll('.ifx canvas')]; const x = c.find((q) => { const s = q.closest('.ifx'); return s && /grado/.test(s.dataset.cod || s.textContent || ''); }) || c[c.length - 1]; x.scrollIntoView({ block: 'center' }); const r = x.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; });
+console.log(caja);
+await sleep(300);
+const cx = caja.x + 20, cy = caja.y + caja.h / 2;
+await pg.mouse.click(cx, cy, { clickCount: 2 }); await sleep(200);
+const sel = await pg.evaluate(() => { const a = HK.hoja.activa(); return a ? { sel: !!a.sel, txt: a.sel ? a.fila.slice(a.sel.i0, a.sel.i1).map((q) => q.s).join('') : null } : null; });
+console.log('doble clic →', JSON.stringify(sel));
+ok(sel && sel.sel, 'doble clic selecciona la palabra');
+await pg.mouse.move(caja.x + 3, cy); await pg.mouse.down(); await pg.mouse.move(caja.x + caja.w - 10, cy, { steps: 6 }); await pg.mouse.up(); await sleep(150);
+const sel2 = await pg.evaluate(() => { const a = HK.hoja.activa(); return a ? { sel: !!a.sel, txt: a.sel ? a.fila.slice(a.sel.i0, a.sel.i1).map((q) => q.s).join('') : null } : null; });
+console.log('arrastre →', JSON.stringify(sel2));
+ok(sel2 && sel2.sel, 'arrastrar selecciona el rango');
+await pg.screenshot({ path: path.resolve(AQUI, 'tests/salida/seleccion_eq_linea.png') });
+console.log('errores:', err.join(' | ') || 'ninguno'); await nav.close(); srv.close(); process.exit(fallos ? 1 : 0);

@@ -1,0 +1,72 @@
+// Selección con el ratón dentro de una ecuación en línea (doble clic = palabra, arrastre = rango).
+import { createRequire } from 'node:module'; import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path'; import { fileURLToPath } from 'node:url';
+const AQUI = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'); const require = createRequire(import.meta.url);
+const puppeteer = require(path.resolve(AQUI, '..', 'hekatan-struct', 'node_modules', 'puppeteer'));
+const T = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.wasm': 'application/wasm', '.css': 'text/css', '.hmath': 'application/json' };
+const srv = http.createServer((q, r) => { const f = path.join(AQUI, decodeURIComponent(q.url.split('?')[0]).replace(/^\/+/, '') || 'index.html'); const ok = fs.existsSync(f) && fs.statSync(f).isFile(); r.writeHead(ok ? 200 : 404, { 'Content-Type': T[path.extname(f)] || 'application/octet-stream', 'Cache-Control': 'no-store' }); if (ok) fs.createReadStream(f).pipe(r); else r.end(); });
+await new Promise((o) => srv.listen(0, '127.0.0.1', o));
+const nav = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] }); const pg = await nav.newPage(); await pg.setViewport({ width: 1100, height: 900 }); const err = []; pg.on('pageerror', (e) => err.push(e.message));
+await pg.goto('http://127.0.0.1:' + srv.address().port + '/index.html'); await pg.waitForFunction('HK.motor.listo || HK.motor.error', { timeout: 60000 });
+const sleep = (ms) => new Promise((o) => setTimeout(o, ms)); let fallos = 0; const ok = (c, m) => { console.log((c ? '  ✅ ' : '  ❌ ') + m); if (!c) fallos++; };
+const SAL = path.resolve(AQUI, 'tests/salida'); const snap = (n) => pg.screenshot({ path: path.join(SAL, 'mover_' + n + '.png') });
+await pg.evaluate((t) => { HK.hoja.abre(t); }, fs.readFileSync(path.resolve(AQUI, 'ejemplos/Funciones_de_forma_1D_hipotesis_graficas.hmath'), 'utf8')); await sleep(3500);
+const items = () => pg.evaluate(() => JSON.parse(HK.hoja.guarda()).items.map((i) => (i.t + (i.mismaLinea ? '*' : '') + ':' + String(i.codigo || i.text || (i.seg && i.seg.map((s) => s.s || s.eq).join('')) || '').replace(/\s+/g, ' ').slice(0, 28))));
+const info = () => pg.evaluate(() => HK.mover.unidades().map((u, i) => { const b = u.getBoundingClientRect(); return { i, cls: u.className, x: b.x, y: b.y, w: b.width, h: b.height, t: (u.textContent || '').slice(0, 20), fila: [...u.parentElement.parentElement.children].indexOf(u.parentElement) }; }));
+const ant = await items(); console.log(ant.slice(0, 14).join('\n'));
+let us = await info(); console.log(us.slice(0, 14).map((u) => u.i + ' ' + u.cls + ' ' + Math.round(u.x) + ',' + Math.round(u.y) + ' ' + Math.round(u.w) + 'x' + Math.round(u.h) + ' f' + u.fila + ' ' + u.t).join('\n'));
+// 1) asa visible al pasar
+await pg.evaluate(() => { document.getElementById('area').scrollTop += HK.mover.unidades()[5].getBoundingClientRect().top - 180; }); await sleep(300); us = await info();
+const A = us[5]; await pg.mouse.move(A.x + 5, A.y + A.h / 2); await sleep(200);
+const asa = await pg.evaluate(() => ({ asa: !!document.querySelector('.mv-asa'), ag: !!document.querySelector('.mv-agarre'), cur: getComputedStyle(document.querySelector('.mv-agarre') || document.body).cursor }));
+ok(asa.asa && asa.ag && asa.cur === 'move', 'al pasar por la franja izquierda aparece el asa y el cursor es move ' + JSON.stringify(asa)); await snap('1_asa');
+// 2) arrastrar la primera ecuacion visible por la franja izquierda hasta debajo de otra
+const orden0 = (await items()).map((s) => s.slice(0, 25));
+const tgt = us[6];
+console.log('arrastra', A.t, '->', tgt.t, tgt.y + tgt.h);
+await pg.mouse.move(A.x + 5, A.y + A.h / 2); await pg.mouse.down(); await pg.mouse.move(A.x + 20, A.y + A.h / 2 + 30, { steps: 4 }); await pg.mouse.move(tgt.x + 30, tgt.y + tgt.h - 3, { steps: 10 }); await sleep(150);
+const vuelo = await pg.evaluate(() => { const v = document.querySelector('.mv-vuelo'); const g = document.querySelector('.mv-guia'); return { v: !!v, op: v && getComputedStyle(v).opacity, g: g && getComputedStyle(g).display }; });
+ok(vuelo.v && vuelo.op === '0.85' && vuelo.g === 'block', 'en vuelo: opacidad .85 y guia azul ' + JSON.stringify(vuelo)); await snap('2_vuelo');
+await pg.mouse.up(); await sleep(600); await snap('3_soltado');
+const orden1 = await items();
+ok(JSON.stringify(orden0) !== JSON.stringify(orden1.map((s) => s.slice(0, 25))), 'cambio el orden al guardar');
+console.log(orden1.slice(0, 14).join('\n'));
+ok(orden1.length === ant.length, 'mismo numero de items ' + orden1.length);
+const errs = await pg.evaluate(() => HK.hoja.reg.filter((r) => r.t === 'eq' && r.ed.resultado && r.ed.resultado.kind === 'err').length); console.log('regiones con error tras mover:', errs);
+const regOrd = await pg.evaluate(() => { const r = HK.hoja.reg.filter((x) => x.el.isConnected).map((x) => x.el); return r.every((e, i) => i === 0 || (r[i - 1].compareDocumentPosition(e) & Node.DOCUMENT_POSITION_FOLLOWING)); });
+ok(regOrd, 'reg esta en el orden del documento (el calculo sigue el orden nuevo)');
+// 3) recalculo dependiente
+await pg.evaluate(() => { HK.hoja.abre({ formato: 'hmath 1', items: [{ t: 'eq', codigo: 'a=2' }, { t: 'eq', codigo: 'b=a+3' }, { t: 'eq', codigo: 'b=' }, { t: 'texto', text: 'fin' }] }); }); await pg.evaluate(() => { document.getElementById('area').scrollTop = 0; }); await sleep(800);
+const val = () => pg.evaluate(() => HK.hoja.reg.filter((r) => r.t === 'eq').map((r) => r.ed.texto() + ' => ' + (r.ed.resultado ? (r.ed.resultado.texto || r.ed.resultado.kind) : '')).join(' | '));
+console.log('antes:', await val());
+us = await info(); const ua = us[0], uc = us[2];
+await pg.mouse.move(ua.x + 4, ua.y + ua.h / 2); await pg.mouse.down(); await pg.mouse.move(uc.x + 40, uc.y + uc.h + 3, { steps: 10 }); await pg.mouse.up(); await sleep(500);
+const v2 = await val(); console.log('a=2 movida debajo de b=:', v2);
+ok(/b= => /.test(v2) && !/b= => 5/.test(v2) && /^b=a/.test(v2), 'lo de abajo se recalcula con el orden nuevo (b ya no ve a)'); await snap('4_recalculo');
+// 4) misma linea
+await pg.evaluate(() => { HK.hoja.abre({ formato: 'hmath 1', items: [{ t: 'eq', codigo: 'a=2' }, { t: 'eq', codigo: 'b=a+3' }, { t: 'eq', codigo: 'c=b*2' }, { t: 'texto', text: 'fin' }] }); }); await pg.evaluate(() => { document.getElementById('area').scrollTop = 0; }); await sleep(800);
+us = await info(); const u1 = us[1], u0 = us[0];
+await pg.mouse.move(u0.x + 4, u0.y + u0.h / 2); await pg.mouse.down(); await pg.mouse.move(u1.x + u1.w - 8, u1.y + u1.h / 2, { steps: 10 }); await sleep(100); await snap('5_lado_vuelo'); await pg.mouse.up(); await sleep(500);
+const it4 = await items(); console.log(it4.join('\n'));
+ok(it4[0].startsWith('eq:b=') && it4[1].startsWith('eq*:a=2'), 'mismaLinea: a=2 quedo a la derecha de b= y se guarda con mismaLinea'); await snap('6_lado');
+const mismaFila = await pg.evaluate(() => { const u = HK.mover.unidades(); return u[0].parentElement === u[1].parentElement; }); ok(mismaFila, 'estan en la misma fila del DOM');
+const gj = await pg.evaluate(() => HK.hoja.guarda()); await pg.evaluate((t) => HK.hoja.abre(t), gj); await sleep(600);
+const mf2 = await pg.evaluate(() => { const u = HK.mover.unidades(); return u[0].parentElement === u[1].parentElement; }); ok(mf2, 'abrir el .hmath guardado conserva la misma linea');
+// 5) seleccion multiple
+await pg.evaluate(() => { HK.hoja.abre({ formato: 'hmath 1', items: [{ t: 'eq', codigo: 'a=2' }, { t: 'eq', codigo: 'b=3' }, { t: 'eq', codigo: 'c=4' }, { t: 'texto', text: 'uno' }, { t: 'texto', text: 'dos' }] }); }); await pg.evaluate(() => { document.getElementById('area').scrollTop = 0; }); await sleep(800);
+us = await info();
+await pg.keyboard.down('Shift'); await pg.mouse.click(us[0].x + 4, us[0].y + us[0].h / 2); await pg.mouse.click(us[1].x + 4, us[1].y + us[1].h / 2); await pg.keyboard.up('Shift');
+let nsel = await pg.evaluate(() => HK.mover.seleccion().length); ok(nsel === 2, 'Mayus+clic en la franja selecciona 2 regiones'); await snap('7_seleccion');
+us = await info(); const u3 = us[4];
+await pg.mouse.move(us[0].x + 4, us[0].y + us[0].h / 2); await pg.mouse.down(); await pg.mouse.move(u3.x + 40, u3.y + u3.h - 3, { steps: 10 }); await sleep(100); await snap('8_grupo_vuelo'); await pg.mouse.up(); await sleep(500);
+const it5 = await items(); console.log(it5.join(' | '));
+ok(/^eq:c=4/.test(it5[0]) && it5[it5.length - 2].includes('a=2') && it5[it5.length - 1].includes('b=3'), 'la seleccion de 2 se movio junta al final'); await snap('9_grupo');
+await pg.keyboard.press('ArrowUp'); await sleep(300); const it6 = await items(); console.log('tras ArrowUp:', it6.join(' | '));
+ok(JSON.stringify(it6) !== JSON.stringify(it5), 'flecha arriba mueve la seleccion');
+await pg.keyboard.press('Delete'); await sleep(300); const it7 = await items(); ok(it7.length === it5.length - 2, 'Supr borra la seleccion (' + it7.length + ')');
+us = await info(); const bx = us[0].x - 30, last = us[us.length - 1];
+await pg.mouse.move(bx, us[0].y - 10); await pg.mouse.down(); await pg.mouse.move(bx + 400, last.y + last.h + 5, { steps: 6 }); await sleep(100); await snap('10_banda'); await pg.mouse.up();
+nsel = await pg.evaluate(() => HK.mover.seleccion().length); ok(nsel === us.length, 'banda en el vacio selecciona todas (' + nsel + '/' + us.length + ')');
+await pg.keyboard.press('Escape'); nsel = await pg.evaluate(() => HK.mover.seleccion().length); ok(nsel === 0, 'Esc suelta la seleccion');
+us = await info(); await pg.mouse.click(us[0].x + 20, us[0].y + us[0].h / 2); await sleep(150);
+ok(await pg.evaluate(() => HK.hoja.hayActivo()), 'clic normal dentro de la ecuacion la activa (edicion intacta)');
+console.log('errores:', err.join(' | ') || 'ninguno'); ok(!err.length, 'sin errores JS'); await nav.close(); srv.close(); process.exit(fallos ? 1 : 0);

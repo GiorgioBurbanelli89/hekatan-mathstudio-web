@@ -5,7 +5,7 @@
 (function (G) {
   const HK = G.HK;
   const RxUnidad = /(?<=[\w)\]])\s+\[[A-Za-zµ°][^\]\[\s,;]*\]/g, RxBloque = /^(for|while|if|function)\b/;
-  const Cierres = { dibujo: '#fin', autolisp: '#fin', dibujar: '#fin', fila: '#finfila', noc: '#equ', sust: '#nosust', triple: '#nosust' };
+  const Cierres = { dibujo: '#fin', autolisp: '#fin', dibujar: '#fin', fila: '#finfila', noc: '#equ' };          // #sust/#triple/#equ/#val/#nosust NO son bloques: son MODOS de mostrar (no se tragan el resto de la hoja)
   const RxLlave = /(?<![A-Za-z])(Simplify|Expand|Diff|Slope|Derivate|Partial|Limit|Taylor|Sum|Suma|Integral|Area)\{/g;
   const omitidas = {};
   function partesAt(s, sep) {
@@ -49,6 +49,18 @@
     while ((m = re.exec(tx))) { texto(tx.slice(k, m.index)); seg.push({ eq: lineaLisp(m[1].trim()).split(' % ')[0], m: 2 }); k = m.index + m[0].length; }
     texto(tx.slice(k)); return { t: 'parrafo', seg };
   }
+  // En Hekatan LISP «[a, b, c]» (una fila, con comas) es un VECTOR 1D = columna: su transpose es fila y transpose(v)·M multiplica.
+  // En los nodos «[a, b, c]» es una fila 1×n: se reescribe «[a; b; c]» (con «;» ya es matriz y no se toca). Igual que el WPF (ArchivoHlisp.VectoresColumna).
+  function vectoresColumna(s) {
+    const c = s.split(''), pila = [], pares = []; let enCad = false;
+    for (let i = 0; i < s.length; i++) { const k = s[i]; if (k === '"') enCad = !enCad; if (enCad) continue; if (k === '[') pila.push(i); else if (k === ']' && pila.length) pares.push([pila.pop(), i]); }
+    for (const [a, z] of pares) {
+      let prof = 0, punto = false; const comas = [];
+      for (let i = a + 1; i < z; i++) { const k = s[i]; if ('([{'.includes(k)) prof++; else if (')]}'.includes(k)) prof--; else if (prof === 0 && k === ';') punto = true; else if (prof === 0 && k === ',') comas.push(i); }
+      if (!punto) for (const k of comas) c[k] = ';';
+    }
+    return c.join('');
+  }
   function lineaLisp(l) {
     const md = /\s*@@\((.*)\)\s*$/.exec(l); if (md) l = l.slice(0, md.index) + " '" + md[1].trim();          // «@@(descripción)» = comentario gris
     let enCad = false, k = -1;
@@ -56,6 +68,7 @@
     let cod = k >= 0 ? l.slice(0, k) : l; const com = k >= 0 ? l.slice(k + 1) : null;
     cod = cod.replace(/·/g, '*').replace(RxUnidad, '');
     if (cod.includes('{')) cod = traduceLlaves(cod);
+    if (cod.includes('[')) cod = vectoresColumna(cod);
     return com !== null ? cod.replace(/\s+$/, '') + ' % ' + com.trim() : cod;
   }
   const GR = { alpha: 'α', beta: 'β', delta: 'δ', epsilon: 'ε', zeta: 'ζ', eta: 'η', theta: 'θ', kappa: 'κ', mu: 'μ', nu: 'ν', xi: 'ξ', rho: 'ρ', sigma: 'σ', tau: 'τ', phi: 'φ', psi: 'ψ', omega: 'ω' };
@@ -129,6 +142,7 @@
       if (/^&&(\s|$)/.test(t)) { vacia(); misma.push(items.length); l = l.replace(/^(\s*)&&\s?/, '$1'); t = l.trim(); }          // «&& …»: lo que sigue va en la MISMA fila que lo anterior (si no, cada bloque baja a una fila nueva)
       if (t === '') { if (prof === 0 && !oculto) vacia(); continue; }
       if (t === '#hide') { vacia(); oculto = true; continue; }
+      if (/^#(sust|sustituir|triple|equ|nosust|val|valor)\s*$/.test(t)) { vacia(); cuenta('#modo (sust/equ/val)'); continue; }          // modo de Hekatan LISP: fórmula = números = valor; aquí se muestra fórmula = valor
       if (t === '#show') { vacia(); oculto = false; continue; }
       if (t.startsWith('#:') && /\$[^$]+\$/.test(t)) { vacia(); items.push(parrafoMixto(t.slice(2).trim())); continue; }          // «#: texto $ecuación$ texto»: las ecuaciones entre $…$ van dibujadas DENTRO de la frase
       if (t.startsWith('#:')) { vacia(); const tx = t.slice(2).trim(), ph = prosaHtml(tx); items.push(ph ? { t: 'texto', text: tx, html: ph } : { t: 'texto', text: tx }); continue; }

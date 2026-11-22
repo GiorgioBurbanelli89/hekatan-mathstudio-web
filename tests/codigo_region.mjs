@@ -1,0 +1,21 @@
+// ＋ Código y Código ⇄ Nodos (como el WPF).  node tests/codigo_region.mjs [captura.png]
+import { createRequire } from 'node:module'; import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path'; import { fileURLToPath } from 'node:url';
+const AQUI = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'); const require = createRequire(import.meta.url);
+const puppeteer = require(path.resolve(AQUI, '..', 'hekatan-struct', 'node_modules', 'puppeteer'));
+const T = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.wasm': 'application/wasm', '.css': 'text/css', '.json': 'application/json' };
+const srv = http.createServer((q, r) => { const f = path.join(AQUI, decodeURIComponent(q.url.split('?')[0]).replace(/^\/+/, '') || 'index.html'); const ok = fs.existsSync(f) && fs.statSync(f).isFile(); r.writeHead(ok ? 200 : 404, { 'Content-Type': T[path.extname(f)] || 'application/octet-stream', 'Cache-Control': 'no-store' }); if (ok) fs.createReadStream(f).pipe(r); else r.end(); });
+await new Promise((o) => srv.listen(0, '127.0.0.1', o));
+const nav = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] }); const pg = await nav.newPage(); await pg.setViewport({ width: 1200, height: 700 }); const err = []; pg.on('pageerror', (e) => err.push(e.message));
+await pg.goto('http://127.0.0.1:' + srv.address().port + '/index.html'); await pg.waitForFunction('HK.motor.listo || HK.motor.error', { timeout: 60000 });
+let fallos = 0; const ok = (c, m) => { console.log((c ? '  ✅ ' : '  ❌ ') + m); if (!c) fallos++; };
+const sleep = (ms) => new Promise((o) => setTimeout(o, ms));
+await pg.evaluate(() => HK.hoja.nuevoCodigo()); await sleep(200);
+ok(await pg.evaluate(() => !!document.querySelector('textarea.cod')), '＋ Código crea una región directamente en modo código');
+await pg.focus('textarea.cod'); await pg.keyboard.down('Control'); await pg.keyboard.press('a'); await pg.keyboard.up('Control');
+await pg.keyboard.type('a = 2\nb = a*3+1', { delay: 5 }); await sleep(500);
+const res = await pg.$eval('.cod-res', (e) => e.textContent); ok(/7$/.test(res.trim()), 'el resultado sale debajo del código: «' + res + '»');
+if (process.argv[2]) await pg.screenshot({ path: process.argv[2] });
+await pg.keyboard.down('Control'); await pg.keyboard.press('k'); await pg.keyboard.up('Control'); await sleep(300);
+ok(await pg.evaluate(() => !document.querySelector('textarea.cod')), 'Ctrl+K vuelve a nodos');
+ok(!err.length, 'sin errores de JS ' + err.join(' | ').slice(0, 300)); console.log(fallos ? '\nHay fallos' : '\nTodo bien');
+await nav.close(); srv.close();
