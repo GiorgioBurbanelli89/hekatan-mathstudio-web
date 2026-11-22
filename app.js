@@ -205,7 +205,7 @@
   function nuevo() { H().limpia(); estado('Hoja nueva'); pagina(); H().nuevaEq(''); }
   const comoHmath = (nombre, t) => HK.hlisp && HK.hlisp.esHlisp(nombre, t) ? JSON.stringify(HK.hlisp.importa(t)) : t;          // .lisp / .hlisp → la misma conversión que el WPF
   // una página de error (404) no se abre como hoja: avisa que el ejemplo no existe
-  async function abreEjemplo(f) { try { const rs = await fetch(f); if (!rs.ok) { estado('No existe el ejemplo ' + f.split('/').pop()); return; } const tx = await rs.text(); if (/^\s*<!DOCTYPE html/i.test(tx)) { estado('No existe el ejemplo ' + f.split('/').pop()); return; } const t = comoHmath(f, tx); H().abre(t); estado('Abierto: ' + f.split('/').pop()); setTimeout(pagina, 50); } catch (e) { estado('No se pudo abrir ' + f + ' (la página debe servirse por http)'); } }
+  async function abreEjemplo(f) { { const m = /^(\d+[a-z]?) /.exec(String(f).split('/').pop()); HK.ejActual = m ? m[1] : null; } try { const rs = await fetch(f); if (!rs.ok) { estado('No existe el ejemplo ' + f.split('/').pop()); return; } const tx = await rs.text(); if (/^\s*<!DOCTYPE html/i.test(tx)) { estado('No existe el ejemplo ' + f.split('/').pop()); return; } const t = comoHmath(f, tx); H().abre(t); estado('Abierto: ' + f.split('/').pop()); setTimeout(pagina, 50); } catch (e) { estado('No se pudo abrir ' + f + ' (la página debe servirse por http)'); } }
   function cuadricula() { document.body.classList.toggle('cuad'); $('m-cuadricula').classList.toggle('activa', document.body.classList.contains('cuad')); }
   $('m-cuadricula').onclick = cuadricula;
   $('m-compartir').onclick = () => { capturaPng('hoja', true); };
@@ -229,9 +229,9 @@
     faltan.forEach((n) => { const b = document.createElement('button'); b.dataset.ej = 'ejemplos/' + n; b.textContent = n.replace(/\.hmath$/, '').replace(/_/g, ' '); b.addEventListener('click', () => { abreEjemplo('ejemplos/' + n); cierra(); }); g.before(b); });
   }).catch(() => {});
   // Ejemplos de Hekatan LISP: la MISMA lista que la web de Hekatan LISP (ejemplos/hlisp/lista.json), un botón por hoja
-  fetch('ejemplos/hlisp/lista.json').then((r) => r.json()).then((L) => {
+  fetch(HK.dirHlisp() + 'lista.json').then((r) => r.json()).then((L) => {
     const g = $('grp-lisp'); if (!g) return; g.textContent = 'Hekatan LISP (.lisp) · ' + L.length + ' ejemplos'; let ant = g;
-    L.forEach((n) => { const b = document.createElement('button'); b.textContent = n.replace(/\.lisp$/, ''); b.title = n; b.addEventListener('click', () => { abreEjemplo('ejemplos/hlisp/' + n); document.querySelectorAll('.mi.abierto').forEach((m) => m.classList.remove('abierto')); }); ant.after(b); ant = b; });
+    L.forEach((n) => { const b = document.createElement('button'); b.textContent = n.replace(/\.lisp$/, ''); b.title = n; b.addEventListener('click', () => { abreEjemplo(HK.dirHlisp() + n); document.querySelectorAll('.mi.abierto').forEach((m) => m.classList.remove('abierto')); }); ant.after(b); ant = b; });
   }).catch(() => { const g = $('grp-lisp'); if (g) g.textContent = 'Hekatan LISP (.lisp) · no se pudo leer la lista'; });
   document.querySelectorAll('.sub button').forEach((b) => b.addEventListener('click', () => {
     const a = b.dataset.a, ej = b.dataset.ej;
@@ -657,10 +657,10 @@
   function abreDeHash() {
     const ej = /^#ej=(.+)$/.exec(location.hash || '');          // «index.html#ej=<nombre del ejemplo>»: enlace CORTO a un ejemplo de la lista (como la web de Hekatan LISP)
     if (ej && /^\d+[a-z]?$/i.test(ej[1])) {          // «#ej=174»: enlace CORTO por número (como Hekatan LISP web): la hoja de la lista que empieza por ese número
-      fetch('ejemplos/hlisp/lista.json').then((r) => r.json()).then((l) => { const f = (l || []).find((x) => x.startsWith(ej[1] + ' ')); if (f) abreEjemplo('ejemplos/hlisp/' + f); else estado('No hay ejemplo ' + ej[1]); }).catch(() => estado('No pude leer la lista de ejemplos'));
+      fetch(HK.dirHlisp() + 'lista.json').then((r) => r.json()).then((l) => { const f = (l || []).find((x) => x.startsWith(ej[1] + ' ')); if (f) abreEjemplo(HK.dirHlisp() + f); else estado('No hay ejemplo ' + ej[1]); }).catch(() => estado('No pude leer la lista de ejemplos'));
       return;
     }
-    if (ej) { let n = ''; try { n = decodeURIComponent(ej[1]); } catch (e) { return; } if (!n || /[\\/]|\.\./.test(n)) return; abreEjemplo((/\.(lisp|hlisp)$/i.test(n) ? 'ejemplos/hlisp/' : 'ejemplos/') + n); return; }
+    if (ej) { let n = ''; try { n = decodeURIComponent(ej[1]); } catch (e) { return; } if (!n || /[\\/]|\.\./.test(n)) return; abreEjemplo((/\.(lisp|hlisp)$/i.test(n) ? HK.dirHlisp() : 'ejemplos/') + n); return; }
     const m = /^#lisp=([A-Za-z0-9_-]+)$/.exec(location.hash || ''); if (!m) return;
     try {
       let b = m[1].replace(/-/g, '+').replace(/_/g, '/'); while (b.length % 4) b += '=';
