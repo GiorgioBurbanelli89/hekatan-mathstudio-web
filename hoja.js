@@ -645,14 +645,42 @@
     for (const n of nuevos) reg.splice(reg.indexOf(n), 1); let k = 0; for (let i = 0; i < reg.length; i++) if (ult.contains(reg[i].el)) k = i + 1; reg.splice(k, 0, ...nuevos);
     const e = nuevos.filter((n) => n.t === 'eq').pop(); if (e) activo = e.ed; resolver(); redibuja();
   }
-  // Ctrl+C / Ctrl+V con regiones seleccionadas (clic en su franja izquierda o sobre una gráfica): copia las regiones y las pega debajo de la seleccionada
-  let regCopiadas = [];
+  // Copiar / pegar REGIONES (como el WPF): Ctrl+A = toda la hoja (dentro de una fórmula o texto, el 2.º Ctrl+A seguido); Ctrl+C / Ctrl+X copian lo seleccionado
+  // en el formato del .hmath (texto, párrafos, ecuaciones, gráficas, bloques LISP, CAD, deslizadores); Ctrl+V lo pega AL FINAL de la hoja, en esta u otra pestaña
+  const TIPO_HOJA = 'application/x-hekatan-hoja'; let ultimoCtrlA = 0;
+  function selRegiones() { const M = HK.mover; return M ? M.seleccion() : []; }
+  function jsonSeleccion(us) { const en = (r) => us.some((u) => u.contains(r.el)); const d = JSON.parse(guarda(en)); if (d.items.length) delete d.items[0].mismaLinea; return d; }
+  function textoSeleccion(us) { return ordenDoc(us).map((u) => { const ta = u.querySelector('textarea'); return ta ? ta.value : (u.innerText || '').trim(); }).filter(Boolean).join(String.fromCharCode(10)); }
+  function pegaRegiones(json) {
+    const d = typeof json === 'string' ? JSON.parse(json) : json; if (!d || !Array.isArray(d.items) || !d.items.length) return false;
+    const antes = new Set(hoja.children); if (HK.mover) HK.mover.limpiaSel(); activo = null;
+    abre(d, true);
+    const nuevas = [...hoja.children].filter((f) => !antes.has(f)); if (HK.mover) for (const f of nuevas) for (const u of f.children) HK.mover.marca(u, true);          // lo pegado queda seleccionado (se puede mover o borrar)
+    if (nuevas[0]) nuevas[0].scrollIntoView({ block: 'nearest' }); const s = document.getElementById('estado'); if (s) s.textContent = d.items.length + ' región(es) pegada(s)'; return true;
+  }
   document.addEventListener('keydown', (e) => {
-    if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey) return; const k = e.key.toLowerCase(); if (k !== 'c' && k !== 'v') return;
-    const M = HK.mover, sel = M ? M.seleccion() : []; if (!sel.length) return;
-    if (k === 'c') { regCopiadas = sel.slice(); e.preventDefault(); e.stopImmediatePropagation(); const s = document.getElementById('estado'); if (s) s.textContent = sel.length + ' región(es) copiada(s): selecciona otra y pulsa Ctrl+V'; return; }
-    if (!regCopiadas.length || !regCopiadas.every((u) => document.body.contains(u))) return;
-    e.preventDefault(); e.stopImmediatePropagation(); duplica(regCopiadas, ordenDoc(sel)[sel.length - 1]);
+    if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey || e.key.toLowerCase() !== 'a') return;
+    const ahora = Date.now(), segundo = ahora - ultimoCtrlA < 1500; ultimoCtrlA = ahora;
+    if ((enTexto() || activo) && !segundo) return;          // 1.er Ctrl+A dentro de una fórmula o un texto: selecciona su contenido
+    if (!HK.mover) return; e.preventDefault(); e.stopImmediatePropagation();
+    activo = null; if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); const g = getSelection(); if (g) g.removeAllRanges(); redibuja(); HK.mover.seleccionaTodo();
+  }, true);
+  function copiaRegiones(e, corta) {
+    const us = selRegiones(); if (!us.length) return false;
+    const d = jsonSeleccion(us); if (!d.items.length) return false;
+    e.clipboardData.setData(TIPO_HOJA, JSON.stringify(d)); e.clipboardData.setData('text/plain', textoSeleccion(us)); e.preventDefault();
+    const s = document.getElementById('estado'); if (s) s.textContent = d.items.length + ' región(es) ' + (corta ? 'cortada(s)' : 'copiada(s)') + ': Ctrl+V las pega al final (en esta u otra hoja)';
+    if (corta) { for (const u of us) { HK.hoja.quitaRegs(u); const f = u.parentElement; u.remove(); if (f && f.classList.contains('fila') && !f.children.length) f.remove(); } HK.mover.limpiaSel(); resolver(); }
+    return true;
+  }
+  document.addEventListener('copy', (e) => { if (copiaRegiones(e, false)) e.stopImmediatePropagation(); }, true);
+  document.addEventListener('cut', (e) => { if (copiaRegiones(e, true)) e.stopImmediatePropagation(); }, true);
+  document.addEventListener('paste', (e) => {
+    const t = document.activeElement; if (t && /^(INPUT|TEXTAREA)$/.test(t.tagName)) return;
+    let j = e.clipboardData.getData(TIPO_HOJA);
+    if (!j) { const tx = (e.clipboardData.getData('text/plain') || '').trim(); if (/^\{[\s\S]*"formato"\s*:\s*"hmath/.test(tx)) j = tx; }          // un .hmath pegado como texto (p. ej. abierto en el Bloc de notas) también entra como regiones
+    if (!j) return;
+    try { if (pegaRegiones(j)) { e.preventDefault(); e.stopImmediatePropagation(); } } catch (x) { /* no era una hoja: sigue el pegado normal */ }
   }, true);
   document.addEventListener('keydown', (e) => {
     if (!(e.ctrlKey || e.metaKey) || e.altKey) return; const k = e.key.toLowerCase(); if (k !== 'd' && k !== 'j') return;
@@ -854,14 +882,14 @@
   G.addEventListener('resize', redibuja);
 
   // ---------------------------------------------------------------- abrir / guardar .hmath
-  function abre(json) {
+  function abre(json, anexa) {          // anexa: PEGAR regiones al final (no borra la hoja; el estilo solo se toma si la hoja está vacía)
     const d = typeof json === 'string' ? JSON.parse(json) : json;
     if (Array.isArray(d.items) && d.items.length > 3000) throw new Error('hoja demasiado grande (maximo 3000 regiones)');
     if ((d.items || []).some((q) => q && q.t === 'eq' && typeof q.codigo === 'string' && q.codigo.length > 100000)) throw new Error('una ecuacion es demasiado larga (maximo 100000 caracteres)');
-    limpia();
-    { const lisp = d.estilo === 'lisp'; document.body.classList.toggle('lisp', lisp); document.body.classList.remove('sinpag');          // hoja de Hekatan LISP: compacta (estilo «lisp») pero CON páginas: se ven el límite de hoja y los saltos de página (Jorge, 19-nov-2026); «Hoja con páginas» la vuelve continua
+    const vacia = reg.every((r) => r.bienvenida || (r.t === 'eq' && !r.enTexto && !r.ed.texto().trim())); if (!anexa || vacia) limpia();
+    if (!anexa || vacia) { const lisp = d.estilo === 'lisp'; document.body.classList.toggle('lisp', lisp); document.body.classList.remove('sinpag');          // hoja de Hekatan LISP: compacta (estilo «lisp») pero CON páginas: se ven el límite de hoja y los saltos de página (Jorge, 19-nov-2026); «Hoja con páginas» la vuelve continua
       if (HK.app) { if (lisp) { HK.app.setTxt(Math.round(d.txt || 15)); HK.app.setEq(Math.round(d.eq || 15)); } else if (HK.app.estiloLisp) { HK.app.setTxt(13); HK.app.setEq(14); } HK.app.estiloLisp = lisp; } }
-    { const gp = typeof d.gap === 'number' ? d.gap : 6; document.documentElement.style.setProperty('--gapfila', Math.max(0, gp + 8) + 'px'); document.documentElement.style.setProperty('--margfila', Math.min(2, 2 + (gp - 6) * 0.9) + 'px'); }          // interlineado de la hoja (campo «gap» del .hmath, como el WPF): 6 → 14 px (como antes), -4 → 4 px
+    if (!anexa || vacia) { const gp = typeof d.gap === 'number' ? d.gap : 6; document.documentElement.style.setProperty('--gapfila', Math.max(0, gp + 8) + 'px'); document.documentElement.style.setProperty('--margfila', Math.min(2, 2 + (gp - 6) * 0.9) + 'px'); }          // interlineado de la hoja (campo «gap» del .hmath, como el WPF): 6 → 14 px (como antes), -4 → 4 px
     const dxs = [];
     for (let it of d.items || []) {
       if (it.dx || it.dy) dxs.push([reg.length, it.dx || 0, it.dy || 0]);
@@ -941,10 +969,11 @@
     if (g.classList.contains('grupo')) return g.firstElementChild === r.el && g.parentElement.firstElementChild !== g;
     return g.firstElementChild !== r.el && g.classList.contains('fila');
   }
-  function guarda() {
-    const items = [];
+  function guarda(filtro) {          // filtro: solo esas regiones (copiar lo seleccionado)
+    const items = [], origYa = new Set(), origTocado = new Set(reg.filter((x) => x.editado && x.original).map((x) => x.original));          // un grupo con UNA línea editada ya no se copia del original
     const emp = (r, o) => { const u = r.el && r.el.parentElement, g = u && u.classList && u.classList.contains('grupo') ? u : r.el, l = g && g.style ? parseFloat((g.classList.contains('txt') || g.classList.contains('slider')) ? g.style.marginLeft : g.style.left) : 0; if (l) o.dx = Math.round(l); const t = g && g.style ? parseFloat(g.style.marginTop) : 0; if (t) o.dy = Math.round(t); items.push(o); };          // posición horizontal libre (desplazar)
     for (const r of reg) {
+      if (filtro && !filtro(r)) continue;
       if (r.t === 'txt' && r.el.querySelector('.ifx')) {          // párrafo con fórmulas dentro: segmentos como el WPF
         const seg = []; (function rec(n) {
           for (const c of n.childNodes) {
@@ -960,9 +989,11 @@
       else if (r.t === 'cad') emp(r, { t: 'cad', codigo: r.ta.value, ...(r.titulo ? { titulo: r.titulo } : {}), ...(mismaLineaDe(r) ? { mismaLinea: true } : {}) });
       else if (r.t === 'raw') emp(r, { t: 'raw', text: r.ta.value, ...(r.oculto ? { oculto: true } : {}), ...(mismaLineaDe(r) ? { mismaLinea: true } : {}) });
       else if (r.enTexto) continue;          // ya va dentro de su párrafo
+      else if (!r.editado && r.original && r.original.t === 'eq' && !origTocado.has(r.original)) { if (!origYa.has(r.original)) { origYa.add(r.original); const o = Object.assign({}, r.original); delete o.mismaLinea; delete o.dx; delete o.dy; if (mismaLineaDe(r)) o.mismaLinea = true; emp(r, o); } }
       else emp(r, { t: 'eq', codigo: codigoWpf(r.editado || !r.codigo ? r.ed.texto() : r.codigo), modo: r.modo, ...(r.oculto ? { oculto: true } : {}), ...(mismaLineaDe(r) ? { mismaLinea: true } : {}) });
     }
-    return JSON.stringify({ formato: 'hmath 1', eq: 14, txt: 16, gap: 6, fmt: 0, items }, null, 1);
+    const lisp = document.body.classList.contains('lisp');          // el estilo de Hekatan LISP viaja con la hoja (como el WPF)
+    return JSON.stringify({ formato: 'hmath 1', eq: lisp && HK.app && HK.app.getEq ? HK.app.getEq() : 14, txt: lisp && HK.app && HK.app.getTxt ? HK.app.getTxt() : 16, gap: 6, fmt: 0, ...(lisp ? { estilo: 'lisp' } : {}), items }, null, 1);
   }
   // ---------------------------------------------------------------- acciones que usa la cinta (app.js)
   function nuevaEq(codigo, mismo, modo) { const r = agregaEq(codigo || '', { mismaLinea: !!mismo, modo: modo || 0 }); activo = r.ed; r.ed.cargar(codigo ? HK.codigoAFilas(codigo) : []); if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); resolver(); r.el.scrollIntoView({ block: 'nearest' }); return r; }
@@ -991,5 +1022,5 @@
   function siguienteEq() { const l = reg.filter((r) => r.t === 'eq' && !r.oculto), i = l.findIndex((r) => r.ed === activo); const n = l[i + 1] || l[0]; if (n) { activo = n.ed; n.ed.cur = { fila: n.ed.fila, i: n.ed.fila.length }; redibuja(); n.el.scrollIntoView({ block: 'nearest' }); } }
   function fracVar() { if (!activo) nuevaEq(''); escribe('/'); const p = activo.cur.fila._p; if (p && p.it.t === 'frac') { p.it.diag = true; activo.cambio(); } }          // «Var. fracción»: fracción diagonal a⁄b
   HK.hoja = { nuevaTabla, nuevoCodigo, fracVar, modoManual: (f) => { calcManual = !!f; if (!f) resolver(true); }, siguienteEq, nuevoCad, cadAgrega, cadExporta, abre, guarda, resolver, agregaEq, agregaTxt, agregaSlider, reg, limpia, activar: (r) => { activo = r.ed; redibuja(); }, nuevaEq, eqEnTexto, setModo, bloque, insertaMat, nuevoTxt, nuevoSlider, escribe, tam, descarga, hayActivo: () => !!activo, desactiva: () => { activo = null; if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); redibuja(); }, quitaRegs: (u) => { for (let i = reg.length - 1; i >= 0; i--) if (u.contains(reg[i].el)) { if (reg[i].ed && reg[i].ed === activo) activo = null; reg.splice(i, 1); } }, activa: () => activo, alternaCodigo, ocultaBloque, redibuja: () => { redibuja(); } };
-  if (!/[?&]vacia/.test(location.search)) { agregaTxt('Hekatan Math Studio', true, 1); agregaTxt('Pulsa «Ecuación» en la cinta, o haz clic en la hoja, y teclea: «/» fracción, «^» exponente, «_» subíndice, «\\» raíz, «(» paréntesis; Espacio sale del hueco. El resultado solo aparece cuando terminas con «=».', false); resolver(); nuevaEq(''); }
+  if (!/[?&]vacia/.test(location.search)) { agregaTxt('Hekatan Math Studio', true, 1); agregaTxt('Pulsa «Ecuación» en la cinta, o haz clic en la hoja, y teclea: «/» fracción, «^» exponente, «_» subíndice, «\\» raíz, «(» paréntesis; Espacio sale del hueco. El resultado solo aparece cuando terminas con «=».', false); resolver(); nuevaEq(''); reg.forEach((r) => { r.bienvenida = true; }); }          // bienvenida: al pegar regiones se reemplaza (la hoja cuenta como vacía)
 })(window);

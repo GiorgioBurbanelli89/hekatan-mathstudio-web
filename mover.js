@@ -199,5 +199,6 @@
     } else if (k === 'ArrowLeft') { let v = p.previousElementSibling; while (v && set.has(v)) v = v.previousElementSibling; if (v) aplica(g, { k: 'lado', fila: p.parentElement, ref: v, desp: false }); }
     else { let v = q.nextElementSibling; while (v && set.has(v)) v = v.nextElementSibling; if (v) aplica(g, { k: 'lado', fila: q.parentElement, ref: v, desp: true }); }
   }, true);
-  HK.mover = { sel, seleccion: () => vivas(), aplica, destino, limpiaSel, unidades: () => filas().flatMap(hijos) };
+  function seleccionaTodo() { limpiaSel(); for (const f of filas()) for (const u of f.children) marca(u, true); estado(sel.size + ' regiones seleccionadas: Ctrl+C las copia (se pegan con Ctrl+V en esta u otra hoja)'); }          // Ctrl+A: TODA la hoja (también lo oculto: las funciones auxiliares de las gráficas)
+  HK.mover = { sel, seleccion: () => vivas(), aplica, destino, limpiaSel, marca, seleccionaTodo, unidades: () => filas().flatMap(hijos) };
 })(window);

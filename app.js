@@ -689,5 +689,5 @@
     } catch (e) { estado('No se pudo abrir el script de la dirección: ' + e.message); }
   }
   setTimeout(abreDeHash, 0); window.addEventListener('hashchange', abreDeHash);
-  HK.app = { setTxt, setEq, ponZoom, getZoom: () => zoom, estado, pagina, setTxt, setEq, abreEjemplo, nuevo, pintaCinta };
+  HK.app = { setTxt, setEq, getTxt: () => txtPt, getEq: () => eqPt, ponZoom, getZoom: () => zoom, estado, pagina, setTxt, setEq, abreEjemplo, nuevo, pintaCinta };
 })(window);
