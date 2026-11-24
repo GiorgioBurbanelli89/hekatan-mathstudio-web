@@ -85,7 +85,7 @@
     max: (x, y) => y !== undefined ? map2(x, y, maxU) : esM(x) ? (hayQ(x) ? x.a.reduce(maxU) : Math.max(...x.a)) : x, min: (x, y) => y !== undefined ? map2(x, y, minU) : esM(x) ? (hayQ(x) ? x.a.reduce(minU) : Math.min(...x.a)) : x, sum: (x) => esM(x) ? (hayQ(x) ? x.a.reduce(sumaU) : x.a.reduce((p, q) => p + q, 0)) : x,
     col: (m, j) => { const o = new Mat(m.r, 1); for (let i = 0; i < m.r; i++) o.s(i, 0, m.g(i, j - 1)); return o; },
     size: (m) => new Mat(1, 2, [m.r, m.c]),
-    inv, det, clsolve: lsolve, round: (x, d) => { const f = Math.pow(10, d === undefined ? 0 : d); return elem((v) => Math.round(numU(v) * f) / f)(x); }, floor: elemN(Math.floor), ceil: elemN(Math.ceil),
+    inv, det, clsolve: lsolve, slsolve: lsolve, cof: cofactores, adj: (A) => transpose(cofactores(A)), round: (x, d) => { const f = Math.pow(10, d === undefined ? 0 : d); return elem((v) => Math.round(numU(v) * f) / f)(x); }, floor: elemN(Math.floor), ceil: elemN(Math.ceil),
   };
   // ---- funciones de matriz de Solver.cs (norm, tr, cross, lin, fila, range…) y SolverSmath.cs (rank, diag, stack, sort…)
   const M1 = (x) => esM(x) ? x : new Mat(1, 1, [x]);
@@ -191,6 +191,12 @@
       for (let i = 0; i < n; i++) if (i !== c) { const f = a[i][c]; if (f) for (let j = 0; j < 2 * n; j++) a[i][j] -= f * a[c][j]; }
     }
     const o = new Mat(n, n); for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) o.s(i, j, a[i][n + j]); return o;
+  }
+  function cofactores(A) {          // cof[i,j] = (−1)^(i+j)·det(menor); como Solver.cs (Cofactores) del escritorio; adj = cofᵀ
+    A = SQ(A); const n = A.r; if (A.c !== n) throw new Error('cof: la matriz debe ser cuadrada');
+    const o = new Mat(n, n); if (n === 1) { o.s(0, 0, 1); return o; }
+    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) { let d; try { d = det(menor(A, i, j)); } catch (e) { d = 0; } o.s(i, j, ((i + j) % 2 ? -d : d) + 0); }
+    return o;
   }
   function det(A) {
     A = SQ(A); const n = A.r; if (A.c !== n) throw new Error('det: la matriz debe ser cuadrada'); const a = A.a.slice(); let d = 1;

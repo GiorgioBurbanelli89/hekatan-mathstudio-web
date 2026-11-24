@@ -22,6 +22,7 @@
       case 'deriv': return [it.v, it.f];
       case 'lim': return it.serie ? [it.v, it.p, it.n, it.body] : [it.v, it.p, it.body];
       case 'mat': return [].concat(...it.cells);
+      case 'trans': return it.F ? [it.r, it.F] : [it.r];
       default: return it.r ? [it.r] : [];
     }
   }
@@ -58,7 +59,12 @@
         return { w: Math.max(n.w, d.w) + tam * .3, a: eje + gap + n.d + n.a, d: d.a + d.d + gap - eje, eje, gap };
       }
       case 'sup': { const r = medirFila(it.r, tam * .7), up = tam * .45; return { w: r.w + 1, a: r.a + up, d: Math.max(0, r.d - up), up }; }
-      case 'trans': { const r = medirFila(it.r, tam), t = medirFila(it.T || (it.T = [{ t: 'c', s: 'T' }]), tam * .7), up = tam * .45; return { w: r.w + t.w + 1, a: Math.max(r.a, t.a + up), d: r.d, up, rw: r.w }; }          // transpose(x) → xᵀ (notación matemática)
+      case 'trans': {          // transpose(x) → xᵀ · inv(x) → x⁻¹ · lsolve(K, F) → K⁻¹·F (it.s = la función, it.F = el 2.º argumento)
+        const r = medirFila(it.r, tam), t = medirFila(it.T || (it.T = [{ t: 'c', s: it.s && it.s !== 'transpose' ? '−1' : 'T' }]), tam * .7), up = tam * .45;
+        let w = r.w + t.w + 1, a = Math.max(r.a, t.a + up), d = r.d, pw = 0;
+        if (it.F) { const p = medirFila(it.P || (it.P = [{ t: 'c', s: '·' }]), tam), f = medirFila(it.F, tam); pw = p.w; w += pw + f.w; a = Math.max(a, f.a); d = Math.max(d, f.d); }
+        return { w, a, d, up, rw: r.w, tw: t.w, pw };
+      }          // transpose(x) → xᵀ (notación matemática)
       case 'sub': { const r = medirFila(it.r, tam * .7), dn = tam * .2; return { w: r.w + 1, a: Math.max(0, r.a - dn), d: r.d + dn, dn }; }
       case 'sqrt': {          // como SqrtNode del WPF: radical de 0.6·fs, barra a 0.1·fs sobre la tinta, el signo llega al menos a la línea base
         const r = medirFila(it.r, tam), t = Math.max(1, tam / 14), c = tam * .1, rad = tam * .6;
@@ -149,7 +155,7 @@
         break;
       }
       case 'sup': dibujarFila(ctx, it.r, x, y - b.up, tam * .7, reg, { fila, it }); break;
-      case 'trans': dibujarFila(ctx, it.r, x, y, tam, reg, { fila, it }); dibujarFila(ctx, it.T, x + b.rw, y - b.up, tam * .7, [], { fila, it }); break;
+      case 'trans': dibujarFila(ctx, it.r, x, y, tam, reg, { fila, it }); dibujarFila(ctx, it.T, x + b.rw, y - b.up, tam * .7, [], { fila, it }); if (it.F) { const x2 = x + b.rw + b.tw + 1; dibujarFila(ctx, it.P, x2, y, tam, [], { fila, it }); dibujarFila(ctx, it.F, x2 + b.pw, y, tam, reg, { fila, it }); } break;
       case 'sub': dibujarFila(ctx, it.r, x, y + b.dn, tam * .7, reg, { fila, it }); break;
       case 'sqrt': {
         const h = b.a + b.d, top = y - b.a, x0 = x;
@@ -242,7 +248,7 @@
         break;
       }
       case 'sup': dibujarFila(ctx, it.r, x, y - b.up, tam * .7, reg, { fila, it }); break;
-      case 'trans': dibujarFila(ctx, it.r, x, y, tam, reg, { fila, it }); dibujarFila(ctx, it.T, x + b.rw, y - b.up, tam * .7, [], { fila, it }); break;
+      case 'trans': dibujarFila(ctx, it.r, x, y, tam, reg, { fila, it }); dibujarFila(ctx, it.T, x + b.rw, y - b.up, tam * .7, [], { fila, it }); if (it.F) { const x2 = x + b.rw + b.tw + 1; dibujarFila(ctx, it.P, x2, y, tam, [], { fila, it }); dibujarFila(ctx, it.F, x2 + b.pw, y, tam, reg, { fila, it }); } break;
       case 'sub': dibujarFila(ctx, it.r, x, y + b.dn, tam * .7, reg, { fila, it }); break;
       case 'sqrt': {
         const r = it.r._b, top = y - b.a + tam * .05, h = b.a + b.d;
@@ -294,7 +300,7 @@
         break;
       }
       case 'mat': {
-        const R = it.cells.length, C = it.cells[0].length, bt = y - b.a + tam * .05, bb = y + b.d - tam * .05, bw = tam * .2;
+        const R = it.cells.length, C = it.cells[0].length, bt = y - b.a + tam * .05, bb = y + b.d - tam * .05, bw = Math.max(5, tam * .34);          // brazos del corchete visibles (con tam·0,2 quedaban de 1 px y [a b; c d] parecía |a b; c d|)
         ctx.strokeStyle = COL.tinta; ctx.lineWidth = Math.max(1, tam / 16);
         ctx.beginPath(); ctx.moveTo(x + bw, bt); ctx.lineTo(x + 2, bt); ctx.lineTo(x + 2, bb); ctx.lineTo(x + bw, bb);
         ctx.moveTo(x + b.w - bw, bt); ctx.lineTo(x + b.w - 2, bt); ctx.lineTo(x + b.w - 2, bb); ctx.lineTo(x + b.w - bw, bb); ctx.stroke();
@@ -309,6 +315,11 @@
       case 'paren': {
         const r = it.r._b, top = y - b.a, bot = y + b.d, lw = Math.max(1, tam / 16), e = tam * .16;
         ctx.strokeStyle = COL.tinta; ctx.lineWidth = lw;
+        if (it.s === 'det' || it.s === 'norm') {          // |A| (determinante) y ‖x‖ (norma): barras en vez de paréntesis
+          const xs = it.s === 'det' ? [tam * .16] : [tam * .1, tam * .22];
+          ctx.beginPath(); for (const d of xs) { ctx.moveTo(x + d, top + tam * .04); ctx.lineTo(x + d, bot - tam * .04); ctx.moveTo(x + b.w - d, top + tam * .04); ctx.lineTo(x + b.w - d, bot - tam * .04); } ctx.stroke();
+          dibujarFila(ctx, it.r, x + tam * .31, y, tam, reg, { fila, it }); break;
+        }
         ctx.beginPath(); ctx.moveTo(x + tam * .27, top); ctx.quadraticCurveTo(x + tam * .02, (top + bot) / 2, x + tam * .27, bot); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(x + b.w - tam * .27, top); ctx.quadraticCurveTo(x + b.w - tam * .02, (top + bot) / 2, x + b.w - tam * .27, bot); ctx.stroke();
         dibujarFila(ctx, it.r, x + tam * .31, y, tam, reg, { fila, it });
@@ -408,7 +419,7 @@
       if (it.t === 'c') { o.s = it.s; if (it.u) o.u = 1; if (it.un) o.un = 1; return o; }
       for (const k of ['s', 'p', 'o', 'corch']) if (it[k] !== undefined) o[k] = it[k];
       if (it.t === 'mat') { o.cells = it.cells.map((f) => f.map((c) => c.map((x) => this.limpiaNodo(x)))); return o; }
-      for (const k of ['n', 'd', 'r', 'lo', 'hi', 'body', 'v', 'f']) if (it[k]) o[k] = it[k].map((x) => this.limpiaNodo(x));
+      for (const k of ['n', 'd', 'r', 'lo', 'hi', 'body', 'v', 'f', 'F']) if (it[k]) o[k] = it[k].map((x) => this.limpiaNodo(x));
       return o;
     }
     clona(items) { return items.map((x) => this.limpiaNodo(x)); }

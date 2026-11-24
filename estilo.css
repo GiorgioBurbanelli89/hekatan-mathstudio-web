@@ -187,6 +187,9 @@ body.lisp .fila > .txt.lado { margin-left:12px; flex:0 1 auto; }
 /* hipótesis con su gráfica AL LADO: un fplot/fsuperficie/fmapa en la misma línea que otras piezas ocupa una columna a la derecha (solo la gráfica; el código sigue en Ctrl+K) */
 .fila > .eq.conGraf:not(:only-child) { flex:0 0 330px; margin-left:auto; }
 .fila > .eq.conGraf:not(:only-child) > canvas:first-child { display:none; }
+.eq.conGraf.soloGraf > canvas:first-child { display:none; }
+.fila > .eq.conGraf.grafLisp:only-child { flex:1 1 auto; }          /* gráfica de una hoja de Hekatan LISP: centrada, como en LISP */
+.eq.conGraf.grafLisp > canvas:not(:first-child):not(.ghov) { display:block; }          /* como Hekatan LISP: solo la gráfica; su código aparece al editarla (doble clic en la gráfica) */
 
 .fila.ini-pag > .txt.titulo { margin-top:-4px; }          /* un título al comienzo de una página queda a 9 px del marco, como en el WPF */
 .eq.conGraf { position:relative; }

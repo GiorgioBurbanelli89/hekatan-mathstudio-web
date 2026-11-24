@@ -334,6 +334,12 @@
         if (a.bars) return chars('|').concat(aFilas(a.args[0]), chars('|'));
         if (a.f === 'sqrt' && a.args.length === 1) return [{ t: 'sqrt', r: aFilas(a.args[0]) }];
         if (a.f === 'transpose' && a.args.length === 1) { const x = sinParen(a.args[0]); return [{ t: 'trans', r: x.t === 'id' || x.t === 'call' || x.t === 'mat' || x.t === 'vec' ? aFilas(x) : [{ t: 'paren', r: aFilas(x) }] }]; }          // transpose(d) se dibuja dᵀ
+        {          // inv(A) → A⁻¹ · lsolve/clsolve/slsolve(K, F) → K⁻¹·F (como SExpr.cs del escritorio); el nodo guarda el nombre (s) y vuelve a texto como la llamada: la semántica no cambia
+          const base = (x) => { x = sinParen(x); return x.t === 'id' || x.t === 'mat' || x.t === 'vec' ? aFilas(x) : [{ t: 'paren', r: aFilas(x) }]; };
+          if ((a.f === 'det' || a.f === 'norm') && a.args.length === 1) return [{ t: 'paren', s: a.f, r: aFilas(sinParen(a.args[0])) }];          // det(A) → |A| · norm(x) → ‖x‖ (como Hekatan LISP); vuelve a texto como det(…) / norm(…)
+          if (a.f === 'inv' && a.args.length === 1) return [{ t: 'trans', s: 'inv', r: base(a.args[0]) }];
+          if ((a.f === 'lsolve' || a.f === 'clsolve' || a.f === 'slsolve') && a.args.length === 2) { const y = sinParen(a.args[1]); return [{ t: 'trans', s: a.f, r: base(a.args[0]), F: y.t === 'id' || y.t === 'num' || y.t === 'mat' || y.t === 'vec' || y.t === 'call' ? aFilas(y) : [{ t: 'paren', r: aFilas(y) }] }]; }
+        }
         if (a.f === 'integral' && (a.args.length === 2 || a.args.length === 4)) return [{ t: 'bigop', s: '∫', body: aFilas(sinParen(a.args[0])), v: aFilas(a.args[1]), lo: a.args.length === 4 ? aFilas(a.args[2]) : [], hi: a.args.length === 4 ? aFilas(a.args[3]) : [] }];
         if ((a.f === 'sum' || a.f === 'prod') && a.args.length === 4) return [{ t: 'bigop', s: a.f === 'sum' ? '∑' : '∏', body: aFilas(sinParen(a.args[0])), lo: aFilas(a.args[1]).concat([ch('=')], aFilas(a.args[2])), hi: aFilas(a.args[3]) }];
         if (a.f === 'limit' && a.args.length === 3 && a.args[1].t === 'id') return [{ t: 'lim', serie: false, v: aFilas(a.args[1]), p: aFilas(a.args[2]), n: [], body: aFilas(sinParen(a.args[0])) }];
@@ -392,8 +398,8 @@
         case 'sup': s += '^(' + filasATexto(it.r) + ')'; break;
         case 'sub': { const q = filasATexto(it.r); s += q.indexOf(',') >= 0 ? '_{' + q + '}' : '_' + q; break; }
         case 'sqrt': s += 'sqrt(' + filasATexto(it.r) + ')'; break;
-        case 'trans': s += 'transpose(' + filasATexto(it.r) + ')'; break;
-        case 'paren': s += '(' + filasATexto(it.r) + ')'; break;
+        case 'trans': s += (it.s && it.s !== 'transpose' ? it.s : 'transpose') + '(' + filasATexto(it.r) + (it.F ? ',' + filasATexto(it.F) : '') + ')'; break;          // Aᵀ, A⁻¹, K⁻¹·F vuelven a ser transpose(A), inv(A), lsolve(K, F)
+        case 'paren': s += (it.s === 'det' || it.s === 'norm' ? it.s : '') + '(' + filasATexto(it.r) + ')'; break;
       }
     }
     return s;

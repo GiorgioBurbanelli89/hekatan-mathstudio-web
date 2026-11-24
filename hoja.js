@@ -206,14 +206,20 @@
     const ult = args[args.length - 1];
     if (ult && ult.t === 'vec' && ult.items.length === 2) { lo = num(ult.items[0]); hi = num(ult.items[1]); args.pop(); }
     else if (args.length >= 3) { hi = num(args.pop()); lo = num(args.pop()); }
-    const n = 200, xs = Array.from({ length: n + 1 }, (_, i) => lo + (hi - lo) * i / n), ys = [], nombres = [];
+    const n = 200, xs = Array.from({ length: n + 1 }, (_, i) => lo + (hi - lo) * i / n), ys = [], nombres = [], pts = [];
+    args = args.filter((a) => {          // puntos([x, y; x, y]): marcas (como «puntos = [x y]» de Hekatan LISP), no una curva
+      if (!(a.t === 'call' && a.f === 'puntos' && a.args.length === 1)) return true;
+      const v = num(a.args[0]), q = HK.M && HK.M.esM(v) ? v : null;
+      if (q) { const c = q.c >= 2 ? q.c : 2, r = q.c >= 2 ? q.r : q.a.length / 2; for (let i = 0; i < r; i++) pts.push([+q.a[i * c], +q.a[i * c + 1]]); }
+      return false;
+    });
     args.forEach((a, k) => {
       let ex = a, nom = 'f' + (k + 1);
-      if (a.t === 'bin' && a.op === '==') { ex = a.b; }
+      if (a.t === 'bin' && a.op === '==') { ex = a.b; if (a.a.t === 'id') nom = a.a.n; }          // «ec_1 == 5 − 2x»: la curva se llama ec_1 (leyenda), como Hekatan LISP
       ys.push(xs.map((x) => { try { return HK.evalua(ex, { v: Object.assign({}, env.v, { x }), f: env.f, l: env.l }); } catch (e) { if (/^indef:x?$/.test(e.message) === false && k === 0 && x === lo) throw e; return NaN; } }));
       nombres.push(nom);
     });
-    return { xs, ys, nombres };
+    return { xs, ys, nombres, pts };
   }
   // fmapa(f(x,y), [x0,x1], [y0,y1])  y  fsuperficie(f(x,y), [x0,x1], [y0,y1], az, el)
   function malla2(args, env) {
@@ -320,8 +326,8 @@
   // marca de agarre en la esquina inferior derecha de toda gráfica: arrastrándola cambian el ancho y el alto
   HK.grip = (c, W, H) => { c.save(); c.strokeStyle = '#7b8699'; c.lineWidth = 1.3; for (let k = 0; k < 3; k++) { c.beginPath(); c.moveTo(W - 4 - k * 4, H - 2); c.lineTo(W - 2, H - 4 - k * 4); c.stroke(); } c.restore(); };
   function dibujaGraf(r) {
-    if (!r.graf) { r.el.classList.remove('conGraf'); if (r.gel) { r.gel.remove(); r.gel = null; } if (r.hov) { r.hov.remove(); r.hov = null; } r.hv = null; return; }
-    r.el.classList.add('conGraf'); r.hv = null; limpiaHover(r);          // con gráfica: en una fila con otras piezas se coloca AL LADO (estilo.css)
+    if (!r.graf) { r.el.classList.remove('conGraf', 'soloGraf'); if (r.gel) { r.gel.remove(); r.gel = null; } if (r.hov) { r.hov.remove(); r.hov = null; } r.hv = null; return; }
+    r.el.classList.add('conGraf'); r.el.classList.toggle('soloGraf', r.ed !== activo); r.hv = null; limpiaHover(r);          // con gráfica: en una fila con otras piezas se coloca AL LADO (estilo.css)
     if (!r.gel) {
       r.gel = document.createElement('canvas'); r.el.appendChild(r.gel);
       r.gel.title = 'Arrastra la esquina inferior derecha para cambiar el ancho y el alto · en 3D: arrastra para girar, rueda para zoom, doble clic para restablecer';
@@ -330,7 +336,7 @@
       document.addEventListener('mousemove', (e) => { if (!arr) return; const ob = r.orb || (r.orb = { az: 0, el: 0, z: 1 }); ob.az += (e.clientX - arr.x) * 0.5; ob.el = Math.max(-89, Math.min(89, ob.el + (e.clientY - arr.y) * 0.5)); arr = { x: e.clientX, y: e.clientY }; dibujaGraf(r); });
       document.addEventListener('mouseup', () => { arr = null; });
       r.gel.addEventListener('wheel', (e) => { if (!(r.graf && (r.graf.tipo === 'sup' || r.graf.tipo === 'esc3')) || e.ctrlKey) return; e.preventDefault(); const ob = r.orb || (r.orb = { az: 0, el: 0, z: 1 }); ob.z = Math.max(0.3, Math.min(8, ob.z * (e.deltaY < 0 ? 1.12 : 1 / 1.12))); dibujaGraf(r); }, { passive: false });
-      r.gel.addEventListener('dblclick', () => { r.orb = null; dibujaGraf(r); });
+      r.gel.addEventListener('dblclick', () => { r.orb = null; activo = r.ed; redibuja(); });          // doble clic en la gráfica: aparece su código para editarlo (fuera de edición solo se ve la gráfica, como Hekatan LISP)
       r.gel.addEventListener('mousemove', (e) => { if (!arr) hover(r, e); });          // hover como el WPF
       r.gel.addEventListener('mouseleave', () => limpiaHover(r));
     }
@@ -342,12 +348,14 @@
       document.addEventListener('mouseup', () => { rz = null; }, true); }
     if (r.graf.tipo && HK.graf2 && /^(riemann|gauss1|gauss2|esc3|tabla|malla|resorte|barra|membrana|trocito)$/.test(r.graf.tipo)) { HK.graf2.dibuja(r); return; }
     if (r.graf.tipo) { dibujaMalla(r); return; }
-    const g = r.graf, cv = r.gel, dpr = window.devicePixelRatio || 1, W = r.gw ? Math.max(180, Math.min((r.el.parentElement || r.el).clientWidth - 16, r.gw)) : Math.min(r.el.clientWidth - 8, 460), H = r.gh ? Math.max(120, r.gh) : 230;          // el ancho y el alto que eligió el usuario (arrastrando la esquina)
+    const LG = r.el.classList.contains('soloGraf') && document.body.classList.contains('lisp') && !(r.el.parentElement && r.el.parentElement.children.length > 1);          // hoja de Hekatan LISP, gráfica sola en su fila: centrada y del tamaño de la de LISP
+    r.el.classList.toggle('grafLisp', LG);
+    const g = r.graf, cv = r.gel, dpr = window.devicePixelRatio || 1, W = r.gw ? Math.max(180, Math.min((r.el.parentElement || r.el).clientWidth - 16, r.gw)) : Math.min(r.el.clientWidth - 8, LG ? 480 : 460), H = r.gh ? Math.max(120, r.gh) : (LG ? 320 : 230);          // el ancho y el alto que eligió el usuario (arrastrando la esquina)
     if (r.gw) r.el.style.flex = '0 0 ' + (W + 8) + 'px';
-    cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + 'px'; cv.style.height = H + 'px'; cv.style.margin = '4px 0 6px 6px';
+    cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + 'px'; cv.style.height = H + 'px'; cv.style.margin = LG ? '4px auto 6px' : '4px 0 6px 6px';
     const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const L = 46, T = 12, R = 12, B = 30, w = W - L - R, h = H - T - B;
-    let mn = Infinity, mx = -Infinity; g.ys.forEach((y) => y.forEach((v) => { if (isFinite(v)) { mn = Math.min(mn, v); mx = Math.max(mx, v); } }));
+    const L = 46, T = 12, R = 12, B = LG ? 40 : 30, w = W - L - R, h = H - T - B;
+    let mn = Infinity, mx = -Infinity; g.ys.forEach((y) => y.forEach((v) => { if (isFinite(v)) { mn = Math.min(mn, v); mx = Math.max(mx, v); } })); (g.pts || []).forEach((p) => { if (isFinite(p[1])) { mn = Math.min(mn, p[1]); mx = Math.max(mx, p[1]); } });
     if (!isFinite(mn)) { mn = -1; mx = 1; } if (mx - mn < 1e-12) { mn -= 1; mx += 1; } const sy = paso(mx - mn, 5); mn = Math.floor((mn - (mx - mn) * .04) / sy) * sy; mx = Math.ceil((mx + (mx - mn) * .04) / sy) * sy;          // el eje y arranca y termina en una marca redonda (como el WPF)
     const x0 = g.xs[0], x1 = g.xs[g.xs.length - 1], X = (x) => L + (x - x0) / (x1 - x0) * w, Y = (y) => T + h - (y - mn) / (mx - mn) * h;
     c.fillStyle = '#fff'; c.fillRect(L, T, w, h); c.font = '11px sans-serif'; c.fillStyle = '#555'; c.strokeStyle = '#e3e3e3'; c.lineWidth = 1;
@@ -357,8 +365,22 @@
     if (mn < 0 && mx > 0) { c.strokeStyle = '#999'; c.beginPath(); c.moveTo(L, Y(0)); c.lineTo(L + w, Y(0)); c.stroke(); }
     c.save(); c.beginPath(); c.rect(L, T, w, h); c.clip();
     g.ys.forEach((ys, k) => { c.strokeStyle = PAL[k % PAL.length]; c.lineWidth = 1.8; c.beginPath(); let on = false; ys.forEach((v, i) => { if (!isFinite(v)) { on = false; return; } if (!on) { c.moveTo(X(g.xs[i]), Y(v)); on = true; } else c.lineTo(X(g.xs[i]), Y(v)); }); c.stroke(); });
+    (g.pts || []).forEach((p) => { c.fillStyle = '#f0b323'; c.beginPath(); c.arc(X(p[0]), Y(p[1]), 4.5, 0, 7); c.fill(); });          // puntos = [x y]: la marca (como Hekatan LISP: punto amarillo y «puntos» en la leyenda)
     c.restore(); HK.grip(c, W, H); c.strokeStyle = '#222'; c.lineWidth = 1; c.strokeRect(L, T, w, h); r.hv = { k: 'curvas', L, T, w, h, mn, mx, x0, x1, g };
-    g.nombres.forEach((nm, k) => { c.fillStyle = PAL[k % PAL.length]; c.fillRect(L + 8, T + 8 + k * 14, 16, 3); c.fillStyle = '#333'; c.textAlign = 'left'; c.fillText(nm, L + 30, T + 12 + k * 14); });
+    if (!LG) { g.nombres.forEach((nm, k) => { c.fillStyle = PAL[k % PAL.length]; c.fillRect(L + 8, T + 8 + k * 14, 16, 3); c.fillStyle = '#333'; c.textAlign = 'left'; c.fillText(nm, L + 30, T + 12 + k * 14); }); return; }
+    {          // como Hekatan LISP: leyenda en un recuadro arriba a la derecha (nombre con subíndice: ec_1 → ec₁, en cursiva) y la «x» bajo el eje
+      const ents = g.nombres.map((nm, k) => ({ nm, col: PAL[k % PAL.length] })).concat((g.pts || []).length ? [{ nm: 'puntos', pto: true }] : []);
+      const parte = (nm) => { const i = nm.indexOf('_'); return i > 0 ? [nm.slice(0, i), nm.slice(i + 1)] : [nm, '']; };
+      const anchoNm = (nm) => { const [b0, s0] = parte(nm); c.font = 'italic 12px serif'; let a = c.measureText(b0).width; c.font = 'italic 9px serif'; return a + (s0 ? c.measureText(s0).width + 1 : 0); };
+      const bw = 34 + Math.max(...ents.map((q) => anchoNm(q.nm))) + 8, bh = 8 + ents.length * 17, bx = L + w - bw - 8, by = T + 8;
+      c.fillStyle = 'rgba(255,255,255,.92)'; c.fillRect(bx, by, bw, bh); c.strokeStyle = '#333'; c.lineWidth = 1; c.strokeRect(bx + .5, by + .5, bw, bh);
+      ents.forEach((q, k) => {
+        const yy = by + 13 + k * 17;
+        if (q.pto) { c.fillStyle = '#f0b323'; c.beginPath(); c.arc(bx + 18, yy - 1, 4.5, 0, 7); c.fill(); } else { c.strokeStyle = q.col; c.lineWidth = 2.4; c.beginPath(); c.moveTo(bx + 8, yy - 1); c.lineTo(bx + 28, yy - 1); c.stroke(); }
+        const [b0, s0] = parte(q.nm); c.fillStyle = '#222'; c.textAlign = 'left'; c.font = 'italic 12px serif'; c.fillText(b0, bx + 34, yy + 3); if (s0) { const a = c.measureText(b0).width; c.font = 'italic 9px serif'; c.fillText(s0, bx + 34 + a + 1, yy + 7); }
+      });
+      c.fillStyle = '#333'; c.font = 'italic 12px serif'; c.textAlign = 'center'; c.fillText('x', L + w / 2, H - 6);
+    }
   }
 
   // ---------------------------------------------------------------- resolver toda la hoja, de arriba abajo
@@ -831,13 +853,21 @@
     const dxs = [];
     for (let it of d.items || []) {
       if (it.dx || it.dy) dxs.push([reg.length, it.dx || 0, it.dy || 0]);
-      if (it.t === 'texto') { const r = agregaTxt(it.text, it.titulo, it.nivel, it.mismaLinea); if (it.html) limpioHtml(r.el, it.html); }
+      if (it.t === 'texto') { const r = agregaTxt(it.text, it.titulo, it.nivel, it.mismaLinea); if (it.html) { limpioHtml(r.el, it.html); r.fuente = it.fuente || it.text; r.htmlIni = r.el.innerHTML; } }          // r.fuente: el «#:» original (A_n, ^{-1}, det(A)…): si el texto no se toca, se exporta tal cual
       else if (it.t === 'parrafo') {          // párrafo del WPF: [{s:texto,b,i,u}, {eq:código,m:0|1|2}, {img:data:…}]
         const r = agregaTxt('', !!it.titulo, it.nivel, it.mismaLinea);
         for (const g of it.seg || []) {
           if (g.eq != null) { const q = agregaEqEnTexto(r.el, g.eq, g.m == null ? 2 : g.m, null); q.auto = true; continue; }
+          if (Array.isArray(g.sis)) {          // sistema de ecuaciones con llave «{»: una ecuación editable por fila (como Hekatan LISP y el WPF)
+            const caja = document.createElement('span'); caja.className = 'hk-sis'; caja.contentEditable = 'false'; caja.style.cssText = 'display:inline-flex;align-items:stretch;vertical-align:middle;margin:.25em 0';
+            caja.innerHTML = '<svg viewBox="0 0 10 100" preserveAspectRatio="none" style="width:.65em;flex:none;overflow:visible"><path d="M9.5,1 C3.5,1 6.5,47 1,50 C6.5,53 3.5,99 9.5,99" fill="none" stroke="currentColor" stroke-width="1.3" vector-effect="non-scaling-stroke"/></svg>';
+            const col = document.createElement('span'); col.style.cssText = 'display:inline-flex;flex-direction:column;row-gap:.3em;padding:.15em 0 .15em .35em'; caja.appendChild(col); r.el.appendChild(caja);
+            for (const c of g.sis) { const fila = document.createElement('span'); fila.style.display = 'block'; col.appendChild(fila); const q = agregaEqEnTexto(fila, c, g.m == null ? 2 : g.m, null); q.auto = true; }
+            continue;
+          }
           if (g.img && /^data:image\//i.test(g.img)) { const im = document.createElement('img'); im.src = g.img; r.el.appendChild(im); continue; }
           let nodo = document.createTextNode(g.s || ''); for (const [k, tg] of [['u', 'u'], ['i', 'i'], ['b', 'b']]) if (g[k]) { const w = document.createElement(tg); w.appendChild(nodo); nodo = w; }
+          if (g.va === 'sup' || g.va === 'sub') { const w = document.createElement(g.va); w.appendChild(nodo); nodo = w; }          // «A^{-1}», «ε_{x}» del párrafo (HlispMixto.cs)
           r.el.appendChild(nodo);
         }
       }
@@ -906,13 +936,14 @@
       if (r.t === 'txt' && r.el.querySelector('.ifx')) {          // párrafo con fórmulas dentro: segmentos como el WPF
         const seg = []; (function rec(n) {
           for (const c of n.childNodes) {
-            if (c.nodeType === 3) { if (!c.nodeValue) continue; const p = c.parentElement, g = { s: c.nodeValue }; if (p.closest('b,strong')) g.b = 1; if (p.closest('i,em')) g.i = 1; if (p.closest('u')) g.u = 1; seg.push(g); }
+            if (c.nodeType === 3) { if (!c.nodeValue) continue; const p = c.parentElement, g = { s: c.nodeValue }; if (p.closest('b,strong')) g.b = 1; if (p.closest('i,em')) g.i = 1; if (p.closest('u')) g.u = 1; if (p.closest('sup')) g.va = 'sup'; else if (p.closest('sub')) g.va = 'sub'; seg.push(g); }
+            else if (c.classList && c.classList.contains('hk-sis')) { const qs = [...c.querySelectorAll('.ifx')].map((sp) => reg.find((x) => x.enTexto && x.spanTxt === sp)).filter(Boolean); seg.push({ sis: qs.map((q) => codigoWpf(q.editado || !q.codigo ? q.ed.texto() : q.codigo, true)), m: 2 }); }          // sistema con llave: vuelve a ser UN «$ec1; ec2$»
             else if (c.classList && c.classList.contains('ifx')) { const q = reg.find((x) => x.enTexto && x.spanTxt === c); if (q) seg.push({ eq: codigoWpf(q.editado || !q.codigo ? q.ed.texto() : q.codigo, true), m: q.modo }); }
             else if (c.tagName === 'BR') seg.push({ s: '\n' }); else if (c.tagName === 'IMG' && /^data:image\//i.test(c.getAttribute('src') || '')) seg.push({ img: c.getAttribute('src') }); else rec(c);
           }
         })(r.el); const o = { t: 'parrafo', seg }; if (r.titulo) { o.titulo = true; o.nivel = r.nivel; } if (mismaLineaDe(r)) o.mismaLinea = true; emp(r, o);
       }
-      else if (r.t === 'txt') { const o = { t: 'texto', text: r.el.textContent }; if (r.titulo) { o.titulo = true; o.nivel = r.nivel; } if (mismaLineaDe(r)) o.mismaLinea = true; if (r.el.querySelector('*') || r.el.getAttribute('style')) o.html = r.el.innerHTML; emp(r, o); }
+      else if (r.t === 'txt') { const o = { t: 'texto', text: r.el.textContent }; if (r.titulo) { o.titulo = true; o.nivel = r.nivel; } if (mismaLineaDe(r)) o.mismaLinea = true; if (r.el.querySelector('*') || r.el.getAttribute('style')) o.html = r.el.innerHTML; if (r.fuente && r.el.innerHTML === r.htmlIni) o.fuente = r.fuente; emp(r, o); }
       else if (r.t === 'slider') emp(r, { t: 'slider', nombre: r.nombre, min: r.min, max: r.max, valor: r.valor, inc: r.inc, ...(mismaLineaDe(r) ? { mismaLinea: true } : {}) });
       else if (r.t === 'cad') emp(r, { t: 'cad', codigo: r.ta.value, ...(r.titulo ? { titulo: r.titulo } : {}), ...(mismaLineaDe(r) ? { mismaLinea: true } : {}) });
       else if (r.t === 'raw') emp(r, { t: 'raw', text: r.ta.value, ...(r.oculto ? { oculto: true } : {}), ...(mismaLineaDe(r) ? { mismaLinea: true } : {}) });

@@ -38,15 +38,31 @@
     const args = partesAt(m[1].replace(/·/g, '*'), ','); if (args.length < 2) return null;
     const rg = /^\[\s*(-?[\d.eE+-]+)[\s,;]+(-?[\d.eE+-]+)\s*\]$/.exec(args[args.length - 1]); if (!rg) return null;
     const ex = [];
-    for (let k = 0; k < args.length - 1; k++) { const e = args[k].trim(), nm = /^([\p{L}_][\p{L}\p{N}_]*)\s*=\s*(.*)$/u.exec(e), expr = nm ? nm[2].trim() : e; if (expr.startsWith('[') && expr.includes(';')) return null; ex.push(expr); }
+    for (let k = 0; k < args.length - 1; k++) { const e = args[k].trim(), nm = /^([\p{L}_][\p{L}\p{N}_]*)\s*=\s*(.*)$/u.exec(e), expr = nm ? nm[2].trim() : e;
+      if (nm && nm[1] === 'puntos' && /^\[.*\]$/.test(expr)) { ex.push('puntos([' + expr.slice(1, -1).split(';').map((f) => f.trim().split(/[\s,]+/).filter(Boolean).join(', ')).join('; ') + '])'); continue; }          // «puntos = [x y; x y]»: marcas en esos puntos (como Hekatan LISP), no una curva
+      if (expr.startsWith('[') && expr.includes(';')) return null; ex.push(nm ? nm[1] + ' == ' + expr : expr); }          // «ec_1 = …»: el nombre va a la leyenda (como Hekatan LISP); «==» para que no sea una asignación
     return 'fplot(' + ex.join(', ') + ', [' + rg[1] + ', ' + rg[2] + '])';
   }
   // «texto $ecuación$ texto» → párrafo del WPF [{s:texto,b}, {eq:código,m:2}, …]: Math Studio mezcla texto y expresión matemática en la misma línea
   function parrafoMixto(tx) {
     const seg = []; let b = false;
-    const texto = (s) => s.split('**').forEach((q, i) => { if (i) b = !b; if (q) seg.push(b ? { s: q, b: 1 } : { s: q }); });
+    const trozo = (q) => {          // «A^{-1}», «ε_{x}»: superíndice / subíndice (va: 'sup' | 'sub'), como HlispMixto.cs del escritorio
+      const re2 = /([\^_])\{([^{}]*)\}/g; let k0 = 0, m2;
+      const pon = (s, va) => { if (!s) return; const g = { s }; if (va) g.va = va; if (b) g.b = 1; seg.push(g); };
+      while ((m2 = re2.exec(q))) { pon(q.slice(k0, m2.index)); pon(m2[1] === '^' ? m2[2].replace(/-/g, '−') : m2[2], m2[1] === '^' ? 'sup' : 'sub'); k0 = m2.index + m2[0].length; }
+      pon(q.slice(k0));
+    };
+    const texto = (s) => s.split('**').forEach((q, i) => { if (i) b = !b; if (q) trozo(q); });
     const re = /\$([^$]+)\$/g; let k = 0, m;
-    while ((m = re.exec(tx))) { texto(tx.slice(k, m.index)); seg.push({ eq: lineaLisp(m[1].trim()).split(' % ')[0], m: 2 }); k = m.index + m[0].length; }
+    while ((m = re.exec(tx))) {
+      texto(tx.slice(k, m.index));
+      const pz = []; let pr = 0, i0 = 0; const s0 = m[1];          // «$ec1; ec2; ec3$» = SISTEMA con llave (como Hekatan LISP y el WPF); los «;» de una matriz [a; b] no cuentan
+      for (let i = 0; i < s0.length; i++) { const c = s0[i]; if ('([{'.includes(c)) pr++; else if (')]}'.includes(c)) pr--; else if (c === ';' && pr === 0) { pz.push(s0.slice(i0, i)); i0 = i + 1; } }
+      pz.push(s0.slice(i0)); const ecs = pz.filter(q => q.trim());
+      if (ecs.length > 1) seg.push({ sis: ecs.map(q => lineaLisp(q.trim()).split(' % ')[0]), m: 2 });
+      else seg.push({ eq: lineaLisp(m[1].trim()).split(' % ')[0], m: 2 });
+      k = m.index + m[0].length;
+    }
     texto(tx.slice(k)); return { t: 'parrafo', seg };
   }
   // En Hekatan LISP «[a, b, c]» (una fila, con comas) es un VECTOR 1D = columna: su transpose es fila y transpose(v)·M multiplica.
@@ -99,12 +115,15 @@
     rep(new RegExp(ANTES + 'inv\\(\\s*' + ID + '\\s*\\)', 'gu'), (a) => nom(a[1]) + '<sup>−1</sup>');
     rep(new RegExp(ANTES + 'transpose\\(\\s*' + ID + '\\s*\\)', 'gu'), (a) => nom(a[1]) + '<sup>T</sup>');
     rep(new RegExp(ANTES + ID + '\\^(-1|T)(?![\\p{L}\\p{N}])', 'gu'), (a) => nom(a[1]) + '<sup>' + (a[2] === '-1' ? '−1' : 'T') + '</sup>');
+    rep(/\^\{([^{}]*)\}/g, (a) => '<sup>' + a[1].replace(/-/g, '−') + '</sup>');          // A^{-1}, (cof(A))^{T}: superíndice (como el render de Hekatan LISP)
+    rep(/_\{([^{}]*)\}/g, (a) => '<sub>' + a[1] + '</sub>');
+    rep(/(?<![\p{L}\p{N}_&#])(\p{L}{1,3})_([\p{L}\p{N}]{1,4})(?![\p{L}\p{N}_])/gu, (a) => a[1] + '<sub>' + a[2] + '</sub>');          // A_n, K_ff, u_f en la prosa: subíndice (como Hekatan LISP)
     if (cambio) h = h.replace(/(?<=[\p{L}\p{N})\]>])(?<!\*)\*(?!\*)(?=[\p{L}\p{N}(<])/gu, '·');
     // matrices literales [a, b; c, d] dibujadas (corchetes, filas y columnas) y «1/det·[...]» con su fracción; letra griega + letras = subíndice (αij → α_ij)
     const TD = 'padding:1px 9px;text-align:center;white-space:nowrap';
     const celda = (c) => c.trim().replace(/^(ok|mal):\s*/, '').replace(/([α-ωΑ-Ω])_?([A-Za-z]{1,2})(?![\p{L}\p{N}])/gu, '$1<sub>$2</sub>');
     const estCas = (c) => { const m = /^\s*(ok|mal):/.exec(c); return m ? (m[1] === 'ok' ? ';background:#dff3e6;color:#1e8449;font-weight:600;border-radius:5px' : ';background:#fbe3e0;color:#c0392b;font-weight:600;border-radius:5px') : ''; };
-    const matriz = (cuerpo) => '<table style="display:inline-table;vertical-align:middle;border-collapse:separate;border-left:2px solid #1d2430;border-right:2px solid #1d2430;border-radius:7px;margin:0 3px">' + cuerpo.split(';').map((f) => '<tr>' + f.split(',').map((c) => '<td style="' + TD + estCas(c) + '">' + celda(c) + '</td>').join('') + '</tr>').join('') + '</table>';
+    const matriz = (cuerpo) => '<table style="display:inline-table;vertical-align:middle;border-collapse:separate;border-left:1.5px solid #1d2430;border-right:1.5px solid #1d2430;margin:0 3px;background:linear-gradient(#1d2430,#1d2430) left top/5px 1.5px no-repeat,linear-gradient(#1d2430,#1d2430) left bottom/5px 1.5px no-repeat,linear-gradient(#1d2430,#1d2430) right top/5px 1.5px no-repeat,linear-gradient(#1d2430,#1d2430) right bottom/5px 1.5px no-repeat">' + cuerpo.split(';').map((f) => '<tr>' + f.split(',').map((c) => '<td style="' + TD + estCas(c) + '">' + celda(c) + '</td>').join('') + '</tr>').join('') + '</table>';
     const frac = (n, d) => '<span style="display:inline-block;vertical-align:middle;text-align:center;margin:0 3px"><span style="display:block;border-bottom:1px solid #1d2430;padding:0 4px">' + n + '</span><span style="display:block;padding:0 4px">' + d + '</span></span>';
     h = h.replace(/(?<![\p{L}\p{N}_])1\/(det)\s*·?\s*\[([^\[\]]*;[^\[\]]*)\]/gu, (m, d, c) => { cambio = true; return frac('1', d) + matriz(c); });
     h = h.replace(/\[([^\[\]<>]*;[^\[\]<>]*)\]/g, (m, c) => { cambio = true; return matriz(c); });
@@ -118,7 +137,7 @@
   }
   function importa(fuente) {
     fuente = griegasEnCodigo(fuente); for (const k in omitidas) delete omitidas[k];
-    const items = []; let bloque = [], original = [], prof = 0, oculto = false, primera = true;
+    const items = []; let bloque = [], original = [], prof = 0, oculto = false, primera = true, numerico = false;
     const raw = (texto, oc) => items.push({ t: 'raw', text: texto, oculto: !!oc });
     const cuenta = (n) => { omitidas[n] = (omitidas[n] || 0) + 1; };
     function vacia() {
@@ -128,7 +147,7 @@
         if (md1 && !RxBloque.test(sc1) && !sc1.endsWith(';')) {          // UNA sola línea (no repetir la variable debajo): «x = 8» se queda así; «R = √(…)» → «R = √(…) = 23.4» con el resultado al final
           const der = sc1.slice(sc1.indexOf('=') + 1).trim(), com = cod.indexOf(' % ') >= 0 ? cod.slice(cod.indexOf(' % ')) : '';
           if (der === md1[1]) cod = md1[1] + ' =' + com;          // «F = F» (volver a mostrar una variable) → «F = 1.44»
-          else if (!/^-?[\d.]+([eE][+-]?\d+)?$/.test(der)) cod = sc1 + ' =' + com;
+          else if (!/^-?[\d.]+([eE][+-]?\d+)?$/.test(der) && !/^\[[^\[\]()*\/^]*\]$/.test(der)) cod = sc1 + ' =' + com;          // «A = [a, b; c, d]» (matriz literal) se ve UNA vez, sin repetir «= [..]» (como ArchivoHlisp.Vacia del escritorio)
         }
       }
       const bal = (s) => { let p = 0; for (const k of s.split('%')[0].replace(/"[^"]*"/g, '')) { if (k === '(') p++; else if (k === ')') p--; } return p; };
@@ -146,12 +165,12 @@
       if (t === '#show') { vacia(); oculto = false; continue; }
       if (t.startsWith('#:') && /\$[^$]+\$/.test(t)) { vacia(); items.push(parrafoMixto(t.slice(2).trim())); continue; }          // «#: texto $ecuación$ texto»: las ecuaciones entre $…$ van dibujadas DENTRO de la frase
       if (t.startsWith('#:')) { vacia(); const tx = t.slice(2).trim(), ph = prosaHtml(tx); items.push(ph ? { t: 'texto', text: tx, html: ph } : { t: 'texto', text: tx }); continue; }
-      if (t.startsWith('##')) { vacia(); const nv = t.match(/^#+/)[0].length; items.push({ t: 'texto', text: t.replace(/^#+/, '').trim(), titulo: true, nivel: Math.min(nv, 3) }); continue; }
+      if (t.startsWith('##')) { vacia(); const nv = t.match(/^#+/)[0].length; const tt = t.replace(/^#+/, '').trim(), it = { t: 'texto', text: tt, titulo: true, nivel: Math.min(nv, 3) }; if (/[\^_]\{/.test(tt)) { const ph = prosaHtml(tt); if (ph) it.html = ph; } items.push(it); continue; }          // «## A·A^{-1} = I»: el exponente también en el título
       if (t.startsWith('# ') && primera) { vacia(); items.push({ t: 'texto', text: t.slice(1).trim(), titulo: true, nivel: 1 }); primera = false; continue; }
       if (t.startsWith('# ') || t === '#') continue;          // comentario de la hoja: no se dibuja
       if (t.startsWith('#')) {          // directiva de Hekatan LISP
         vacia(); primera = false; const nombre = (/^#(\w+)/.exec(t) || [])[1] || '', txt = [l];
-        if (nombre === 'numerico' || nombre === 'simbolico') { cuenta('#' + nombre + ' (sin efecto)'); continue; }
+        if (nombre === 'numerico' || nombre === 'simbolico') { if (nombre === 'numerico') numerico = true; cuenta('#' + nombre + ' (oculto)'); continue; }          // no se dibuja; la hoja queda marcada «numerico» (como el escritorio)
         if (nombre === 'fplot') { const cod = traduceFplot(t); if (cod) { items.push(oculto ? { t: 'eq', codigo: cod, modo: 0, oculto: true, orig: '' } : { t: 'eq', codigo: cod, modo: 0, orig: '' }); cuenta('#fplot (nativa)'); continue; } }
         if (nombre === 'slider') {          // #slider fplot(f1, f2, [a b]), n = lo:hi → un deslizador de la hoja (n) y la gráfica nativa que lo usa: al moverlo la curva se redibuja
           const ms = /^#slider\s+(fplot|fresorte|fresortesim|ftrocito|friemann)\s*\((.*)\)\s*,\s*([\p{L}_][\p{L}\p{N}_]*)\s*=\s*(-?[\d.eE+-]+)\s*:\s*(-?[\d.eE+-]+)\s*$/u.exec(t), cod = ms && (ms[1] === 'fplot' ? traduceFplot('#fplot(' + ms[2] + ')') : ms[1] + '(' + ms[2].replace(/·/g, '*') + ')');
@@ -178,14 +197,15 @@
     }
     vacia();
     for (const k of misma) if (items[k]) items[k].mismaLinea = true;
-    return { formato: 'hmath 1', estilo: 'lisp', eq: 15.33, txt: 15, gap: 0, items };
+    const hoja = { formato: 'hmath 1', estilo: 'lisp', eq: 15.33, txt: 15, gap: 0, items }; if (numerico) hoja.numerico = true;
+    return hoja;
   }
   // ---------------------------------------------------------------- hoja → texto de Hekatan LISP (lo inverso de importa): «# título» «## sección» «#: párrafo» · cálculo tal cual · #fplot · bloques LISP tal cual
   const GrafSlider = /^(fplot|fresorte|fresortesim|ftrocito|friemann)\s*\(/;
   function exporta(json) {
     const d = typeof json === 'string' ? JSON.parse(json) : json, o = []; let oc = false;
     const ocultar = (x) => { if (!!x.oculto !== oc) { o.push(x.oculto ? '#hide' : '#show'); oc = !!x.oculto; } };
-    const prm = (seg) => seg.map((g) => g.eq !== undefined ? '$' + adiff(g.eq) + '$' : g.s !== undefined ? (g.b ? '**' + g.s + '**' : g.s) : '').join('');
+    const prm = (seg) => seg.map((g) => Array.isArray(g.sis) ? '$' + g.sis.map(adiff).join('; ') + '$' : g.eq !== undefined ? '$' + adiff(g.eq) + '$' : g.s !== undefined ? ((s0) => g.b ? '**' + s0 + '**' : s0)(g.va === 'sup' ? '^{' + g.s.replace(/−/g, '-') + '}' : g.va === 'sub' ? '_{' + g.s + '}' : g.s) : '').join('');
     const unaLinea = (s) => String(s).replace(/\s*\n\s*/g, ' ').trim();
     // diff(a, v) / pdiff(a, v) (lo que guarda la hoja) -> Derivate{a @ v} / Partial{a @ v} (como se escribe en Hekatan LISP)
     const adiff = (s) => { let r = String(s); for (let g = 0; g < 30; g++) { const m = /(?<![\p{L}\p{N}_])(pdiff|diff)\(/u.exec(r); if (!m) break; const ini = m.index + m[0].length; let p = 1, k = ini, com = -1; for (; k < r.length && p > 0; k++) { const c = r[k]; if (c === '(' || c === '[' || c === '{') p++; else if (c === ')' || c === ']' || c === '}') p--; else if (c === ',' && p === 1 && com < 0) com = k; } if (p !== 0 || com < 0) break; r = r.slice(0, m.index) + (m[1] === 'pdiff' ? 'Partial' : 'Derivate') + '{' + r.slice(ini, com).trim() + ' @ ' + r.slice(com + 1, k - 1).trim() + '}' + r.slice(k); } return r; };
@@ -203,7 +223,7 @@
         o.push('#slider ' + cg + ', ' + pend.nombre + ' = ' + pend.min + ':' + pend.max); pend = null; ultNom = null; ultEq = -1; return;
       }
       if (x.t === 'texto' || x.t === 'parrafo') {
-        const t = unaLinea(x.t === 'texto' ? (x.html && !x.titulo ? dehtml(x.html) : x.text) : prm(x.seg || [])); if (!t) return;
+        const t = unaLinea(x.t === 'texto' ? (x.fuente || (x.html && !x.titulo ? dehtml(x.html) : x.text)) : prm(x.seg || [])); if (!t) return;
         if (x.mismaLinea && x.t === 'texto' && !x.titulo && ultEq >= 0 && ultEq === o.length - 1 && !o[ultEq].includes('\n')) { o[ultEq] += " '" + t; return; }          // «f = ... 'nota»: la nota va al final de la linea de la formula
         if (x.titulo) o.push('#'.repeat(Math.min(3, x.nivel || 1)) + ' ' + t); else o.push('#: ' + t);
       } else if (x.t === 'eq') {
@@ -211,7 +231,8 @@
         if (ultNom && String(x.codigo || '').trim() === ultNom && !x.mismaLinea) return;          // el eco «x» de «x = expr» lo pone la importacion
         ls = ls.filter((l, i) => !(l.trim() === '' && (i === 0 || i === ls.length - 1))); { let q = ls.length - 1; while (q > 0 && ls[q].trim() === '') q--; const m = q > 0 ? /^([\p{L}_][\p{L}\p{N}_]*)\s*=/u.exec(ls[q - 1]) : null; if (m && ls[q].trim() === m[1]) ls = ls.slice(0, q).concat(ls.slice(q + 1)); }          // «x = expr» + «x»: el eco lo pone la importación
         { const mnom = /^([\p{L}_][\p{L}\p{N}_]*)\s*=[^=]/u.exec(ls[ls.length - 1] || ''); ultNom = mnom && ls.length === 1 ? mnom[1] : null; }
-        o.push(ls.map((l) => { l = adiff(l).replace(/^(\s*)fplot\s*\((.*)\[\s*([^\],]+?)\s*[, ]\s*([^\],]+?)\s*\]\s*\)\s*$/, '$1#fplot($2[$3 $4])'); return l.replace(/\s+%\s*(.*)$/, " '$1"); }).join('\n'));
+        o.push(ls.map((l) => { if (/^\s*fplot\s*\(/.test(l)) l = l.replace(/\s*==\s*/g, ' = ').replace(/puntos\(\[([^\]]*)\]\)/g, (m0, q) => 'puntos = [' + q.split(';').map((f) => f.split(',').map((s) => s.trim()).join(' ')).join('; ') + ']');          // vuelve a la forma de Hekatan LISP: «ec_1 = …», «puntos = [x y]»
+          l = adiff(l).replace(/^(\s*)fplot\s*\((.*)\[\s*([^\],]+?)\s*[, ]\s*([^\],]+?)\s*\]\s*\)\s*$/, '$1#fplot($2[$3 $4])'); return l.replace(/\s+%\s*(.*)$/, " '$1"); }).join('\n'));
       } else if (x.t === 'slider') pend = x;
       else if (x.t === 'cad') o.push('#autolisp\n' + String(x.codigo || '').replace(/\s+$/, '') + '\n#fin');
       else if (x.t === 'raw') o.push(String(x.text || '').replace(/\s+$/, ''));

@@ -202,13 +202,33 @@
   }
   function guardaComo() { const n = prompt('Nombre del archivo', 'hoja'); if (!n) return; const nom = n.replace(/\.hmath$/i, ''); H().descarga(nom); recuerda(nom + '.hmath', H().guarda()); estado('Guardado: ' + nom + '.hmath'); }
   function guarda() { H().descarga(); recuerda('hoja.hmath', H().guarda()); }
-  function nuevo() { H().limpia(); estado('Hoja nueva'); pagina(); H().nuevaEq(''); }
-  const comoHmath = (nombre, t) => HK.hlisp && HK.hlisp.esHlisp(nombre, t) ? JSON.stringify(HK.hlisp.importa(t)) : t;          // .lisp / .hlisp → la misma conversión que el WPF
+  function nuevo() { HK.lispFuente = null; H().limpia(); estado('Hoja nueva'); pagina(); H().nuevaEq(''); }
+  const comoHmath = (nombre, t) => { const l = HK.hlisp && HK.hlisp.esHlisp(nombre, t); HK.lispFuente = l ? t : null; return l ? JSON.stringify(HK.hlisp.importa(t)) : t; };          // HK.lispFuente: el texto .lisp tal cual (para «Compartir» si la hoja no se tocó)          // .lisp / .hlisp → la misma conversión que el WPF
   // una página de error (404) no se abre como hoja: avisa que el ejemplo no existe
   async function abreEjemplo(f) { { const m = /^(\d+[a-z]?) /.exec(String(f).split('/').pop()); HK.ejActual = m ? m[1] : null; } try { const rs = await fetch(f); if (!rs.ok) { estado('No existe el ejemplo ' + f.split('/').pop()); return; } const tx = await rs.text(); if (/^\s*<!DOCTYPE html/i.test(tx)) { estado('No existe el ejemplo ' + f.split('/').pop()); return; } const t = comoHmath(f, tx); H().abre(t); estado('Abierto: ' + f.split('/').pop()); setTimeout(pagina, 50); } catch (e) { estado('No se pudo abrir ' + f + ' (la página debe servirse por http)'); } }
   function cuadricula() { document.body.classList.toggle('cuad'); $('m-cuadricula').classList.toggle('activa', document.body.classList.contains('cuad')); }
   $('m-cuadricula').onclick = cuadricula;
-  $('m-compartir').onclick = () => { capturaPng('hoja', true); };
+  // «Compartir» = un ENLACE (como Math Studio de escritorio y Hekatan LISP web): <esta página>#lisp=<base64url del script de Hekatan LISP en UTF-8>; abreDeHash lo abre
+  function enlaceHoja() {
+    const tocada = (H().reg || []).some((q) => q.editado);
+    const txt = (!tocada && HK.lispFuente) || HK.hlisp.exporta(H().guarda());
+    const u8 = new TextEncoder().encode(txt); let s = ''; for (let i = 0; i < u8.length; i += 32768) s += String.fromCharCode.apply(null, u8.subarray(i, i + 32768));
+    return location.href.split('#')[0] + '#lisp=' + btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function aviso(t) { let a = document.getElementById('hk-toast'); if (!a) { a = document.createElement('div'); a.id = 'hk-toast'; a.style.cssText = 'position:fixed;left:50%;bottom:42px;transform:translateX(-50%);z-index:60;background:#1e7d45;color:#fff;padding:7px 16px;border-radius:8px;font:13px Segoe UI,sans-serif;box-shadow:0 2px 10px #0004;transition:opacity .3s'; document.body.appendChild(a); } a.textContent = t; a.style.opacity = '1'; clearTimeout(a._t); a._t = setTimeout(() => { a.style.opacity = '0'; }, 2200); }
+  function dialogoEnlace(url) {          // sin portapapeles (http, permiso denegado…): el enlace en un cuadro, ya seleccionado, para Ctrl+C
+    let v = document.getElementById('hk-enlace'); if (v) v.remove();
+    v = document.createElement('div'); v.id = 'hk-enlace'; v.style.cssText = 'position:fixed;inset:0;z-index:70;background:#0005;display:flex;align-items:center;justify-content:center';
+    v.innerHTML = '<div style="background:#fff;border-radius:10px;padding:14px 16px;width:min(560px,92vw);font:13px Segoe UI,sans-serif;box-shadow:0 4px 24px #0006"><b>Enlace de la hoja</b><div style="margin:4px 0 8px;color:#555">Cópialo con Ctrl+C y compártelo: al abrirlo se carga esta hoja.</div><textarea readonly spellcheck="false" style="width:100%;height:90px;font:12px Consolas,monospace;resize:vertical"></textarea><div style="text-align:right;margin-top:8px"><button data-a="cp">Copiar</button> <button data-a="x">Cerrar</button></div></div>';
+    document.body.appendChild(v); const ta = v.querySelector('textarea'); ta.value = url; ta.focus(); ta.select();
+    v.addEventListener('click', (e) => { if (e.target === v) return v.remove(); const b = e.target.closest('button'); if (!b) return; if (b.dataset.a === 'x') return v.remove(); ta.select(); let ok = false; try { ok = document.execCommand('copy'); } catch (er) { ok = false; } if (ok) { aviso('✓ Enlace copiado'); v.remove(); } else estado('Selecciona el enlace y usa Ctrl+C'); });
+  }
+  $('m-compartir').onclick = () => {
+    let url; try { url = enlaceHoja(); } catch (e) { estado('No se pudo armar el enlace: ' + e.message); return; }
+    const ok = () => { aviso('✓ Enlace copiado'); estado('Enlace copiado (' + url.length + ' caracteres): al abrirlo se carga esta hoja'); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(ok, () => dialogoEnlace(url)); else dialogoEnlace(url);
+  };
+  HK.enlaceHoja = enlaceHoja;
   // Script de Hekatan LISP: la hoja como texto (se copia, se descarga como .lisp, se edita y se vuelve a aplicar con la misma importación del WPF)
   $('m-hlisp').onclick = () => {
     let v = document.getElementById('hlisp-modal'); if (v) { v.remove(); return; }
@@ -665,7 +685,7 @@
     try {
       let b = m[1].replace(/-/g, '+').replace(/_/g, '/'); while (b.length % 4) b += '=';
       const txt = new TextDecoder('utf-8').decode(Uint8Array.from(atob(b), (c) => c.charCodeAt(0)));
-      H().abre(JSON.stringify(HK.hlisp.importa(txt))); estado('Script de Hekatan Code abierto'); setTimeout(pagina, 50);
+      H().abre(JSON.stringify(HK.hlisp.importa(txt))); HK.lispFuente = txt; estado('Hoja abierta desde el enlace'); setTimeout(pagina, 50);
     } catch (e) { estado('No se pudo abrir el script de la dirección: ' + e.message); }
   }
   setTimeout(abreDeHash, 0); window.addEventListener('hashchange', abreDeHash);

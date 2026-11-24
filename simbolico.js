@@ -95,6 +95,18 @@
           return '(expt ' + T(a.a, c) + ' ' + ratDe(String(e)) + ')';
         }
         const op = { '+': '+', '-': '-', '*': '*', imp: '*', '/': '/' }[a.op]; if (!op) throw new Error('operador sin forma simbólica: ' + a.op);
+        if (esMatL(a.a, c, 0) || esMatL(a.b, c, 0)) {
+          if (op === '*' && esMatL(a.a, c, 0) && esMatL(a.b, c, 0)) {          // dos vectores columna de igual largo (en Hekatan LISP [1, ξ] es un vector 1D): su producto es el producto punto
+            const ca = matCod(a.a, c), cb = matCod(a.b, c), dim = (q) => lisp("(let ((x (meval '" + q + "))) (if (and (vectorp x) (> (length x) 0) (vectorp (aref x 0))) (list (length x) (length (aref x 0))) nil))");
+            const da = dim(ca), db = dim(cb), ma = /^\((\d+) (\d+)\)$/.exec(da), mb = /^\((\d+) (\d+)\)$/.exec(db);
+            if (ma && mb && ma[2] !== mb[1]) {
+              if (ma[2] === '1' && mb[2] === '1' && ma[1] === mb[1]) return lisp("(let ((x (meval '(* (mtransp " + ca + ') ' + cb + ')))) (loop while (and (vectorp x) (= (length x) 1)) do (setf x (aref x 0))) x)');
+              if (ma[2] === '1' && ma[1] === mb[1]) return lisp("(meval '(* (mtransp " + ca + ') ' + cb + '))').replace(/#\(/g, '(vec ');          // vector 1D · matriz ([1, ξ]·M) = fila · matriz, como Hekatan LISP
+              throw new Error('producto de matrices: ' + ma[1] + '×' + ma[2] + ' por ' + mb[1] + '×' + mb[2]);
+            }
+          }
+          return lisp("(meval '" + matCod(a, c) + ')').replace(/#\(/g, '(vec ');          // A·A⁻¹, adj(A)/det(A), A·X con letras: producto / cociente de matrices en el motor (meval), como Hekatan LISP
+        }          // A·A⁻¹, adj(A)/det(A), A·X con letras: producto / cociente de matrices en el motor (meval), como Hekatan LISP
         return '(' + op + ' ' + T(a.a, c) + ' ' + T(a.b, c) + ')';
       }
       case 'call': return llamada(a, c);
@@ -103,12 +115,46 @@
     throw new Error('sin forma simbólica: ' + a.t);
   }
   // matriz con letras → código del motor: (vector (vector 'a 'b) (vector 'c 'd)); un nombre se resuelve hasta su definición
-  function matrizMotor(a, c) {
+  const MOTOR_MAT = { det: '(mdet ', adj: '(madjugate ', cof: '(mcofactors ', inv: '(minv-auto ', transpose: '(mtransp ' };
+  function matrizMotor(a, c, rect) {          // rect: transpose acepta matrices no cuadradas
     for (let k = 0; a && a.t === 'id' && c.env.l && a.n in c.env.l && k < 20; k++) a = c.env.l[a.n];
     if (a && a.t === 'paren') a = a.a;
+    { const mn = matNum(a, c, "'"); if (mn) return mn; }          // inv(K) con K numérica dentro de una expresión con letras
+    if (a && a.t === 'call' && MOTOR_MAT[a.f] && a.f !== 'det' && a.args.length === 1) return MOTOR_MAT[a.f] + matrizMotor(a.args[0], c, a.f === 'transpose') + ')';          // cof(A)ᵀ, inv(adj(A))…: anidadas, todo en el motor
+    if (a && (a.t === 'bin' || a.t === 'neg') && esMatL(a, c, 0)) return "'" + lisp("(meval '" + matCod(a, c) + ')');          // det(K − λ·M), (S_A·S_B)ᵀ: primero la operación de matrices (meval)
     if (!a || a.t !== 'mat') throw new Error('det, adj, inv y transpose simbólicos piden una matriz con letras, p. ej. A = [a, b; c, d]');
-    if (a.rows.length > 6 || a.rows.some((r) => r.length !== a.rows.length)) throw new Error('matriz simbólica: cuadrada, de hasta 6 × 6');
+    if (a.rows.length > 6 || (!rect && a.rows.some((r) => r.length !== a.rows.length))) throw new Error('matriz simbólica: cuadrada, de hasta 6 × 6');
     return '(vector ' + a.rows.map((r) => '(vector ' + r.map((x) => "'" + T(x, c)).join(' ') + ')').join(' ') + ')';
+  }
+  // ¿es una MATRIZ de letras (literal, nombre que la guarda, inv/adj/cof/transpose de una, o una operación con ellas)? Para el camino meval de T
+  function esMatL(a, c, prof) {
+    if (!a || typeof a !== 'object' || prof > 30) return false;
+    if (a.t === 'paren') return esMatL(a.a, c, prof + 1);
+    if (a.t === 'mat') return true;
+    if (a.t === 'call') return !!MOTOR_MAT[a.f] && a.f !== 'det';
+    if (a.t === 'id') return !!matNum(a, c) || (!!(c.env.l && a.n in c.env.l) && esMatL(c.env.l[a.n], c, prof + 1));
+    if (a.t === 'neg') return esMatL(a.a, c, prof + 1);
+    if (a.t === 'bin' && a.op !== '^') return esMatL(a.a, c, prof + 1) || esMatL(a.b, c, prof + 1);
+    return false;
+  }
+  // un nombre que guarda una matriz NUMÉRICA (env.v): (vector (vector …)) con racionales, para mezclarla con letras (c₁ = inv(M)·[1; 0] y luego [1; ξ]·c₁)
+  function matNum(a, c, q) {
+    const v = a && a.t === 'id' && !(c.env.l && a.n in c.env.l) && c.env.v ? c.env.v[a.n] : null;
+    if (!v || !HK.M || !HK.M.esM(v) || v.a.some((x) => typeof x !== 'number' || !isFinite(x))) return null;
+    const fl = []; for (let i = 0; i < v.r; i++) { const f = []; for (let j = 0; j < v.c; j++) f.push((q || '') + ratDe(String(v.g(i, j)))); fl.push('(vector ' + f.join(' ') + ')'); }
+    return '(vector ' + fl.join(' ') + ')';
+  }
+  // código para meval: las matrices de letras como (vector (vector …)) y inv/adj/cof/transpose ya calculadas por el motor (#(#(…)))
+  function matCod(a, c) {
+    switch (a.t) {
+      case 'paren': return matCod(a.a, c);
+      case 'id': if (matNum(a, c)) return matNum(a, c); return c.env.l && a.n in c.env.l && esMatL(c.env.l[a.n], c, 0) ? matCod(c.env.l[a.n], c) : T(a, c);
+      case 'mat': return '(vector ' + a.rows.map((r) => '(vector ' + r.map((x) => T(x, c)).join(' ') + ')').join(' ') + ')';
+      case 'neg': return '(* -1 ' + matCod(a.a, c) + ')';
+      case 'bin': { const op = { '+': '+', '-': '-', '*': '*', imp: '*', '/': '/' }[a.op]; return op ? '(' + op + ' ' + matCod(a.a, c) + ' ' + matCod(a.b, c) + ')' : T(a, c); }
+      case 'call': if (MOTOR_MAT[a.f] && a.f !== 'det' && a.args.length === 1) return lisp(MOTOR_MAT[a.f] + matrizMotor(a.args[0], c, a.f === 'transpose') + ')'); return T(a, c);
+    }
+    return T(a, c);
   }
   // ¿la expresión lleva matrices (literal [..] o transpose) aunque sea a través de nombres definidos en la hoja?
   function conMatriz(a, c, prof) {
@@ -151,8 +197,8 @@
     }
     if (['sin', 'cos', 'exp', 'ln', 'sqrt'].includes(f)) return '(' + f + ' ' + T(a.args[0], c) + ')';
     if (f === 'log') return '(ln ' + T(a.args[0], c) + ')';
-    if ((f === 'det' || f === 'adj' || f === 'inv' || f === 'transpose') && a.args.length === 1) {          // determinante, adjunta, inversa y traspuesta con letras (motor de Hekatan LISP: mdet, madjugate, minv-auto, mtransp)
-      const m = matrizMotor(a.args[0], c), r = lisp({ det: '(mdet ', adj: '(madjugate ', inv: '(minv-auto ', transpose: '(mtransp ' }[f] + m + ')');
+    if (MOTOR_MAT[f] && a.args.length === 1) {          // determinante, adjunta, inversa y traspuesta con letras (motor de Hekatan LISP: mdet, madjugate, minv-auto, mtransp)
+      const m = matrizMotor(a.args[0], c, f === 'transpose'), r = lisp(MOTOR_MAT[f] + m + ')');
       return f === 'det' ? r : r.replace(/#\(/g, '(vec ');          // la matriz vuelve como #(#(..) #(..)) → (vec (vec ..) (vec ..)) para dibujarla
     }
     if (f === 'simplify' || f === 'expand') { const x = T(a.args[0], c); return x.startsWith('(vec ') ? x : lisp("(simplify '" + x + ')'); }
@@ -262,7 +308,7 @@
         if (xs[0].t === 'num' && xs[0].s === '1' && xs.length > 1) xs.shift();
         if (xs[0].t === 'neg' && xs[0].a.t === 'num' && xs[0].a.s === '1' && xs.length > 1) { neg = true; xs.shift(); }
         else if (xs[0].t === 'neg') { neg = true; xs[0] = xs[0].a; }
-        let r = par(xs[0]); for (let i = 1; i < xs.length; i++) { const y = par(xs[i]); r = { t: 'bin', op: y.t === 'num' || (y.t === 'bin' && y.op === '/') ? '*' : 'imp', a: r, b: y }; }
+        let r = par(xs[0]); for (let i = 1; i < xs.length; i++) { const y = par(xs[i]); r = { t: 'bin', op: y.t === 'num' || (y.t === 'bin' && y.op === '/') || conPunto() ? '*' : 'imp', a: r, b: y }; }          // hoja de Hekatan LISP: a·d − b·c (con punto, como LISP); si no, ad − bc
         return neg ? { t: 'neg', a: r.t === 'bin' && (r.op === '+' || r.op === '-') ? { t: 'paren', a: r } : r } : r;
       }
       case '/': return { t: 'bin', op: '/', a: k[0], b: k[1] };
@@ -271,6 +317,7 @@
       default: return { t: 'call', f: op, args: k };
     }
   }
+  const conPunto = () => typeof document !== 'undefined' && document.body && document.body.classList.contains('lisp');
   function par2(a) { return a.t === 'bin' && (a.op === '+' || a.op === '-') ? { t: 'paren', a } : a; }
 
   // ---------------------------------------------------------------- API
