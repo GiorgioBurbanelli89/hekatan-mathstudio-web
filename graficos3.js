@@ -130,7 +130,8 @@
   const plano = (v) => v && v.a ? Array.from(v.a).map(num) : (typeof v === 'number' ? [v] : []);
   function modelo3d(inside) {
     const nom = partes(inside, ','), env = entorno(), V = nom.map((q) => { try { return ev(q, env); } catch (e) { return null; } });
-    const X = filas(V[0]), S = filas(V[1]), B = filas(V[2]), vN = plano(V[3]); let vB = filas(V[4]); if (vB.length !== B.length || vB.some((r) => r.length < 2)) { const f = plano(V[4]); vB = B.map((_, k) => [f[2 * k] || 0, f[2 * k + 1] || 0]); }
+    const limpia = (a) => { const mx = a.reduce((s, q) => Math.max(s, Math.abs(q) || 0), 0), tol = 1e-12 * (mx || 1); return a.map((q) => Math.abs(q) < tol ? 0 : q); };          // ruido de redondeo (4.661e-16) = 0 en la barra de colores, como LISP (0.0000)
+    const X = filas(V[0]), S = filas(V[1]), B = filas(V[2]), vN = limpia(plano(V[3])); let vB = filas(V[4]); if (vB.length !== B.length || vB.some((r) => r.length < 2)) { const f = plano(V[4]); vB = B.map((_, k) => [f[2 * k] || 0, f[2 * k + 1] || 0]); }
     const U = V.length > 5 ? filas(V[5]) : [], escv = V.length > 6 ? num(V[6]) || 0 : 0, anim = V.length > 7 ? num(V[7]) || 0 : 0;
     const D = { X, S, B, vN, vB, esc: escv, anim, nS: nom[3] || '', nB: nom[4] || '' }; if (U.length === X.length) D.U = U.map((r) => r.slice(0, 3));
     const html = '<div class="hk-m3d" style="position:relative;display:inline-block;max-width:100%"><canvas id="hkm3dw' + (idM++) + '" width="900" height="600" style="max-width:100%;height:auto;cursor:grab;touch-action:none" data-m3d="' + esc(JSON.stringify(D)) + '"></canvas><div class="hk-m3d-tip" style="position:absolute;display:none;pointer-events:none;background:rgba(255,255,255,.95);color:#111;border:1px solid #888;border-radius:4px;padding:3px 7px;font:12px monospace;white-space:pre"></div></div>';

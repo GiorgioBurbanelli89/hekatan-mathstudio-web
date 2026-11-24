@@ -206,7 +206,7 @@
     const ult = args[args.length - 1];
     if (ult && ult.t === 'vec' && ult.items.length === 2) { lo = num(ult.items[0]); hi = num(ult.items[1]); args.pop(); }
     else if (args.length >= 3) { hi = num(args.pop()); lo = num(args.pop()); }
-    const n = 200, xs = Array.from({ length: n + 1 }, (_, i) => lo + (hi - lo) * i / n), ys = [], nombres = [], pts = [];
+    const n = 200, xs = Array.from({ length: n + 1 }, (_, i) => lo + (hi - lo) * i / n), ys = [], nombres = [], pts = [], series = [];
     args = args.filter((a) => {          // puntos([x, y; x, y]): marcas (como «puntos = [x y]» de Hekatan LISP), no una curva
       if (!(a.t === 'call' && a.f === 'puntos' && a.args.length === 1)) return true;
       const v = num(a.args[0]), q = HK.M && HK.M.esM(v) ? v : null;
@@ -216,10 +216,14 @@
     args.forEach((a, k) => {
       let ex = a, nom = 'f' + (k + 1);
       if (a.t === 'bin' && a.op === '==') { ex = a.b; if (a.a.t === 'id') nom = a.a.n; }          // «ec_1 == 5 − 2x»: la curva se llama ec_1 (leyenda), como Hekatan LISP
+      if (ex.t === 'id' && ex.n !== 'x') {          // «Q4 = P_q4» con P_q4 una matriz N×2 calculada en la hoja: SERIE de puntos (x, y), no una curva (HojaNumerica.EsSerieCalculada de Hekatan LISP)
+        let v = null; try { v = num(ex); } catch (e) { v = null; }
+        if (v && HK.M && HK.M.esM(v) && v.c === 2 && v.r >= 1) { const p = []; for (let i = 0; i < v.r; i++) p.push([+v.a[2 * i], +v.a[2 * i + 1]]); series.push({ nom, p, col: k }); return; }
+      }
       ys.push(xs.map((x) => { try { return HK.evalua(ex, { v: Object.assign({}, env.v, { x }), f: env.f, l: env.l }); } catch (e) { if (/^indef:x?$/.test(e.message) === false && k === 0 && x === lo) throw e; return NaN; } }));
       nombres.push(nom);
     });
-    return { xs, ys, nombres, pts };
+    return { xs, ys, nombres, pts, series };
   }
   // fmapa(f(x,y), [x0,x1], [y0,y1])  y  fsuperficie(f(x,y), [x0,x1], [y0,y1], az, el)
   function malla2(args, env) {
@@ -355,7 +359,7 @@
     cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + 'px'; cv.style.height = H + 'px'; cv.style.margin = LG ? '4px auto 6px' : '4px 0 6px 6px';
     const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0);
     const L = 46, T = 12, R = 12, B = LG ? 40 : 30, w = W - L - R, h = H - T - B;
-    let mn = Infinity, mx = -Infinity; g.ys.forEach((y) => y.forEach((v) => { if (isFinite(v)) { mn = Math.min(mn, v); mx = Math.max(mx, v); } })); (g.pts || []).forEach((p) => { if (isFinite(p[1])) { mn = Math.min(mn, p[1]); mx = Math.max(mx, p[1]); } });
+    let mn = Infinity, mx = -Infinity; g.ys.forEach((y) => y.forEach((v) => { if (isFinite(v)) { mn = Math.min(mn, v); mx = Math.max(mx, v); } })); (g.pts || []).concat(...(g.series || []).map((s) => s.p)).forEach((p) => { if (isFinite(p[1])) { mn = Math.min(mn, p[1]); mx = Math.max(mx, p[1]); } });
     if (!isFinite(mn)) { mn = -1; mx = 1; } if (mx - mn < 1e-12) { mn -= 1; mx += 1; } const sy = paso(mx - mn, 5); mn = Math.floor((mn - (mx - mn) * .04) / sy) * sy; mx = Math.ceil((mx + (mx - mn) * .04) / sy) * sy;          // el eje y arranca y termina en una marca redonda (como el WPF)
     const x0 = g.xs[0], x1 = g.xs[g.xs.length - 1], X = (x) => L + (x - x0) / (x1 - x0) * w, Y = (y) => T + h - (y - mn) / (mx - mn) * h;
     c.fillStyle = '#fff'; c.fillRect(L, T, w, h); c.font = '11px sans-serif'; c.fillStyle = '#555'; c.strokeStyle = '#e3e3e3'; c.lineWidth = 1;
@@ -365,18 +369,19 @@
     if (mn < 0 && mx > 0) { c.strokeStyle = '#999'; c.beginPath(); c.moveTo(L, Y(0)); c.lineTo(L + w, Y(0)); c.stroke(); }
     c.save(); c.beginPath(); c.rect(L, T, w, h); c.clip();
     g.ys.forEach((ys, k) => { c.strokeStyle = PAL[k % PAL.length]; c.lineWidth = 1.8; c.beginPath(); let on = false; ys.forEach((v, i) => { if (!isFinite(v)) { on = false; return; } if (!on) { c.moveTo(X(g.xs[i]), Y(v)); on = true; } else c.lineTo(X(g.xs[i]), Y(v)); }); c.stroke(); });
+    (g.series || []).forEach((s) => { c.fillStyle = PAL[s.col % PAL.length]; s.p.forEach((p) => { if (!isFinite(p[0]) || !isFinite(p[1])) return; c.beginPath(); c.arc(X(p[0]), Y(p[1]), 4, 0, 7); c.fill(); }); });          // series de puntos (x, y) de la hoja
     (g.pts || []).forEach((p) => { c.fillStyle = '#f0b323'; c.beginPath(); c.arc(X(p[0]), Y(p[1]), 4.5, 0, 7); c.fill(); });          // puntos = [x y]: la marca (como Hekatan LISP: punto amarillo y «puntos» en la leyenda)
     c.restore(); HK.grip(c, W, H); c.strokeStyle = '#222'; c.lineWidth = 1; c.strokeRect(L, T, w, h); r.hv = { k: 'curvas', L, T, w, h, mn, mx, x0, x1, g };
-    if (!LG) { g.nombres.forEach((nm, k) => { c.fillStyle = PAL[k % PAL.length]; c.fillRect(L + 8, T + 8 + k * 14, 16, 3); c.fillStyle = '#333'; c.textAlign = 'left'; c.fillText(nm, L + 30, T + 12 + k * 14); }); return; }
+    if (!LG) { g.nombres.forEach((nm, k) => { c.fillStyle = PAL[k % PAL.length]; c.fillRect(L + 8, T + 8 + k * 14, 16, 3); c.fillStyle = '#333'; c.textAlign = 'left'; c.fillText(nm, L + 30, T + 12 + k * 14); }); (g.series || []).forEach((s, q) => { const yy = T + 8 + (g.nombres.length + q) * 14; c.fillStyle = PAL[s.col % PAL.length]; c.beginPath(); c.arc(L + 16, yy + 1, 3.5, 0, 7); c.fill(); c.fillStyle = '#333'; c.textAlign = 'left'; c.fillText(s.nom, L + 30, yy + 4); }); return; }
     {          // como Hekatan LISP: leyenda en un recuadro arriba a la derecha (nombre con subíndice: ec_1 → ec₁, en cursiva) y la «x» bajo el eje
-      const ents = g.nombres.map((nm, k) => ({ nm, col: PAL[k % PAL.length] })).concat((g.pts || []).length ? [{ nm: 'puntos', pto: true }] : []);
+      const ents = g.nombres.map((nm, k) => ({ nm, col: PAL[k % PAL.length] })).concat((g.series || []).map((s) => ({ nm: s.nom, pto: true, pc: PAL[s.col % PAL.length] })), (g.pts || []).length ? [{ nm: 'puntos', pto: true }] : []);
       const parte = (nm) => { const i = nm.indexOf('_'); return i > 0 ? [nm.slice(0, i), nm.slice(i + 1)] : [nm, '']; };
       const anchoNm = (nm) => { const [b0, s0] = parte(nm); c.font = 'italic 12px serif'; let a = c.measureText(b0).width; c.font = 'italic 9px serif'; return a + (s0 ? c.measureText(s0).width + 1 : 0); };
       const bw = 34 + Math.max(...ents.map((q) => anchoNm(q.nm))) + 8, bh = 8 + ents.length * 17, bx = L + w - bw - 8, by = T + 8;
       c.fillStyle = 'rgba(255,255,255,.92)'; c.fillRect(bx, by, bw, bh); c.strokeStyle = '#333'; c.lineWidth = 1; c.strokeRect(bx + .5, by + .5, bw, bh);
       ents.forEach((q, k) => {
         const yy = by + 13 + k * 17;
-        if (q.pto) { c.fillStyle = '#f0b323'; c.beginPath(); c.arc(bx + 18, yy - 1, 4.5, 0, 7); c.fill(); } else { c.strokeStyle = q.col; c.lineWidth = 2.4; c.beginPath(); c.moveTo(bx + 8, yy - 1); c.lineTo(bx + 28, yy - 1); c.stroke(); }
+        if (q.pto) { c.fillStyle = q.pc || '#f0b323'; c.beginPath(); c.arc(bx + 18, yy - 1, 4.5, 0, 7); c.fill(); } else { c.strokeStyle = q.col; c.lineWidth = 2.4; c.beginPath(); c.moveTo(bx + 8, yy - 1); c.lineTo(bx + 28, yy - 1); c.stroke(); }
         const [b0, s0] = parte(q.nm); c.fillStyle = '#222'; c.textAlign = 'left'; c.font = 'italic 12px serif'; c.fillText(b0, bx + 34, yy + 3); if (s0) { const a = c.measureText(b0).width; c.font = 'italic 9px serif'; c.fillText(s0, bx + 34 + a + 1, yy + 7); }
       });
       c.fillStyle = '#333'; c.font = 'italic 12px serif'; c.textAlign = 'center'; c.fillText('x', L + w / 2, H - 6);
@@ -391,7 +396,14 @@
     else for (let i = 0; i < f.length; i++) if (f[i].t === 'c' && (f[i].s === '=' || f[i].s === '≔')) { f[i]._tint = 'define'; return; }
   }
   function valorRes(v) {
-    if (HK.M.esM(v)) return v.r === 1 && v.c === 1 ? valorRes(v.a[0]) : { kind: 'mat', mat: v };
+    if (HK.M.esM(v)) {
+      if (v.r === 1 && v.c === 1) return valorRes(v.a[0]);
+      if (v.a.every((q) => typeof q === 'number')) {          // a la VISTA, el ruido de redondeo es 0 (B·B⁻¹ = I y no 1.11E-16; LISP es exacto): |v| < 1e-12·máx|entrada|
+        const mx = v.a.reduce((s, q) => Math.max(s, Math.abs(q)), 0), tol = 1e-12 * (mx || 1);
+        if (v.a.some((q) => q !== 0 && Math.abs(q) < tol)) v = new HK.M.Mat(v.r, v.c, v.a.map((q) => Math.abs(q) < tol ? 0 : q));
+      }
+      return { kind: 'mat', mat: v };
+    }
     const texto = HK.fmt(v), q = HK.U && HK.U.esQ(v), i = q ? texto.indexOf(' ') : -1;
     return { kind: 'val', texto, cu: i };          // cu: dónde empieza la unidad (se dibuja en teal)
   }
