@@ -196,7 +196,7 @@
     });
     c.appendChild(d); reg.push(r); r.dibuja(); return r;
   }
-  function limpia() { hoja.innerHTML = ''; reg.length = 0; activo = null; ultimaFila = null; }
+  function limpia() { hoja.innerHTML = ''; reg.length = 0; activo = null; ultimaFila = null; numHoja = false; }
 
   // ---------------------------------------------------------------- gráficas: fplot(f1, f2, …, [a,b])  (la expresión escrita directamente, como en Hekatan LISP)
   const PAL = ['#3a62d9', '#f2792f', '#2e9e4f', '#c13c6b', '#7b57c9', '#1b9aaa'];
@@ -668,7 +668,7 @@
   function copiaRegiones(e, corta) {
     const us = selRegiones(); if (!us.length) return false;
     const d = jsonSeleccion(us); if (!d.items.length) return false;
-    e.clipboardData.setData(TIPO_HOJA, JSON.stringify(d)); e.clipboardData.setData('text/plain', textoSeleccion(us)); e.preventDefault();
+    e.clipboardData.setData(TIPO_HOJA, JSON.stringify(d)); let txt = ''; try { txt = HK.hlisp && HK.hlisp.exporta ? HK.hlisp.exporta(JSON.stringify(d)) : ''; } catch (x) { txt = ''; } e.clipboardData.setData('text/plain', txt || textoSeleccion(us));          /* el TEXTO es script de Hekatan LISP: pegado en Hekatan LISP (web o escritorio) se calcula igual */ e.preventDefault();
     const s = document.getElementById('estado'); if (s) s.textContent = d.items.length + ' región(es) ' + (corta ? 'cortada(s)' : 'copiada(s)') + ': Ctrl+V las pega al final (en esta u otra hoja)';
     if (corta) { for (const u of us) { HK.hoja.quitaRegs(u); const f = u.parentElement; u.remove(); if (f && f.classList.contains('fila') && !f.children.length) f.remove(); } HK.mover.limpiaSel(); resolver(); }
     return true;
@@ -882,11 +882,13 @@
   G.addEventListener('resize', redibuja);
 
   // ---------------------------------------------------------------- abrir / guardar .hmath
+  var numHoja = false;          // var: limpia() (más arriba) también la usa
   function abre(json, anexa) {          // anexa: PEGAR regiones al final (no borra la hoja; el estilo solo se toma si la hoja está vacía)
     const d = typeof json === 'string' ? JSON.parse(json) : json;
     if (Array.isArray(d.items) && d.items.length > 3000) throw new Error('hoja demasiado grande (maximo 3000 regiones)');
     if ((d.items || []).some((q) => q && q.t === 'eq' && typeof q.codigo === 'string' && q.codigo.length > 100000)) throw new Error('una ecuacion es demasiado larga (maximo 100000 caracteres)');
     const vacia = reg.every((r) => r.bienvenida || (r.t === 'eq' && !r.enTexto && !r.ed.texto().trim())); if (!anexa || vacia) limpia();
+    if (!anexa || vacia) numHoja = !!d.numerico;          // hoja numérica (#numerico de Hekatan LISP): viaja al guardar, copiar y exportar
     if (!anexa || vacia) { const lisp = d.estilo === 'lisp'; document.body.classList.toggle('lisp', lisp); document.body.classList.remove('sinpag');          // hoja de Hekatan LISP: compacta (estilo «lisp») pero CON páginas: se ven el límite de hoja y los saltos de página (Jorge, 19-nov-2026); «Hoja con páginas» la vuelve continua
       if (HK.app) { if (lisp) { HK.app.setTxt(Math.round(d.txt || 15)); HK.app.setEq(Math.round(d.eq || 15)); } else if (HK.app.estiloLisp) { HK.app.setTxt(13); HK.app.setEq(14); } HK.app.estiloLisp = lisp; } }
     if (!anexa || vacia) { const gp = typeof d.gap === 'number' ? d.gap : 6; document.documentElement.style.setProperty('--gapfila', Math.max(0, gp + 8) + 'px'); document.documentElement.style.setProperty('--margfila', Math.min(2, 2 + (gp - 6) * 0.9) + 'px'); }          // interlineado de la hoja (campo «gap» del .hmath, como el WPF): 6 → 14 px (como antes), -4 → 4 px
@@ -993,7 +995,7 @@
       else emp(r, { t: 'eq', codigo: codigoWpf(r.editado || !r.codigo ? r.ed.texto() : r.codigo), modo: r.modo, ...(r.oculto ? { oculto: true } : {}), ...(mismaLineaDe(r) ? { mismaLinea: true } : {}) });
     }
     const lisp = document.body.classList.contains('lisp');          // el estilo de Hekatan LISP viaja con la hoja (como el WPF)
-    return JSON.stringify({ formato: 'hmath 1', eq: lisp && HK.app && HK.app.getEq ? HK.app.getEq() : 14, txt: lisp && HK.app && HK.app.getTxt ? HK.app.getTxt() : 16, gap: 6, fmt: 0, ...(lisp ? { estilo: 'lisp' } : {}), items }, null, 1);
+    return JSON.stringify({ formato: 'hmath 1', eq: lisp && HK.app && HK.app.getEq ? HK.app.getEq() : 14, txt: lisp && HK.app && HK.app.getTxt ? HK.app.getTxt() : 16, gap: 6, fmt: 0, ...(lisp ? { estilo: 'lisp' } : {}), ...(numHoja ? { numerico: true } : {}), items }, null, 1);
   }
   // ---------------------------------------------------------------- acciones que usa la cinta (app.js)
   function nuevaEq(codigo, mismo, modo) { const r = agregaEq(codigo || '', { mismaLinea: !!mismo, modo: modo || 0 }); activo = r.ed; r.ed.cargar(codigo ? HK.codigoAFilas(codigo) : []); if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); resolver(); r.el.scrollIntoView({ block: 'nearest' }); return r; }

@@ -224,7 +224,7 @@
       }
       if (x.t === 'texto' || x.t === 'parrafo') {
         const t = unaLinea(x.t === 'texto' ? (x.fuente || (x.html && !x.titulo ? dehtml(x.html) : x.text)) : prm(x.seg || [])); if (!t) return;
-        if (x.mismaLinea && x.t === 'texto' && !x.titulo && ultEq >= 0 && ultEq === o.length - 1 && !o[ultEq].includes('\n')) { o[ultEq] += " '" + t; return; }          // «f = ... 'nota»: la nota va al final de la linea de la formula
+        if (x.mismaLinea && x.t === 'texto' && !x.titulo && ultEq >= 0 && ultEq === o.length - 1 && !o[ultEq].includes('\n')) { if (!o[ultEq].endsWith("'" + t)) o[ultEq] += " '" + t; return; }          // «f = ... 'nota»: la nota va al final de la linea de la formula
         if (x.titulo) o.push('#'.repeat(Math.min(3, x.nivel || 1)) + ' ' + t); else o.push('#: ' + t);
       } else if (x.t === 'eq') {
         let ls = String(x.codigo || '').replace(/\r/g, '').split('\n'); if (!ls.length || !ls.join('').trim()) return;
@@ -241,6 +241,7 @@
     });
     if (pend) o.push(pend.nombre + ' = ' + pend.valor + " 'deslizador " + pend.min + ' … ' + pend.max);
     if (oc) o.push('#show');
+    if (d.numerico && !o.some((s) => /^#numerico\b/.test(s))) { const k = o.length && /^#\s/.test(o[0]) ? 1 : 0; o.splice(k, 0, '#numerico'); const m2 = new Set([...mis].map((q) => q >= k ? q + 1 : q)); mis.clear(); m2.forEach((q) => mis.add(q)); }          // hoja numérica: sin esta línea Hekatan LISP la lee como simbólica
     let r = ''; o.forEach((s, k) => { r += (k ? (mis.has(k) ? '\n' : '\n\n') : '') + s; });
     return r + '\n';
   }
