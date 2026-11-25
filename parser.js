@@ -246,6 +246,7 @@
         const mt = env.v[a.f];
         if (mt && HK.M.esM(mt)) return HK.M.indice(mt, a.args.map((x) => evalua(x, env)));
         if (a.f === 'if' && a.args.length === 3 && !env.f['if']) { const c = N(evalua(a.args[0], env)); return (c !== 0 && c !== false) ? evalua(a.args[1], env) : evalua(a.args[2], env); }          // if(c, a, b): solo evalúa la rama elegida (como el WPF)
+        if (a.f === 'dec' && (a.args.length === 1 || a.args.length === 2) && !env.f.dec) { const v = N(evalua(a.args[0], env)), d = a.args[1] ? Math.round(N(evalua(a.args[1], env))) : 4; return Number(v.toFixed(Math.max(0, Math.min(12, d)))); }          // dec(x, n): valor decimal con n decimales (como dec de Hekatan LISP)
         const u = env.f[a.f];
         if (u) return llama(u, a.args.map((x) => evalua(x, env)), env, a.f);
         if ((a.f === 'matriz' && a.args.length === 3) || (a.f === 'grid' && a.args.length === 5) || (a.f === 'tab' && a.args.length === 4)) {          // matriz(nf, nc, f) · grid(f, na, nb, a, b) · tab(f, n, a, b): f es una función de la hoja (Solver.cs:740-760)
