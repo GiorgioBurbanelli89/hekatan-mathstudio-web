@@ -193,5 +193,6 @@
 "188 Mario Paz 6.3 - portico 3D dibujado en el celular, barra con corte, masa y modos contra ETABS.lisp",
 "188 Talud por elementos finitos - hasta donde es lineal y desde donde es no lineal, contra GEO5, Tellus y XSLOPE.lisp",
 "190 Talud calculado por elementos finitos en la hoja - funciones de forma, Jacobiano, rigidez, Drucker-Prager y Newton.lisp",
-"191 Pruebas del manual de GEO5 FEM - edometro y triaxial con Drucker-Prager, simbolos y numeros contra la solucion exacta.lisp"
+"191 Pruebas del manual de GEO5 FEM - edometro y triaxial con Drucker-Prager, simbolos y numeros contra la solucion exacta.lisp",
+"192 XSLOPE paso a paso - Fellenius, Bishop, Janbu, Cuerpo de Ingenieros, Lowe-Karafiath, Spencer, Morgenstern-Price y elementos finitos.lisp"
 ]
