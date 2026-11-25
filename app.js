@@ -344,7 +344,8 @@
   }
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.body.dataset.vista === 'enfoque') ponVista('impresion'); });
   // CELULAR: pantalla angosta → «Diseño web» (sin papel carta, a todo el ancho) y cinta compacta (estilo.css, body.movil). El papel de 816 px encogido al ancho del celular dejaba la letra ilegible
-  if (G.matchMedia && G.matchMedia('(max-width: 760px)').matches) { document.body.classList.add('movil'); ponVista('web'); }
+  const esMovil = G.matchMedia && (G.matchMedia('(max-width: 760px)').matches || (G.matchMedia('(pointer: coarse)').matches && Math.min(G.screen.width, G.screen.height) <= 600));          // celular aunque se abra en HORIZONTAL (≈ 890 px de ancho): pantalla táctil cuyo lado corto es de celular
+  if (esMovil) { document.body.classList.add('movil'); ponVista('web'); }
   // Al GIRAR el celular (o cambiar el ancho de la ventana) la hoja se reacomoda: se vuelve a la MISMA fila que se estaba viendo (antes saltaba al principio)
   (function () {
     const a = $('area'); let anc = null, quieto = false;
