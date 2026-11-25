@@ -343,6 +343,24 @@
     setTimeout(pagina, 0);
   }
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.body.dataset.vista === 'enfoque') ponVista('impresion'); });
+  // CELULAR: pantalla angosta → «Diseño web» (sin papel carta, a todo el ancho) y cinta compacta (estilo.css, body.movil). El papel de 816 px encogido al ancho del celular dejaba la letra ilegible
+  if (G.matchMedia && G.matchMedia('(max-width: 760px)').matches) { document.body.classList.add('movil'); ponVista('web'); }
+  // Al GIRAR el celular (o cambiar el ancho de la ventana) la hoja se reacomoda: se vuelve a la MISMA fila que se estaba viendo (antes saltaba al principio)
+  (function () {
+    const a = $('area'); let anc = null, quieto = false;
+    const toma = () => { const t0 = a.getBoundingClientRect().top; for (const e of a.querySelectorAll('#hoja .fila, #hoja .txt')) { const r = e.getBoundingClientRect(); if (r.height && r.bottom > t0 + 1) { anc = { e, d: r.top - t0 }; return; } } anc = null; };
+    let anchoVisto = G.innerWidth;
+    a.addEventListener('scroll', () => { if (!quieto && G.innerWidth === anchoVisto) toma(); }, { passive: true });          // un scroll que llega con el ancho ya cambiado es del reacomodo, no del usuario: no mueve el ancla
+    let fin = 0, ro = null, k = null;
+    const fija = () => { if (k && k.e.isConnected) a.scrollTop += k.e.getBoundingClientRect().top - a.getBoundingClientRect().top - k.d; };
+    const suelta = () => { if (ro) ro.disconnect(); ro = null; quieto = false; k = null; anchoVisto = G.innerWidth; };
+    G.addEventListener('resize', () => {          // el celular reacomoda en varios pasos (ancho, páginas, gráficas perezosas): durante 2 s, cada cambio de tamaño vuelve a poner la fila en su sitio
+      if (!k) { k = anc; if (!k) return; } quieto = true; fija();
+      if (!ro && G.ResizeObserver) { ro = new ResizeObserver(fija); ro.observe($('hoja')); ro.observe(a); }
+      clearTimeout(fin); fin = setTimeout(() => { fija(); suelta(); toma(); }, 2000);
+    });
+    a.addEventListener('touchstart', () => { if (k) { clearTimeout(fin); suelta(); } }, { passive: true });          // si el usuario toca la hoja, manda él
+  })();
   const fitUna = () => ponZoom(Math.min(($('area').clientHeight - 30) / PGH, ($('area').clientWidth - 40) / PGW));
   CINTA['Vista'] = [
     { ic: '🗋', t: 'Diseño de impresión', tip: VISTAS.impresion, acc: () => ponVista('impresion') },

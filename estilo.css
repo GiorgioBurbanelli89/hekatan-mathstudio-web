@@ -226,6 +226,31 @@ body.mv-arrastrando { user-select:none; cursor:move; }
 #hoja .fila > .eq.hueco:not(.conGraf) { padding-left:0; }          /* el indicador vacío mide solo su lienzo (sin la franja de agarre de 10 px) */          /* la franja izquierda (10 px) queda libre para agarrar, como el WPF (Padding.Left = 10) */
 
 /* Exportar PDF = window.print(): sólo las páginas de la hoja, sin menú, cinta, estado ni pestañas */
+/* CELULAR (body.movil, app.js): hoja a todo el ancho sin papel carta, cinta y menús compactos que se deslizan de lado, ecuaciones anchas con desplazamiento propio */
+body.movil #titulo { font-size:12px; padding:6px 10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+body.movil #menu, body.movil #pestanas { flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none; }
+body.movil #pestanas button { flex:none; padding:5px 9px; }
+body.movil #menu > * { flex:none; white-space:nowrap; }
+body.movil #menu .mi > span { padding:6px 8px; }
+body.movil #cinta { height:66px; padding:4px; }
+body.movil .bt { min-width:44px; padding:3px 5px 1px; font-size:11px; gap:1px; }
+body.movil .bt .ic { font-size:18px; height:26px; }
+body.movil #area { padding:6px 0 40px; }
+body.movil[data-vista=web] #papel { padding:12px 10px; }
+body.movil #hoja { outline:none !important; }
+body.movil .fila { overflow-x:auto; overflow-y:hidden; gap:6px; }
+body.movil .txt { padding-left:2px; }
+body.movil .txt:not(.titulo):not(.lado) { padding-right:2px; }
+body.movil .dib-vista canvas, body.movil .dib-vista svg, body.movil .dib-vista img, body.movil .raw svg { max-width:100%; height:auto; }
+body.movil #estado { font-size:11px; }
+body.movil #nav { display:none; }
+@media (max-height: 500px) {          /* celular HORIZONTAL: la cabecera se queda con lo justo (cinta solo con íconos, sin título largo) */
+  body.movil #titulo { padding:3px 10px; }
+  body.movil #cinta { height:40px; padding:2px 4px; }
+  body.movil .bt { font-size:0; min-width:34px; padding:2px 4px; }
+  body.movil .bt .ic { font-size:18px; height:30px; }
+  body.movil #estado { display:none; }
+}
 @media print {
   @page { margin:0; }
   html, body { height:auto !important; overflow:visible !important; background:#fff !important; }
