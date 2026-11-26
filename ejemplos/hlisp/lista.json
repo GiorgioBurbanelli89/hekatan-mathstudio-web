@@ -204,5 +204,6 @@
 "199 Viga en voladizo acartelada - matriz de rigidez de seccion variable y Newton-Raphson no lineal paso a paso.lisp",
 "200 Viga empotrada en ambos extremos - matriz de rigidez simbolica, momentos de empotramiento y Newton-Raphson no lineal con rotulas que se ablandan.lisp",
 "201 Introduccion a los elementos finitos en geotecnia - los 8 pasos con un ejemplo pequeno.lisp",
-"202 Antes de empezar con elementos finitos en geotecnia - los 6 requisitos y por que.lisp"
+"202 Antes de empezar con elementos finitos en geotecnia - los 6 requisitos y por que.lisp",
+"203 Newton-Raphson con varias incognitas paso a paso - la cercha de dos barras con K_T por du igual a R, en Hekatan Math Studio y Hekatan Code.lisp"
 ]
