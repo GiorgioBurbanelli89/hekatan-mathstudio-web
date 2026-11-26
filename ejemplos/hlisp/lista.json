@@ -197,5 +197,6 @@
 "192 XSLOPE paso a paso - Fellenius, Bishop, Janbu, Cuerpo de Ingenieros, Lowe-Karafiath, Spencer, Morgenstern-Price y elementos finitos.lisp",
 "193 XSLOPE elementos finitos paso a paso - T6, Mohr-Coulomb con angulo de Lode y el algoritmo viscoplastico de Griffiths y Lane.lisp",
 "194 Talud parametrico - cambia altura, pendiente, c, phi y gamma, busca el circulo critico y calcula los 7 metodos de XSLOPE.lisp",
-"195 Donde se diferencian XSLOPE, GEO5, Tellus y PLAXIS - criterio, algoritmo, paso de F y malla en la falla del talud.lisp"
+"195 Donde se diferencian XSLOPE, GEO5, Tellus y PLAXIS - criterio, algoritmo, paso de F y malla en la falla del talud.lisp",
+"196 Newton-Raphson explicado con una cercha - una barra que se ablanda y una cercha de dos barras, paso a paso.lisp"
 ]
