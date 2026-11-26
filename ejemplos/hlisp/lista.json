@@ -200,5 +200,6 @@
 "195 Donde se diferencian XSLOPE, GEO5, Tellus y PLAXIS - criterio, algoritmo, paso de F y malla en la falla del talud.lisp",
 "196 Newton-Raphson explicado con una cercha - una barra que se ablanda y una cercha de dos barras, paso a paso.lisp",
 "197 Diagrama de interaccion P-M de un muro con elementos de borde distintos - compatibilidad, centroide plastico y los dos sentidos.lisp",
-"198 Newton-Raphson desde cero - lineal contra no lineal, la recta que se repite, la cercha y el talud.lisp"
+"198 Newton-Raphson desde cero - lineal contra no lineal, la recta que se repite, la cercha y el talud.lisp",
+"199 Viga en voladizo acartelada - matriz de rigidez de seccion variable y Newton-Raphson no lineal paso a paso.lisp"
 ]
