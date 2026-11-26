@@ -202,18 +202,29 @@
   }
   function guardaComo() { const n = prompt('Nombre del archivo', 'hoja'); if (!n) return; const nom = n.replace(/\.hmath$/i, ''); H().descarga(nom); recuerda(nom + '.hmath', H().guarda()); estado('Guardado: ' + nom + '.hmath'); }
   function guarda() { H().descarga(); recuerda('hoja.hmath', H().guarda()); }
-  function nuevo() { HK.lispFuente = null; H().limpia(); estado('Hoja nueva'); pagina(); H().nuevaEq(''); }
+  function nuevo() { HK.lispFuente = null; HK.ejActual = null; HK.ejArchivo = null; H().limpia(); estado('Hoja nueva'); pagina(); H().nuevaEq(''); }
   const comoHmath = (nombre, t) => { const l = HK.hlisp && HK.hlisp.esHlisp(nombre, t); HK.lispFuente = l ? t : null; return l ? JSON.stringify(HK.hlisp.importa(t)) : t; };          // HK.lispFuente: el texto .lisp tal cual (para «Compartir» si la hoja no se tocó)          // .lisp / .hlisp → la misma conversión que el WPF
   // una página de error (404) no se abre como hoja: avisa que el ejemplo no existe
-  async function abreEjemplo(f) { { const m = /^(\d+[a-z]?) /.exec(String(f).split('/').pop()); HK.ejActual = m ? m[1] : null; } try { const rs = await fetch(f); if (!rs.ok) { estado('No existe el ejemplo ' + f.split('/').pop()); return; } const tx = await rs.text(); if (/^\s*<!DOCTYPE html/i.test(tx)) { estado('No existe el ejemplo ' + f.split('/').pop()); return; } const t = comoHmath(f, tx); H().abre(t); estado('Abierto: ' + f.split('/').pop()); setTimeout(pagina, 50); } catch (e) { estado('No se pudo abrir ' + f + ' (la página debe servirse por http)'); } }
+  async function abreEjemplo(f) { { const nb = String(f).split('/').pop(); const m = /^(\d+[a-z]?) /.exec(nb); HK.ejActual = m ? m[1] : null; HK.ejArchivo = nb; } try { const rs = await fetch(f); if (!rs.ok) { estado('No existe el ejemplo ' + f.split('/').pop()); return; } const tx = await rs.text(); if (/^\s*<!DOCTYPE html/i.test(tx)) { estado('No existe el ejemplo ' + f.split('/').pop()); return; } const t = comoHmath(f, tx); H().abre(t); estado('Abierto: ' + f.split('/').pop()); setTimeout(pagina, 50); } catch (e) { estado('No se pudo abrir ' + f + ' (la página debe servirse por http)'); } }
   function cuadricula() { document.body.classList.toggle('cuad'); $('m-cuadricula').classList.toggle('activa', document.body.classList.contains('cuad')); }
   $('m-cuadricula').onclick = cuadricula;
   // «Compartir» = un ENLACE (como Math Studio de escritorio y Hekatan LISP web): <esta página>#lisp=<base64url del script de Hekatan LISP en UTF-8>; abreDeHash lo abre
-  function enlaceHoja() {
+  // Enlace CORTO: (1) ejemplo sin tocar → «#ej=203» (o «#ej=<archivo>» si no lleva número); (2) hoja propia o editada → «#lz=» = el script
+  // comprimido (deflate-raw) en base64url, mucho más corto que «#lisp=» (que queda solo de respaldo si el navegador no tiene CompressionStream)
+  const b64url = (u8) => { let s = ''; for (let i = 0; i < u8.length; i += 32768) s += String.fromCharCode.apply(null, u8.subarray(i, i + 32768)); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+  const deB64url = (t) => { let b = t.replace(/-/g, '+').replace(/_/g, '/'); while (b.length % 4) b += '='; return Uint8Array.from(atob(b), (c) => c.charCodeAt(0)); };
+  async function enlaceHoja() {
+    const base = location.href.split('#')[0].split('?')[0];
     const tocada = (H().reg || []).some((q) => q.editado);
+    if (!tocada && HK.ejActual) return base + '#ej=' + HK.ejActual;
+    if (!tocada && HK.ejArchivo) return base + '#ej=' + encodeURIComponent(HK.ejArchivo);
     const txt = (!tocada && HK.lispFuente) || HK.hlisp.exporta(H().guarda());
-    const u8 = new TextEncoder().encode(txt); let s = ''; for (let i = 0; i < u8.length; i += 32768) s += String.fromCharCode.apply(null, u8.subarray(i, i + 32768));
-    return location.href.split('#')[0] + '#lisp=' + btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const u8 = new TextEncoder().encode(txt);
+    if (typeof CompressionStream === 'function') {
+      const z = new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer());
+      return base + '#lz=' + b64url(z);
+    }
+    return base + '#lisp=' + b64url(u8);
   }
   function aviso(t) { let a = document.getElementById('hk-toast'); if (!a) { a = document.createElement('div'); a.id = 'hk-toast'; a.style.cssText = 'position:fixed;left:50%;bottom:42px;transform:translateX(-50%);z-index:60;background:#1e7d45;color:#fff;padding:7px 16px;border-radius:8px;font:13px Segoe UI,sans-serif;box-shadow:0 2px 10px #0004;transition:opacity .3s'; document.body.appendChild(a); } a.textContent = t; a.style.opacity = '1'; clearTimeout(a._t); a._t = setTimeout(() => { a.style.opacity = '0'; }, 2200); }
   function dialogoEnlace(url) {          // sin portapapeles (http, permiso denegado…): el enlace en un cuadro, ya seleccionado, para Ctrl+C
@@ -224,9 +235,10 @@
     v.addEventListener('click', (e) => { if (e.target === v) return v.remove(); const b = e.target.closest('button'); if (!b) return; if (b.dataset.a === 'x') return v.remove(); ta.select(); let ok = false; try { ok = document.execCommand('copy'); } catch (er) { ok = false; } if (ok) { aviso('✓ Enlace copiado'); v.remove(); } else estado('Selecciona el enlace y usa Ctrl+C'); });
   }
   $('m-compartir').onclick = () => {
-    let url; try { url = enlaceHoja(); } catch (e) { estado('No se pudo armar el enlace: ' + e.message); return; }
-    const ok = () => { aviso('✓ Enlace copiado'); estado('Enlace copiado (' + url.length + ' caracteres): al abrirlo se carga esta hoja'); };
-    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(ok, () => dialogoEnlace(url)); else dialogoEnlace(url);
+    enlaceHoja().then((url) => {
+      const ok = () => { aviso('✓ Enlace copiado'); estado('Enlace copiado (' + url.length + ' caracteres): al abrirlo se carga esta hoja'); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(ok, () => dialogoEnlace(url)); else dialogoEnlace(url);
+    }, (e) => estado('No se pudo armar el enlace: ' + e.message));
   };
   HK.enlaceHoja = enlaceHoja;
   // Script de Hekatan LISP: la hoja como texto (se copia, se descarga como .lisp, se edita y se vuelve a aplicar con la misma importación del WPF)
@@ -700,12 +712,15 @@
       return;
     }
     if (ej) { let n = ''; try { n = decodeURIComponent(ej[1]); } catch (e) { return; } if (!n || /[\\/]|\.\./.test(n)) return; abreEjemplo((/\.(lisp|hlisp)$/i.test(n) ? HK.dirHlisp() : 'ejemplos/') + n); return; }
+    const abreTxt = (txt) => { HK.ejActual = null; HK.ejArchivo = null; H().abre(JSON.stringify(HK.hlisp.importa(txt))); HK.lispFuente = txt; estado('Hoja abierta desde el enlace'); setTimeout(pagina, 50); };
+    const z = /^#lz=([A-Za-z0-9_-]+)$/.exec(location.hash || '');          // «#lz=»: el script comprimido (deflate-raw) del botón Compartir
+    if (z) {
+      new Response(new Blob([deB64url(z[1])]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text()
+        .then(abreTxt, (e) => estado('No se pudo abrir la hoja del enlace: ' + e.message));
+      return;
+    }
     const m = /^#lisp=([A-Za-z0-9_-]+)$/.exec(location.hash || ''); if (!m) return;
-    try {
-      let b = m[1].replace(/-/g, '+').replace(/_/g, '/'); while (b.length % 4) b += '=';
-      const txt = new TextDecoder('utf-8').decode(Uint8Array.from(atob(b), (c) => c.charCodeAt(0)));
-      H().abre(JSON.stringify(HK.hlisp.importa(txt))); HK.lispFuente = txt; estado('Hoja abierta desde el enlace'); setTimeout(pagina, 50);
-    } catch (e) { estado('No se pudo abrir el script de la dirección: ' + e.message); }
+    try { abreTxt(new TextDecoder('utf-8').decode(deB64url(m[1]))); } catch (e) { estado('No se pudo abrir el script de la dirección: ' + e.message); }
   }
   setTimeout(abreDeHash, 0); window.addEventListener('hashchange', abreDeHash);
   HK.app = { setTxt, setEq, getTxt: () => txtPt, getEq: () => eqPt, ponZoom, getZoom: () => zoom, estado, pagina, setTxt, setEq, abreEjemplo, nuevo, pintaCinta };
