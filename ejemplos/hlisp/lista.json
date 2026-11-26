@@ -195,5 +195,6 @@
 "190 Talud calculado por elementos finitos en la hoja - funciones de forma, Jacobiano, rigidez, Drucker-Prager y Newton.lisp",
 "191 Pruebas del manual de GEO5 FEM - edometro y triaxial con Drucker-Prager, simbolos y numeros contra la solucion exacta.lisp",
 "192 XSLOPE paso a paso - Fellenius, Bishop, Janbu, Cuerpo de Ingenieros, Lowe-Karafiath, Spencer, Morgenstern-Price y elementos finitos.lisp",
-"193 XSLOPE elementos finitos paso a paso - T6, Mohr-Coulomb con angulo de Lode y el algoritmo viscoplastico de Griffiths y Lane.lisp"
+"193 XSLOPE elementos finitos paso a paso - T6, Mohr-Coulomb con angulo de Lode y el algoritmo viscoplastico de Griffiths y Lane.lisp",
+"194 Talud parametrico - cambia altura, pendiente, c, phi y gamma, busca el circulo critico y calcula los 7 metodos de XSLOPE.lisp"
 ]
