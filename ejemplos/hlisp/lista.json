@@ -207,5 +207,6 @@
 "202 Antes de empezar con elementos finitos en geotecnia - los 6 requisitos y por que.lisp",
 "203 Newton-Raphson en una barra con 1, 2 y 3 incognitas - funciones de forma 1D, 2D y 3D, la misma ley y K_T por du igual a R paso a paso.lisp",
 "204 Funciones de forma Q4, Q8 y Q9 a fondo - deducidas con la matriz C, propiedades, Jacobiano, Gauss, modos espurios y bloqueo en un voladizo.lisp",
-"205 Funciones de forma T3 y T6 a fondo - coordenadas de area, matriz C, propiedades, Jacobiano, Gauss en triangulos y el mismo voladizo.lisp"
+"205 Funciones de forma T3 y T6 a fondo - coordenadas de area, matriz C, propiedades, Jacobiano, Gauss en triangulos y el mismo voladizo.lisp",
+"206 Funciones de forma H8 a fondo (y H20, H27, T4, T10) - matriz C, propiedades, Jacobiano 3D, Gauss, relojes de arena y el voladizo como solido.lisp"
 ]
