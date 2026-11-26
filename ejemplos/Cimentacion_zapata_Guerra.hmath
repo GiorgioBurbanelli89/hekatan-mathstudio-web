@@ -180,6 +180,10 @@
    "titulo": false
   },
   {
+   "t": "raw",
+   "text": "#dibujo(\"Zapata: planta (arriba) y elevación por y = 0 (abajo)\", ud = m, escala = auto, cotas = m, alto = 170, lado = derecha)\n#  rect(-B/2, (L/2 + 2.8) + -L/2, B, L, \"gruesa tenue\")\n#  rect(-cx/2, (L/2 + 2.8) + -cy/2, cx, cy, \"gruesa denso\")\n#  linea(-B/2 - 0.35, (L/2 + 2.8), B/2 + 0.35, (L/2 + 2.8), \"eje\")\n#  linea(0, (L/2 + 2.8) + -L/2 - 0.35, 0, (L/2 + 2.8) + L/2 + 0.35, \"eje\")\n#  flecha(B/2 + 0.2, (L/2 + 2.8), B/2 + 0.55, (L/2 + 2.8), \"media\")\n#  texto(B/2 + 0.62, (L/2 + 2.8), \"x\", 3, \"i\")\n#  flecha(0, (L/2 + 2.8) + L/2 + 0.2, 0, (L/2 + 2.8) + L/2 + 0.55, \"media\")\n#  texto(0, (L/2 + 2.8) + L/2 + 0.72, \"y\", 3, \"c\")\n#  cota(-B/2, (L/2 + 2.8) + -L/2, B/2, (L/2 + 2.8) + -L/2, -0.55, \"B = {B:2} m\")\n#  cota(-B/2, (L/2 + 2.8) + -L/2, -B/2, (L/2 + 2.8) + L/2, 0.55, \"L = {L:2} m\")\n#  cota(-cx/2, (L/2 + 2.8) + cy/2, cx/2, (L/2 + 2.8) + cy/2, 0.3, \"c_{x} = {cx:2} m\")\n#  texto(-B/2 - 0.3, (L/2 + 2.8) + L/2 + 0.72, \"PLANTA\", 3, \"i\", estilo = \"gris\")\n#  hover([0, -B/2, B/2, B/2, -B/2], [(L/2 + 2.8), (L/2 + 2.8) + -L/2, (L/2 + 2.8) + -L/2, (L/2 + 2.8) + L/2, (L/2 + 2.8) + L/2], \"x = {#1:3} m, y = {#2:3} m\", [0, -B/2, B/2, B/2, -B/2], [0, -L/2, -L/2, L/2, L/2])\n#  hover([0], [(L/2 + 2.8)], \"columna {#1:2} × {#2:2} m\\nN = {#3:1} t · M_y = {#4:1} t·m\", cx, cy, N, My, radio = 30)\n#  achurado(-B/2 - 0.6, -Df - 0.6, B + 1.2, 0.6, \"diagonal\")\n#  achurado([-B/2 - 0.6, -cx/2, -cx/2, -B/2, -B/2, -B/2 - 0.6], [0, 0, -Df + h, -Df + h, -Df, -Df], \"cruz\")\n#  achurado([B/2 + 0.6, cx/2, cx/2, B/2, B/2, B/2 + 0.6], [0, 0, -Df + h, -Df + h, -Df, -Df], \"cruz\")\n#  linea(-B/2 - 0.6, 0, B/2 + 0.6, 0, \"gruesa\")\n#  seccion(-B/2, -Df, B, h)\n#  seccion(-cx/2, -Df + h, cx, Df - h + 0.6)\n#  flecha(0, 1.5, 0, 0.64, \"gruesa rojo\")\n#  texto(0.12, 1.4, \"N = {N:1} t\", 3.2, \"i\", estilo = \"rojo\")\n#  flechamomento(0, 0.7, 0.42, 160, 20, \"media azul\")\n#  texto(-0.5, 1.05, \"M_{y} = {My:1} t·m\", 3.2, \"d\", estilo = \"azul\")\n#  texto(-B/2 - 0.6, 1.5, \"ELEVACIÓN\", 3, \"i\", estilo = \"gris\")\n#  cota(-B/2, -Df, -B/2, -Df + h, 0.4, \"h = {h:2} m\")\n#  cota(B/2 + 0.6, -Df, B/2 + 0.6, 0, -0.4, \"D_{f} = {Df:2} m\")\n#  cota(-B/2, -Df - 0.6, B/2, -Df - 0.6, -0.35, \"B = {B:2} m\")\n#  texto(-B/2 - 0.3, -Df / 2 + h / 2, \"relleno\", 2.8, \"c\", estilo = \"gris\")\n#  texto(0, -Df - 0.3, \"suelo φ = {fi:1}°, γ = {gs:2} t/m³\", 2.8, \"c\", estilo = \"gris\")\n#  hover([0, -B/2, B/2], [-Df + h/2, -Df, -Df], \"zapata B = {#1:2} m, h = {#2:2} m\\nD_f = {#3:2} m\", B, h, Df, radio = 40)\n#  hover([0], [1.0], \"N = {#1:1} t\\nM_y = {#2:1} t·m\", N, My, radio = 30)\n#fin"
+  },
+  {
    "t": "eq",
    "codigo": "B=3.45 % lado en x [m]",
    "modo": 0
@@ -251,16 +255,9 @@
   },
   {
    "t": "texto",
-   "text": "Dibujo de referencia (paramétrico): planta y elevación salen de B, L, h, D_f, c_x, c_y, N y M_y; si cambia un dato, el dibujo y sus cotas cambian. Pase el cursor por la columna o las esquinas para ver los valores.",
-   "titulo": false
-  },
-  {
-   "t": "raw",
-   "text": "#dibujo(\"Planta: zapata B × L con la columna c_x × c_y al centro\", ud = m, escala = auto, cotas = m)\n#  rect(-B/2, -L/2, B, L, \"gruesa tenue\")\n#  rect(-cx/2, -cy/2, cx, cy, \"gruesa denso\")\n#  linea(-B/2 - 0.35, 0, B/2 + 0.35, 0, \"eje\")\n#  linea(0, -L/2 - 0.35, 0, L/2 + 0.35, \"eje\")\n#  flecha(B/2 + 0.2, 0, B/2 + 0.55, 0, \"media\")\n#  texto(B/2 + 0.62, 0, \"x\", 3, \"i\")\n#  flecha(0, L/2 + 0.2, 0, L/2 + 0.55, \"media\")\n#  texto(0, L/2 + 0.72, \"y\", 3, \"c\")\n#  cota(-B/2, -L/2, B/2, -L/2, -0.55, \"B = {B:2} m\")\n#  cota(-B/2, -L/2, -B/2, L/2, 0.55, \"L = {L:2} m\")\n#  cota(-cx/2, cy/2, cx/2, cy/2, 0.3, \"c_{x} = {cx:2} m\")\n#  hover([0, -B/2, B/2, B/2, -B/2], [0, -L/2, -L/2, L/2, L/2], \"x = {#1:3} m, y = {#2:3} m\", [0, -B/2, B/2, B/2, -B/2], [0, -L/2, -L/2, L/2, L/2])\n#  hover([0], [0], \"columna {#1:2} × {#2:2} m\\nN = {#3:1} t · M_y = {#4:1} t·m\", cx, cy, N, My, radio = 30)\n#fin"
-  },
-  {
-   "t": "raw",
-   "text": "#dibujo(\"Elevación (corte por y = 0): zapata de canto h con el fondo a D_f, relleno encima\", ud = m, escala = auto, cotas = m)\n#  achurado(-B/2 - 0.6, -Df - 0.6, B + 1.2, 0.6, \"diagonal\")\n#  achurado([-B/2 - 0.6, -cx/2, -cx/2, -B/2, -B/2, -B/2 - 0.6], [0, 0, -Df + h, -Df + h, -Df, -Df], \"cruz\")\n#  achurado([B/2 + 0.6, cx/2, cx/2, B/2, B/2, B/2 + 0.6], [0, 0, -Df + h, -Df + h, -Df, -Df], \"cruz\")\n#  linea(-B/2 - 0.6, 0, B/2 + 0.6, 0, \"gruesa\")\n#  seccion(-B/2, -Df, B, h)\n#  seccion(-cx/2, -Df + h, cx, Df - h + 0.6)\n#  flecha(0, 1.5, 0, 0.64, \"gruesa rojo\")\n#  texto(0.12, 1.4, \"N = {N:1} t\", 2.6, \"i\", estilo = \"rojo\")\n#  flechamomento(0, 0.7, 0.42, 160, 20, \"media azul\")\n#  texto(-0.5, 1.05, \"M_{y} = {My:1} t·m\", 2.6, \"d\", estilo = \"azul\")\n#  cota(-B/2, -Df, -B/2, -Df + h, 0.4, \"h = {h:2} m\")\n#  cota(B/2 + 0.6, -Df, B/2 + 0.6, 0, -0.4, \"D_{f} = {Df:2} m\")\n#  cota(-B/2, -Df - 0.6, B/2, -Df - 0.6, -0.35, \"B = {B:2} m\")\n#  texto(-B/2 - 0.3, -Df / 2 + h / 2, \"relleno\", 2.2, \"c\", estilo = \"gris\")\n#  texto(B/2 - 0.1, -Df - 0.3, \"suelo φ = {fi:1}°, γ = {gs:2} t/m³\", 2.2, \"d\", estilo = \"gris\")\n#  hover([0, -B/2, B/2], [-Df + h/2, -Df, -Df], \"zapata B = {#1:2} m, h = {#2:2} m\\nD_f = {#3:2} m\", B, h, Df, radio = 40)\n#  hover([0], [1.0], \"N = {#1:1} t\\nM_y = {#2:1} t·m\", N, My, radio = 30)\n#fin"
+   "text": "Dibujo de referencia (paramétrico, a la derecha de los datos): planta y elevación salen de B, L, h, D_f, c_x, c_y, N y M_y; si cambia un dato, el dibujo y sus cotas cambian. Pase el cursor por la columna o las esquinas para ver los valores.",
+   "titulo": false,
+   "debajo": true
   },
   {
    "t": "eq",

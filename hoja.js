@@ -11,6 +11,12 @@
     if (mismaLinea && ultimaFila && ultimaFila.isConnected) return ultimaFila;
     ultimaFila = fila(); return ultimaFila;
   }
+  // CELULAR (body.movil): no hay ancho para «lado = derecha»; el dibujo baja DEBAJO de sus datos (hasta el próximo título, texto «debajo» u otro dibujo). Solo mueve el DOM: el orden guardado (reg) no cambia
+  function apilaDibDer() {
+    if (!document.body.classList.contains('movil')) return;
+    const fin = (n) => n.classList.contains('dib-der') || n.classList.contains('debajo') || !!n.querySelector(':scope > .txt.titulo');
+    for (const c of [...hoja.querySelectorAll(':scope > .fila.dib-der')]) { let n = c.nextElementSibling, ult = null; while (n && !fin(n)) { ult = n; n = n.nextElementSibling; } if (ult) ult.after(c); }
+  }
   function agregaTxt(texto, titulo, nivel, mismo) {
     const c = contenedor(!!mismo), d = document.createElement('div');
     d.className = 'txt' + (titulo ? ' titulo n' + (nivel || 1) : '') + (mismo ? ' lado' : ''); d.contentEditable = 'true'; d.textContent = texto; d.spellcheck = false;
@@ -917,7 +923,8 @@
     const dxs = [];
     for (let it of d.items || []) {
       if (it.dx || it.dy) dxs.push([reg.length, it.dx || 0, it.dy || 0]);
-      if (it.t === 'texto') { const r = agregaTxt(it.text, it.titulo, it.nivel, it.mismaLinea); if (it.html) { limpioHtml(r.el, it.html); r.fuente = it.fuente || it.text; r.htmlIni = r.el.innerHTML; } }          // r.fuente: el «#:» original (A_n, ^{-1}, det(A)…): si el texto no se toca, se exporta tal cual
+      if (it.t === 'texto') { const r = agregaTxt(it.text, it.titulo, it.nivel, it.mismaLinea); if (it.debajo) { r.debajo = true; r.el.parentElement.classList.add('debajo'); }          // «debajo»: va bajo el dibujo «lado = derecha» que tiene al lado (no al lado de él)
+        if (it.html) { limpioHtml(r.el, it.html); r.fuente = it.fuente || it.text; r.htmlIni = r.el.innerHTML; } }          // r.fuente: el «#:» original (A_n, ^{-1}, det(A)…): si el texto no se toca, se exporta tal cual
       else if (it.t === 'parrafo') {          // párrafo del WPF: [{s:texto,b,i,u}, {eq:código,m:0|1|2}, {img:data:…}]
         const r = agregaTxt('', !!it.titulo, it.nivel, it.mismaLinea);
         for (const g of it.seg || []) {
@@ -954,6 +961,7 @@
       }
     }
     for (const [i, x, y] of dxs) { const r = reg[i]; if (!r || !r.el) continue; const u = r.el.parentElement && r.el.parentElement.classList.contains('grupo') ? r.el.parentElement : r.el; if (x) { if (u.classList.contains('txt') || u.classList.contains('slider')) u.style.marginLeft = x + 'px'; else u.style.left = x + 'px'; } if (y) u.style.marginTop = y + 'px'; }
+    apilaDibDer();
     calculaConAviso();          // la hoja se VE ya (fórmulas y textos); los resultados llegan después, con «calculando… N s» arriba
   }
   // formato del texto (negrita, tamaño, tabla…): solo etiquetas y estilos de una lista corta
@@ -1008,7 +1016,7 @@
           }
         })(r.el); const o = { t: 'parrafo', seg }; if (r.titulo) { o.titulo = true; o.nivel = r.nivel; } if (mismaLineaDe(r)) o.mismaLinea = true; emp(r, o);
       }
-      else if (r.t === 'txt') { const o = { t: 'texto', text: r.el.textContent }; if (r.titulo) { o.titulo = true; o.nivel = r.nivel; } if (mismaLineaDe(r)) o.mismaLinea = true; if (r.el.querySelector('*') || r.el.getAttribute('style')) o.html = r.el.innerHTML; if (r.fuente && r.el.innerHTML === r.htmlIni) o.fuente = r.fuente; emp(r, o); }
+      else if (r.t === 'txt') { const o = { t: 'texto', text: r.el.textContent }; if (r.titulo) { o.titulo = true; o.nivel = r.nivel; } if (r.debajo) o.debajo = true; if (mismaLineaDe(r)) o.mismaLinea = true; if (r.el.querySelector('*') || r.el.getAttribute('style')) o.html = r.el.innerHTML; if (r.fuente && r.el.innerHTML === r.htmlIni) o.fuente = r.fuente; emp(r, o); }
       else if (r.t === 'slider') emp(r, { t: 'slider', nombre: r.nombre, min: r.min, max: r.max, valor: r.valor, inc: r.inc, ...(r.anim ? { anim: true } : {}), ...(r.local ? { local: true } : {}), ...(r.paso ? { paso: true } : {}), ...(mismaLineaDe(r) ? { mismaLinea: true } : {}) });
       else if (r.t === 'cad') emp(r, { t: 'cad', codigo: r.ta.value, ...(r.titulo ? { titulo: r.titulo } : {}), ...(mismaLineaDe(r) ? { mismaLinea: true } : {}) });
       else if (r.t === 'raw') emp(r, { t: 'raw', text: r.ta.value, ...(r.oculto ? { oculto: true } : {}), ...(mismaLineaDe(r) ? { mismaLinea: true } : {}) });

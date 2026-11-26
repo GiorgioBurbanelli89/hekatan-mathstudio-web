@@ -291,7 +291,7 @@
     const cs = getComputedStyle(papel), mt = parseFloat(cs.paddingTop) || 96, mb = parseFloat(cs.paddingBottom) || 96, util = PGH - mt - mb;
     const nat = hijos.map((c) => ({ c, top: c.offsetTop, h: c.offsetHeight, m0: parseFloat(getComputedStyle(c).marginTop) || 0 }));
     let extra = 0, gFin = -1;          // gFin: lo que está AL LADO de un dibujo flotante («lado = derecha») se mueve con él, no por separado
-    const cierra = (x) => x.c.classList.contains('dib-der') || !!x.c.querySelector(':scope > .txt.titulo');
+    const cierra = (x) => x.c.classList.contains('dib-der') || x.c.classList.contains('debajo') || !!x.c.querySelector(':scope > .txt.titulo');
     for (let i = 0; i < nat.length; i++) {
       const n = nat[i]; if (!n.h || i < gFin) continue;
       const pe = n.c.children.length === 1 ? n.c.firstElementChild : null, esTit = pe && (pe.classList.contains('titulo') || /^\s*Figura(?![A-Za-z])/.test(pe.textContent)) && nat[i + 1];          // título o leyenda «Figura…»: va con lo que sigue          // un título va siempre con lo que sigue (como el WPF): nunca queda solo al pie de la página
