@@ -295,3 +295,4 @@ body.movil #nav { display:none; }
 
 .fila.dib-der { float:right; clear:right; width:46%; margin-left:14px; }          /* #dibujo(…, lado = derecha): al lado de los datos que siguen */
 .fila:has(> .txt.titulo) { clear:both; }
+.slider.anim button { background:#3a62d9; color:#fff; border-color:#2b4fb8; min-width:28px; }

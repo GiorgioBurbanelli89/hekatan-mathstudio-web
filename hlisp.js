@@ -172,9 +172,21 @@
         vacia(); primera = false; const nombre = (/^#(\w+)/.exec(t) || [])[1] || '', txt = [l];
         if (nombre === 'numerico' || nombre === 'simbolico') { if (nombre === 'numerico') numerico = true; cuenta('#' + nombre + ' (oculto)'); continue; }          // no se dibuja; la hoja queda marcada «numerico» (como el escritorio)
         if (nombre === 'fplot') { const cod = traduceFplot(t); if (cod) { items.push(oculto ? { t: 'eq', codigo: cod, modo: 0, oculto: true, orig: '' } : { t: 'eq', codigo: cod, modo: 0, orig: '' }); cuenta('#fplot (nativa)'); continue; } }
-        if (nombre === 'slider') {          // #slider fplot(f1, f2, [a b]), n = lo:hi → un deslizador de la hoja (n) y la gráfica nativa que lo usa: al moverlo la curva se redibuja
-          const ms = /^#slider\s+(fplot|fresorte|fresortesim|ftrocito|friemann)\s*\((.*)\)\s*,\s*([\p{L}_][\p{L}\p{N}_]*)\s*=\s*(-?[\d.eE+-]+)\s*:\s*(-?[\d.eE+-]+)\s*$/u.exec(t), cod = ms && (ms[1] === 'fplot' ? traduceFplot('#fplot(' + ms[2] + ')') : ms[1] + '(' + ms[2].replace(/·/g, '*') + ')');
-          if (ms && cod) { const lo = parseFloat(ms[4]), hi = parseFloat(ms[5]); items.push({ t: 'slider', nombre: ms[3], min: lo, max: hi, valor: (lo + hi) / 2, inc: (hi - lo) / 50 }, oculto ? { t: 'eq', codigo: cod, modo: 0, oculto: true, orig: '' } : { t: 'eq', codigo: cod, modo: 0, orig: '' }); cuenta('#slider fplot (nativa)'); continue; }
+        if (nombre === 'slider' || nombre === 'anim' || nombre === 'deslizador' || nombre === 'animar') {          // #slider fplot(f1, f2, [a b]), n = lo:hi  o  n = lo:paso:hi (como Hekatan LISP) → un deslizador de la hoja (n) y la gráfica nativa que lo usa: al moverlo la curva se redibuja.
+          // #anim fplot(…), n = lo:paso:hi (UNA línea; el bloque «#anim(…) … #finanim» sigue como bloque LISP) → lo mismo, con ▶/⏸ que recorre los cuadros de lo a hi y vuelve a empezar
+          const ms = /^#(?:slider|anim|deslizador|animar)\s+(fplot|fresorte|fresortesim|ftrocito|friemann)\s*\((.*)\)\s*,\s*([\p{L}_][\p{L}\p{N}_]*)\s*=\s*(-?[\d.eE+-]+)\s*:\s*(-?[\d.eE+-]+)\s*(?::\s*(-?[\d.eE+-]+)\s*)?$/u.exec(t), cod = ms && (ms[1] === 'fplot' ? traduceFplot('#fplot(' + ms[2] + ')') : ms[1] + '(' + ms[2].replace(/·/g, '*') + ')');
+          if (ms && cod) {
+            let lo = parseFloat(ms[4]), hi = parseFloat(ms[5]), inc = (hi - lo) / 50, valor = (lo + hi) / 2;
+            if (ms[6] !== undefined) { inc = hi; hi = parseFloat(ms[6]); }          // «n = 0:5:60»: el del medio es el PASO (Hekatan LISP · LispAnim.Valores)
+            else if (Number.isInteger(lo) && Number.isInteger(hi) && hi - lo >= 5 && hi - lo <= 50) inc = 1;          // «n = 1:8» sin paso: de uno en uno (SliderHtml de Hekatan LISP)
+            if (inc > 0 && hi > lo) {
+              const nv = Math.floor((hi - lo) / inc + 1e-9); valor = +(lo + Math.floor(nv / 2) * inc).toPrecision(12);          // se entra por el cuadro de en medio (como Hekatan LISP)
+              const anim = nombre === 'anim' || nombre === 'animar', sl = { t: 'slider', nombre: ms[3], min: lo, max: hi, valor, inc, local: true };
+              if (anim) { sl.anim = true; sl.valor = lo; }
+              if (ms[6] !== undefined) sl.paso = true;
+              items.push(sl, oculto ? { t: 'eq', codigo: cod, modo: 0, oculto: true, orig: '' } : { t: 'eq', codigo: cod, modo: 0, orig: '' }); cuenta(anim ? '#anim fplot (nativa)' : '#slider fplot (nativa)'); continue;
+            }
+          }
         }
         if (t.startsWith('#|')) while (i < lin.length && lin[i].trimStart().startsWith('#|')) { txt.push(lin[i].replace(/\s+$/, '')); i++; }
         let cierre = Cierres[nombre] || null; if (!cierre && nombre === 'anim' && /^#anim\s*\(/.test(t)) cierre = '#finanim';
@@ -219,8 +231,8 @@
       if (pend && !(x.t === 'eq' && GrafSlider.test(String(x.codigo || '').trim()))) { o.push(pend.nombre + ' = ' + pend.valor + " 'deslizador " + pend.min + ' … ' + pend.max); pend = null; }
       const n0 = o.length;
       if (pend && x.t === 'eq') {          // el deslizador + su grafica vuelven a ser UNA directiva
-        const cg = adiff(String(x.codigo || '').trim()).replace(/^fplot\s*\((.*)\[\s*([^\],]+?)\s*[, ]\s*([^\],]+?)\s*\]\s*\)\s*$/, 'fplot($1[$2 $3])');
-        o.push('#slider ' + cg + ', ' + pend.nombre + ' = ' + pend.min + ':' + pend.max); pend = null; ultNom = null; ultEq = -1; return;
+        const cg = adiff(String(x.codigo || '').trim()).replace(/\s*==\s*/g, ' = ').replace(/^fplot\s*\((.*)\[\s*([^\],]+?)\s*[, ]\s*([^\],]+?)\s*\]\s*\)\s*$/, 'fplot($1[$2 $3])');
+        o.push((pend.anim ? '#anim ' : '#slider ') + cg + ', ' + pend.nombre + ' = ' + pend.min + ':' + (pend.paso || pend.anim ? pend.inc + ':' : '') + pend.max); pend = null; ultNom = null; ultEq = -1; return;
       }
       if (x.t === 'texto' || x.t === 'parrafo') {
         const t = unaLinea(x.t === 'texto' ? (x.fuente || (x.html && !x.titulo ? dehtml(x.html) : x.text)) : prm(x.seg || [])); if (!t) return;

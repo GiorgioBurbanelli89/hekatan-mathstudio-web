@@ -82,22 +82,28 @@
     ed.alUne = () => uneConAnterior(r);
     reg.push(r); return r;
   }
-  function agregaSlider(nombre, min, max, valor, inc, mismo) {
-    const c = contenedor(!!mismo), d = document.createElement('div'); d.className = 'slider';
+  function agregaSlider(nombre, min, max, valor, inc, mismo, op) {          // op: { anim, local, paso } (de «#anim fplot(…), n = a:paso:b» / «#slider …» de Hekatan LISP)
+    op = op || {};
+    const c = contenedor(!!mismo), d = document.createElement('div'); d.className = 'slider' + (op.anim ? ' anim' : '');
     d.innerHTML = '<span class="nom"></span><button>▶</button><input type="range"><span class="val"></span>';
     const nom = d.children[0], bt = d.children[1], rg = d.children[2], vl = d.children[3];
     nom.textContent = nombre; rg.min = min; rg.max = max; rg.step = inc || (max - min) / 100; rg.value = valor; vl.textContent = HK.fmt ? HK.fmt(parseFloat(Number(valor).toPrecision(6))) : valor;
-    const r = { t: 'slider', nombre, min, max, valor, inc: inc || (max - min) / 100, el: d };
+    const r = { t: 'slider', nombre, min, max, valor, inc: inc || (max - min) / 100, el: d, anim: !!op.anim, local: !!op.local, paso: !!op.paso };
+    if (op.anim) { bt.title = 'Reproducir / pausar la animación'; d.title = 'Animación de Hekatan LISP: ▶ recorre ' + nombre + ' de ' + min + ' a ' + max; }
     rg.addEventListener('input', () => { r.valor = parseFloat(rg.value); vl.textContent = HK.fmt(r.valor); resolver(); });
     let tm = null;
     bt.addEventListener('click', () => {
       if (tm) { clearInterval(tm); tm = null; bt.textContent = '▶'; return; }
       bt.textContent = '⏸'; let dir = 1;
+      if (r.anim && parseFloat(rg.value) >= max - 1e-9) rg.value = min;          // animación: si está al final, vuelve a empezar
       tm = setInterval(() => {
-        let v = parseFloat(rg.value) + dir * parseFloat(rg.step) * 2; if (v > max) { v = max; dir = -1; } if (v < min) { v = min; dir = 1; }
+        let v;
+        if (r.anim) { v = parseFloat(rg.value) + parseFloat(rg.step); if (v > max + 1e-9) v = min; }          // animación (#anim de Hekatan LISP): cuadro a cuadro de min a max y vuelta al primero
+        else { v = parseFloat(rg.value) + dir * parseFloat(rg.step) * 2; if (v > max) { v = max; dir = -1; } if (v < min) { v = min; dir = 1; } }
         rg.value = v; r.valor = parseFloat(rg.value); vl.textContent = HK.fmt(r.valor); resolver();
-      }, 60);
+      }, r.anim ? 140 : 60);
     });
+    r.para = () => { if (tm) { clearInterval(tm); tm = null; bt.textContent = '▶'; } };
     c.appendChild(d); reg.push(r); return r;
   }
   // bloque CAD: código AutoLISP del motor (linea, rect, circulo…) arriba, el dibujo (SVG) abajo; se baja como .lsp (AutoCAD) o DXF
@@ -310,6 +316,12 @@
       const X = L + (g.xs[ik] - x0) / (x1 - x0) * w, lin = ['x = ' + fv(g.xs[ik])];
       c.strokeStyle = 'rgba(20,20,20,.65)'; c.setLineDash([4, 3]); c.beginPath(); c.moveTo(X, T); c.lineTo(X, T + h); c.stroke(); c.setLineDash([]);
       g.ys.forEach((ys, s) => { const v = ys[ik]; if (!isFinite(v)) return; lin.push((g.nombres[s] || 'serie ' + (s + 1)) + ' = ' + fv(v)); c.fillStyle = PAL[s % PAL.length]; c.strokeStyle = '#fff'; c.lineWidth = 1.5; c.beginPath(); c.arc(X, T + h - (v - mn) / (mx - mn) * h, 4.5, 0, 7); c.fill(); c.stroke(); });
+      (g.series || []).forEach((s) => {          // series de datos: el valor en la x del cursor sobre la polilínea (interpolado en el tramo que la contiene; si la curva pasa varias veces, el tramo más cercano al cursor) o el punto más cercano
+        const Yp = (y) => T + h - (y - mn) / (mx - mn) * h, xc = g.xs[ik]; let best = null;
+        for (let i = 0; i + 1 < s.p.length; i++) { const a = s.p[i], b = s.p[i + 1]; if (![a[0], a[1], b[0], b[1]].every(isFinite) || a[0] === b[0]) continue; if ((xc - a[0]) * (xc - b[0]) > 0) continue; const y = a[1] + (b[1] - a[1]) * (xc - a[0]) / (b[0] - a[0]), d = Math.abs(Yp(y) - py); if (!best || d < best.d) best = { y, d }; }
+        if (!best) { const pp = s.p.filter((p) => isFinite(p[0]) && isFinite(p[1])); if (!pp.length) return; let q = pp[0]; for (const p of pp) if (Math.abs(p[0] - xc) < Math.abs(q[0] - xc)) q = p; if (Math.abs(q[0] - xc) > (x1 - x0) * 0.02) return; best = { y: q[1] }; }
+        lin.push(s.nom + ' = ' + fv(best.y)); c.fillStyle = PAL[s.col % PAL.length]; c.strokeStyle = '#fff'; c.lineWidth = 1.5; c.beginPath(); c.arc(X, Yp(best.y), 4.5, 0, 7); c.fill(); c.stroke();
+      });
       globo(c, lin, X, py, W, H); r.hoverTxt = lin.join(' | ');
     } else if (hv.k === 'mapa') {
       const { Lm, T, w, h, d, n } = hv; if (px < Lm || px > Lm + w || py < T || py > T + h) return;
@@ -329,6 +341,8 @@
   }
   // marca de agarre en la esquina inferior derecha de toda gráfica: arrastrándola cambian el ancho y el alto
   HK.grip = (c, W, H) => { c.save(); c.strokeStyle = '#7b8699'; c.lineWidth = 1.3; for (let k = 0; k < 3; k++) { c.beginPath(); c.moveTo(W - 4 - k * 4, H - 2); c.lineTo(W - 2, H - 4 - k * 4); c.stroke(); } c.restore(); };
+  // ¿marcar los puntos de una serie? Como Hekatan LISP (PlotSvg): pocas filas (≤ 30) sí; con muchas, solo si el nombre dice que son puntos o pasos (pasos_de_Newton, puntos, iteraciones…)
+  function serieConMarcas(s) { return s.p.length < 2 || s.p.length <= 30 || /punto|paso|newton|iter|dato|ensayo|sap|etabs|opensees/i.test(s.nom || ''); }
   function dibujaGraf(r) {
     if (!r.graf) { r.el.classList.remove('conGraf', 'soloGraf'); if (r.gel) { r.gel.remove(); r.gel = null; } if (r.hov) { r.hov.remove(); r.hov = null; } r.hv = null; return; }
     r.el.classList.add('conGraf'); r.el.classList.toggle('soloGraf', r.ed !== activo); r.hv = null; limpiaHover(r);          // con gráfica: en una fila con otras piezas se coloca AL LADO (estilo.css)
@@ -369,22 +383,27 @@
     if (mn < 0 && mx > 0) { c.strokeStyle = '#999'; c.beginPath(); c.moveTo(L, Y(0)); c.lineTo(L + w, Y(0)); c.stroke(); }
     c.save(); c.beginPath(); c.rect(L, T, w, h); c.clip();
     g.ys.forEach((ys, k) => { c.strokeStyle = PAL[k % PAL.length]; c.lineWidth = 1.8; c.beginPath(); let on = false; ys.forEach((v, i) => { if (!isFinite(v)) { on = false; return; } if (!on) { c.moveTo(X(g.xs[i]), Y(v)); on = true; } else c.lineTo(X(g.xs[i]), Y(v)); }); c.stroke(); });
-    (g.series || []).forEach((s) => { c.fillStyle = PAL[s.col % PAL.length]; s.p.forEach((p) => { if (!isFinite(p[0]) || !isFinite(p[1])) return; c.beginPath(); c.arc(X(p[0]), Y(p[1]), 4, 0, 7); c.fill(); }); });          // series de puntos (x, y) de la hoja
+    (g.series || []).forEach((s) => {          // series (x, y) de la hoja (matriz N×2): POLILÍNEA en el orden de las filas (sin reordenar por x: así las curvas cerradas, como el diagrama P–M, también salen) y marcas en los puntos
+      const col = PAL[s.col % PAL.length], marcas = serieConMarcas(s);
+      if (s.p.length >= 2) { c.strokeStyle = col; c.lineWidth = 2; c.lineJoin = 'round'; c.beginPath(); let on = false; s.p.forEach((p) => { if (!isFinite(p[0]) || !isFinite(p[1])) { on = false; return; } if (!on) { c.moveTo(X(p[0]), Y(p[1])); on = true; } else c.lineTo(X(p[0]), Y(p[1])); }); c.stroke(); }
+      if (marcas) s.p.forEach((p) => { if (!isFinite(p[0]) || !isFinite(p[1])) return; c.fillStyle = col; c.strokeStyle = '#fff'; c.lineWidth = 1.2; c.beginPath(); c.arc(X(p[0]), Y(p[1]), s.p.length > 30 ? 2.5 : 4.5, 0, 7); c.fill(); c.stroke(); });
+    });
     (g.pts || []).forEach((p) => { c.fillStyle = '#f0b323'; c.beginPath(); c.arc(X(p[0]), Y(p[1]), 4.5, 0, 7); c.fill(); });          // puntos = [x y]: la marca (como Hekatan LISP: punto amarillo y «puntos» en la leyenda)
     c.restore(); HK.grip(c, W, H); c.strokeStyle = '#222'; c.lineWidth = 1; c.strokeRect(L, T, w, h); r.hv = { k: 'curvas', L, T, w, h, mn, mx, x0, x1, g };
-    if (!LG) { g.nombres.forEach((nm, k) => { c.fillStyle = PAL[k % PAL.length]; c.fillRect(L + 8, T + 8 + k * 14, 16, 3); c.fillStyle = '#333'; c.textAlign = 'left'; c.fillText(nm, L + 30, T + 12 + k * 14); }); (g.series || []).forEach((s, q) => { const yy = T + 8 + (g.nombres.length + q) * 14; c.fillStyle = PAL[s.col % PAL.length]; c.beginPath(); c.arc(L + 16, yy + 1, 3.5, 0, 7); c.fill(); c.fillStyle = '#333'; c.textAlign = 'left'; c.fillText(s.nom, L + 30, yy + 4); }); return; }
+    if (!LG) { g.nombres.forEach((nm, k) => { c.fillStyle = PAL[k % PAL.length]; c.fillRect(L + 8, T + 8 + k * 14, 16, 3); c.fillStyle = '#333'; c.textAlign = 'left'; c.fillText(nm, L + 30, T + 12 + k * 14); }); (g.series || []).forEach((s, q) => { const yy = T + 8 + (g.nombres.length + q) * 14; c.fillStyle = PAL[s.col % PAL.length]; if (s.p.length >= 2) c.fillRect(L + 8, yy, 16, 3); if (serieConMarcas(s)) { c.beginPath(); c.arc(L + 16, yy + 1, 3.5, 0, 7); c.fill(); } c.fillStyle = '#333'; c.textAlign = 'left'; c.fillText(s.nom, L + 30, yy + 4); }); return; }
     {          // como Hekatan LISP: leyenda en un recuadro arriba a la derecha (nombre con subíndice: ec_1 → ec₁, en cursiva) y la «x» bajo el eje
-      const ents = g.nombres.map((nm, k) => ({ nm, col: PAL[k % PAL.length] })).concat((g.series || []).map((s) => ({ nm: s.nom, pto: true, pc: PAL[s.col % PAL.length] })), (g.pts || []).length ? [{ nm: 'puntos', pto: true }] : []);
+      const ents = g.nombres.map((nm, k) => ({ nm, col: PAL[k % PAL.length] })).concat((g.series || []).map((s) => ({ nm: s.nom, pto: serieConMarcas(s), lin: s.p.length >= 2, col: PAL[s.col % PAL.length], pc: PAL[s.col % PAL.length] })), (g.pts || []).length ? [{ nm: 'puntos', pto: true }] : []);
       const parte = (nm) => { const i = nm.indexOf('_'); return i > 0 ? [nm.slice(0, i), nm.slice(i + 1)] : [nm, '']; };
       const anchoNm = (nm) => { const [b0, s0] = parte(nm); c.font = 'italic 12px serif'; let a = c.measureText(b0).width; c.font = 'italic 9px serif'; return a + (s0 ? c.measureText(s0).width + 1 : 0); };
       const bw = 34 + Math.max(...ents.map((q) => anchoNm(q.nm))) + 8, bh = 8 + ents.length * 17, bx = L + w - bw - 8, by = T + 8;
       c.fillStyle = 'rgba(255,255,255,.92)'; c.fillRect(bx, by, bw, bh); c.strokeStyle = '#333'; c.lineWidth = 1; c.strokeRect(bx + .5, by + .5, bw, bh);
       ents.forEach((q, k) => {
         const yy = by + 13 + k * 17;
-        if (q.pto) { c.fillStyle = q.pc || '#f0b323'; c.beginPath(); c.arc(bx + 18, yy - 1, 4.5, 0, 7); c.fill(); } else { c.strokeStyle = q.col; c.lineWidth = 2.4; c.beginPath(); c.moveTo(bx + 8, yy - 1); c.lineTo(bx + 28, yy - 1); c.stroke(); }
+        if (!q.pto || q.lin) { c.strokeStyle = q.col; c.lineWidth = 2.4; c.beginPath(); c.moveTo(bx + 8, yy - 1); c.lineTo(bx + 28, yy - 1); c.stroke(); }
+        if (q.pto) { c.fillStyle = q.pc || '#f0b323'; c.beginPath(); c.arc(bx + 18, yy - 1, 4.5, 0, 7); c.fill(); }
         const [b0, s0] = parte(q.nm); c.fillStyle = '#222'; c.textAlign = 'left'; c.font = 'italic 12px serif'; c.fillText(b0, bx + 34, yy + 3); if (s0) { const a = c.measureText(b0).width; c.font = 'italic 9px serif'; c.fillText(s0, bx + 34 + a + 1, yy + 7); }
       });
-      c.fillStyle = '#333'; c.font = 'italic 12px serif'; c.textAlign = 'center'; c.fillText('x', L + w / 2, H - 6);
+      if (g.ys.length || !(g.series || []).length) { c.fillStyle = '#333'; c.font = 'italic 12px serif'; c.textAlign = 'center'; c.fillText('x', L + w / 2, H - 6); }          // solo series de datos: el eje NO es la «x» de una fórmula (Hekatan LISP no rotula ejes de series); no se pone una «x» genérica
     }
   }
 
@@ -538,8 +557,11 @@
       const t2 = performance.now(); for (let i = 0; i < n; i++) filas.forEach(paso); const ms = (performance.now() - t2) / n;
       return { kind: 'val', texto: '⏱ ' + (ms >= 1 ? ms.toFixed(3) + ' ms' : (ms * 1000).toFixed(3) + ' µs') + ' por pasada (promedio de ' + n + (n === 1 ? ' pasada)' : ' pasadas)'), cu: -1 };
     }
+    let sLocal = null;          // deslizador de «#slider/#anim fplot(…), n = …» (Hekatan LISP): n vale SOLO para su gráfica; después se devuelve lo que había
     for (const r of reg) {
-      if (r.t === 'slider') { env.v[r.nombre] = r.valor; continue; }
+      if (sLocal && sLocal.usado) { if (sLocal.habia) env.v[sLocal.n] = sLocal.v; else delete env.v[sLocal.n]; sLocal = null; }
+      if (sLocal && r.t === 'eq') sLocal.usado = true;
+      if (r.t === 'slider') { if (r.local) sLocal = { n: r.nombre, habia: Object.prototype.hasOwnProperty.call(env.v, r.nombre), v: env.v[r.nombre] }; env.v[r.nombre] = r.valor; continue; }
       if (r.t === 'raw' && r.dibuja) { r.vals = env.v; setTimeout(r.dibuja, 0); continue; }          // #dibujo: se redibuja con los valores de TODA la hoja (como Hekatan LISP: puede ir antes de las líneas que dibuja, p. ej. «lado = derecha» al lado de sus datos)
       if (r.t !== 'eq') continue;
       if (!r.prog) r.ed.resultado = null; r.graf = null; r.ed.modo = r.modo; limpiaMarcas(r.ed.fila);
@@ -633,7 +655,7 @@
   function clona(r, mismo) {
     if (r.t === 'eq') { const n = agregaEq(r.ed.texto(), { mismaLinea: mismo, modo: r.modo, oculto: r.oculto }); n.editado = true; n.gw = r.gw; n.gh = r.gh; return n; }
     if (r.t === 'txt') { const n = agregaTxt(r.el.textContent, r.titulo, r.nivel, mismo); if (r.el.querySelector('*') && !r.el.querySelector('.ifx')) limpioHtml(n.el, r.el.innerHTML); return n; }
-    if (r.t === 'slider') return agregaSlider(r.nombre, r.min, r.max, r.valor, r.inc, mismo);
+    if (r.t === 'slider') return agregaSlider(r.nombre, r.min, r.max, r.valor, r.inc, mismo, r);
     if (r.t === 'cad') return agregaCad(r.ta.value, r.titulo, mismo);
     if (r.t === 'raw') return agregaRaw(r.ta.value, r.oculto, mismo);
     return null;
@@ -913,7 +935,7 @@
           r.el.appendChild(nodo);
         }
       }
-      else if (it.t === 'slider') agregaSlider(it.nombre, it.min, it.max, it.valor, it.inc, it.mismaLinea);
+      else if (it.t === 'slider') agregaSlider(it.nombre, it.min, it.max, it.valor, it.inc, it.mismaLinea, it);
       else if (it.t === 'cad') agregaCad(it.codigo || CAD_CAB, it.titulo, it.mismaLinea);
       else if (it.t === 'raw') agregaRaw(it.text, it.oculto, it.mismaLinea);
       else if (it.t === 'eq') {
@@ -987,7 +1009,7 @@
         })(r.el); const o = { t: 'parrafo', seg }; if (r.titulo) { o.titulo = true; o.nivel = r.nivel; } if (mismaLineaDe(r)) o.mismaLinea = true; emp(r, o);
       }
       else if (r.t === 'txt') { const o = { t: 'texto', text: r.el.textContent }; if (r.titulo) { o.titulo = true; o.nivel = r.nivel; } if (mismaLineaDe(r)) o.mismaLinea = true; if (r.el.querySelector('*') || r.el.getAttribute('style')) o.html = r.el.innerHTML; if (r.fuente && r.el.innerHTML === r.htmlIni) o.fuente = r.fuente; emp(r, o); }
-      else if (r.t === 'slider') emp(r, { t: 'slider', nombre: r.nombre, min: r.min, max: r.max, valor: r.valor, inc: r.inc, ...(mismaLineaDe(r) ? { mismaLinea: true } : {}) });
+      else if (r.t === 'slider') emp(r, { t: 'slider', nombre: r.nombre, min: r.min, max: r.max, valor: r.valor, inc: r.inc, ...(r.anim ? { anim: true } : {}), ...(r.local ? { local: true } : {}), ...(r.paso ? { paso: true } : {}), ...(mismaLineaDe(r) ? { mismaLinea: true } : {}) });
       else if (r.t === 'cad') emp(r, { t: 'cad', codigo: r.ta.value, ...(r.titulo ? { titulo: r.titulo } : {}), ...(mismaLineaDe(r) ? { mismaLinea: true } : {}) });
       else if (r.t === 'raw') emp(r, { t: 'raw', text: r.ta.value, ...(r.oculto ? { oculto: true } : {}), ...(mismaLineaDe(r) ? { mismaLinea: true } : {}) });
       else if (r.enTexto) continue;          // ya va dentro de su párrafo
