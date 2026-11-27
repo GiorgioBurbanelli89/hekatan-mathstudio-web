@@ -75,12 +75,12 @@ L_b = [4, 5, 6, 7, 8, 9]
 u_A = lsolve(K_g(L_b, L_b), F_g(L_b)) 'UNA división: u₂, v₂, θ₂, u₃, v₃, θ₃ [m, rad]
 d_A = 1000·u_A(1) 'deriva del techo [mm]
 #: Momento en la base derecha: la reacción del nudo 4 (giro), r = K·u en ese grado de libertad:
-M_A = abs(sum(transpose(K_g(12, L_b)).*u_A)) 'momento en la base derecha [kN·m]
+M_A = abs(K_g(12, 4)·u_A(1) + K_g(12, 5)·u_A(2) + K_g(12, 6)·u_A(3) + K_g(12, 7)·u_A(4) + K_g(12, 8)·u_A(5) + K_g(12, 9)·u_A(6)) 'momento en la base derecha [kN·m]
 #: **En una línea:** empotrado, el techo se mueve 0.6918 mm y la base derecha toma 49.97 kN·m (OpenSees: 0.6918 mm y 49.97 kN·m).
 
 ## 3 · Modelo B: resortes de Winkler
 #: **Simbólico primero.** La presión bajo la zapata es proporcional al hundimiento, q = k_s·w (un colchón de resortes). El módulo de balasto sale del suelo y del ancho de la zapata:
-k_s = E_s/(B·(1 - ν^2)) 'módulo de balasto, forma simbólica
+k_s = Simplify{E_s/(B*(1 - ν^2))} 'módulo de balasto, forma simbólica
 E_s = 20000 'módulo del suelo [kPa]
 ν = 0.3 'Poisson
 B = 2 'ancho de la zapata [m]
