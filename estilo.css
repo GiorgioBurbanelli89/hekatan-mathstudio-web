@@ -254,9 +254,14 @@ body.movil #nav { display:none; }
 @media print {
   @page { margin:0; }
   html, body { height:auto !important; overflow:visible !important; background:#fff !important; }
-  #menu, #pestanas, #cinta, #estado, #nav, #hlisp-modal, .pg.encab:empty, .corte, .marco { display:none !important; }
+  #titulo, #menu, #pestanas, #cinta, #estado, #nav, #hlisp-modal, #hk-barra-tactil, .pg.encab:empty, .corte, .marco { display:none !important; }          /* #titulo también: sus 34 px corrían TODA la hoja y cada página impresa empezaba con el final de la anterior */
   #area { position:static !important; overflow:visible !important; height:auto !important; background:#fff !important; padding:0 !important; }
-  #papel { zoom:1 !important; box-shadow:none !important; margin:0 !important; }
+  #papel { zoom:1 !important; box-shadow:none !important; margin:0 !important; padding-top:0 !important; padding-bottom:0 !important; min-height:0 !important; }
+  #papel .pg { display:none !important; }          /* número, encabezado y pie: los pone @page (app.js, #pag-print) */
+  #hoja > .pag-ini { break-before:page; padding-top:0 !important; margin-top:0 !important; }          /* lo que la vista Página puso al comienzo de una página nueva */
+  .pag-hueco { break-before:page; height:0 !important; }          /* salto entre renglones de un programa partido */
+  #hoja > .fila { break-inside:avoid; }
+  #hoja > .fila:has(.grupo > .pag-hueco) { break-inside:auto; }
 }
 
 /* ---- bloque CAD como en el WPF (BloquesLisp.cs): sin marco, el dibujo flota sobre el papel; el borde azul solo al pasar el ratón / seleccionar */
@@ -319,3 +324,4 @@ body.tactil-compacto #titulo, body.tactil-compacto #menu, body.tactil-compacto #
   body.movil #cinta .grupo-t > span { display:none; }
   body.movil #pestanas button { min-height:0; padding:3px 8px; }
 }
+.fila .eq.progl.pag-fin::after { display:none; }          /* último renglón de un programa en su página: la barra se cierra aquí y sigue en la página siguiente */

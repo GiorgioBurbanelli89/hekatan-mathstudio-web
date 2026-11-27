@@ -285,14 +285,44 @@
   // Márgenes entre páginas (como el WPF): nada se escribe en la franja del margen inferior + margen superior de la página siguiente;
   // la línea (bloque) que no cabe entera antes del margen inferior pasa, entera, al comienzo de la página siguiente.
   let enPag = false;
+  function parteGrupo(fila, y0, PGH, mt, mb) {          // bloque de programa (for/if/función: una columna .grupo de renglones .eq) más alto que una página: se parte ENTRE RENGLONES
+    const g = [...fila.children].find((c) => c.classList.contains('grupo') && c.children.length > 1); if (!g) return 0;
+    const fr = fila.getBoundingClientRect(), esc = fila.offsetHeight / (fr.height || 1);
+    const hs = [...g.children].filter((c) => c.offsetHeight > 0).map((c) => ({ c, t: (c.getBoundingClientRect().top - fr.top) * esc, h: c.offsetHeight }));
+    let S = 0, prev = null;
+    for (const x of hs) {
+      const t = y0 + x.t + S, k = Math.floor(t / PGH), fin = (k + 1) * PGH - mb;
+      if (t + x.h > fin + 0.5 && x.h <= PGH - mt - mb && prev) {          // este renglón no cabe: baja entero al comienzo de la página siguiente; el de arriba cierra su barra
+        const d = (k + 1) * PGH + mt - t, h = document.createElement('div'); h.className = 'pag-hueco'; h.style.height = d + 'px'; x.c.before(h); prev.classList.add('pag-fin'); S += d;          // hueco (no margen: al imprimir el margen en el salto se trunca)
+      }
+      prev = x.c;
+    }
+    return S;
+  }
+  function parteEq(fila, y0, PGH, mt, mb) {          // ecuación alta (una sola, dibujada en un lienzo): huecos entre renglones para que cada parte quede dentro del recuadro de su página
+    const r = H().reg.find((q) => q.ed && q.ed.canvas && fila.contains(q.ed.canvas) && q.ed.canvas.offsetHeight > 0 && !q.oculto && q.el.offsetParent); if (!r) return 0;
+    const cv = r.ed.canvas, fr = fila.getBoundingClientRect(), esc = fila.offsetHeight / (fr.height || 1), off = (cv.getBoundingClientRect().top - fr.top) * esc, Hc = cv.offsetHeight;
+    const libres = r.ed.lineasLibres(); if (!libres.length) return 0;
+    const cortes = []; let S = 0, k = Math.floor((y0 + off) / PGH), ult = 0;
+    for (let g = 0; g < 200; g++) {
+      const fin = (k + 1) * PGH - mb, lim = fin - (y0 + off) - S;          // hasta dónde cabe el dibujo (sin huecos) en esta página
+      if (Hc <= lim + 0.5) break;
+      const c = libres.filter((y) => y <= lim && y > ult + 1).pop(); if (c === undefined) break;          // no hay un renglón libre que quepa: se deja como está (no se corta a mitad de una línea)
+      const gap = (k + 1) * PGH + mt - (y0 + off + c + S); cortes.push({ y: c, gap }); S += gap; ult = c; k++;
+    }
+    if (!cortes.length) return 0;
+    r.ed.cortes = cortes; r.ed.dibuja(); return S;
+  }
   function empaqueta() {
     const hoja = $('hoja'), papel = $('papel'), hijos = [...hoja.children];
-    hijos.forEach((c) => { c.style.marginTop = ''; c.style.paddingTop = ''; c.classList.remove('ini-pag'); });
+    hijos.forEach((c) => { c.style.marginTop = ''; c.style.paddingTop = ''; c.classList.remove('ini-pag', 'pag-ini'); });
+    H().reg.forEach((r) => { if (r.ed && r.ed.cortes) { r.ed.cortes = null; r.ed.dibuja(); } });
+    hoja.querySelectorAll('.pag-hueco').forEach((c) => c.remove()); hoja.querySelectorAll('.pag-fin').forEach((c) => c.classList.remove('pag-fin'));          // los saltos de página dentro de una ecuación se recalculan desde el dibujo entero
     const vista = document.body.getAttribute('data-vista');
     if (document.body.classList.contains('sinpag') || vista === 'web' || vista === 'borrador' || vista === 'esquema') return;
     const cs = getComputedStyle(papel), mt = parseFloat(cs.paddingTop) || 96, mb = parseFloat(cs.paddingBottom) || 96, util = PGH - mt - mb;
     const nat = hijos.map((c) => ({ c, top: c.offsetTop, h: c.offsetHeight, m0: parseFloat(getComputedStyle(c).marginTop) || 0 }));
-    let extra = 0, gFin = -1;          // gFin: lo que está AL LADO de un dibujo flotante («lado = derecha») se mueve con él, no por separado
+    let extra = 0, gFin = -1, kPrev = 0;          // kPrev: página donde terminó lo anterior → lo que empieza en una página nueva lleva .pag-ini (al IMPRIMIR: salto de página ahí, estilo.css)          // gFin: lo que está AL LADO de un dibujo flotante («lado = derecha») se mueve con él, no por separado
     const cierra = (x) => x.c.classList.contains('dib-der') || x.c.classList.contains('debajo') || !!x.c.querySelector(':scope > .txt.titulo');
     for (let i = 0; i < nat.length; i++) {
       const n = nat[i]; if (!n.h || i < gFin) continue;
@@ -304,8 +334,10 @@
       if (y0 < ini) d = ini - y0;                                                    // cae en el margen superior: baja al comienzo de la página
       else if (y0 >= fin || (y1 > fin + 0.5 && y1 - y0 <= util)) d = (k + 1) * PGH + mt - y0;          // cae en el margen inferior o no cabe: pasa entera a la página siguiente
       if (d > 0.5 && n.c.classList.contains('dib-der') && nat[i + 1]) nat[i + 1].c.style.marginTop = (nat[i + 1].m0 + d) + 'px';          // dibujo «lado = derecha» que no cabe: su margen NO mueve el texto de al lado (flota) → el texto baja con él a la página siguiente (antes quedaba angosto y se salía de la página)
+      { const kN = Math.floor((y0 + d) / PGH); if (kN > kPrev) n.c.classList.add('pag-ini'); kPrev = Math.max(kPrev, kN); }
       if (d > 0.5 && getComputedStyle(n.c).clear !== 'none') { n.c.style.paddingTop = ((parseFloat(getComputedStyle(n.c).paddingTop) || 0) + d) + 'px'; extra += d; continue; }          // va debajo de un dibujo flotante (clear): el margen se lo come el espacio bajo el dibujo y NO lo mueve → se empuja con relleno
-      if (d > 0.5) { n.c.style.marginTop = (n.m0 + d) + 'px'; extra += d; const t0 = n.c.firstElementChild; if (t0 && t0.classList.contains('titulo')) { const a0 = parseFloat(getComputedStyle(t0).marginTop) || 0; n.c.classList.add('ini-pag'); extra += (parseFloat(getComputedStyle(t0).marginTop) || 0) - a0; } }          // un título al comienzo de página pierde su aire de arriba: lo que sigue sube lo mismo
+      if (d > 0.5) { n.c.style.paddingTop = ((parseFloat(getComputedStyle(n.c).paddingTop) || 0) + d) + 'px'; extra += d;          /* RELLENO, no margen: al imprimir, el navegador TRUNCA el margen que cae en un salto de página (la línea subía a y≈0, dentro del margen superior) */ const t0 = n.c.firstElementChild; if (t0 && t0.classList.contains('titulo')) { const a0 = parseFloat(getComputedStyle(t0).marginTop) || 0; n.c.classList.add('ini-pag'); extra += (parseFloat(getComputedStyle(t0).marginTop) || 0) - a0; } }          // un título al comienzo de página pierde su aire de arriba: lo que sigue sube lo mismo
+      if (jG < 0 && !esTit && y1 - y0 > util) { const S = parteGrupo(n.c, y0 + d, PGH, mt, mb) || parteEq(n.c, y0 + d, PGH, mt, mb); extra += S; kPrev = Math.max(kPrev, Math.floor((y0 + d + n.h + S - 1) / PGH)); }          // más alta que una página: un programa (for/end…) se parte ENTRE LÍNEAS en cada salto; nada sale del margen
     }
   }
   function pagina() {
@@ -314,6 +346,8 @@
     if ($('nav')) llenaNav();
     const papel = $('papel'), hoja = $('hoja'); papel.querySelectorAll('.pg,.corte,.marco').forEach((x) => x.remove());
     const alto = hoja.offsetHeight + 192, n = Math.max(1, Math.ceil(alto / PGH)); papel.style.minHeight = (n * PGH) + 'px';
+    { const c0 = getComputedStyle(papel), t = parseFloat(c0.paddingTop) || 96, b = parseFloat(c0.paddingBottom) || 96; let st = $('pag-print'); if (!st) { st = document.createElement('style'); st.id = 'pag-print'; document.head.appendChild(st); }          // IMPRIMIR / PDF: el navegador corta las páginas con los mismos márgenes y en los mismos sitios (.pag-ini, .pag-hueco) que la vista Página; los márgenes en el salto no se pierden
+      st.textContent = '@media print { @page { size: ' + PGW + 'px ' + PGH + 'px; margin: ' + t + 'px 0 ' + b + 'px 0; @top-right { content: counter(page); font: 11px Segoe UI, sans-serif; color: #666; margin-right: ' + (parseFloat(c0.paddingRight) || 96) + 'px; }' + (encab ? ' @top-center { content: ' + JSON.stringify(encab) + '; font: 11px Segoe UI, sans-serif; color: #555; }' : '') + (pie ? ' @bottom-center { content: ' + JSON.stringify(pie) + '; font: 11px Segoe UI, sans-serif; color: #555; }' : '') + ' } }'; }
     const cs = getComputedStyle(papel), mt = parseFloat(cs.paddingTop) || 96, mb = parseFloat(cs.paddingBottom) || 96, ml = parseFloat(cs.paddingLeft) || 96, mr = parseFloat(cs.paddingRight) || 96;
     for (let k = 0; k < n; k++) {
       const m = document.createElement('div'); m.className = 'marco'; m.style.cssText = 'left:' + ml + 'px;top:' + (k * PGH + mt) + 'px;width:' + (papel.clientWidth - ml - mr) + 'px;height:' + (PGH - mt - mb) + 'px'; papel.appendChild(m);

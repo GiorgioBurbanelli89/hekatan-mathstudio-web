@@ -404,6 +404,28 @@
       }
       if (this.foco && (this.modo === 1 || this.modo === 2)) { ctx.font = '10.5px "Segoe UI", sans-serif'; ctx.fillStyle = this.modo === 1 ? '#7c3aed' : '#6b7280'; ctx.textAlign = 'right'; ctx.fillText(this.modo === 1 ? 'simbólica' : 'notación', W - 3, 11); ctx.textAlign = 'left'; }
       if (this.foco) this.dibujaCursor(ctx);
+      if (this.cortes && this.cortes.length) this.aplicaCortes(W, H);
+    }
+    // ----- SALTOS DE PÁGINA dentro de una ecuación alta (un programa for/end de muchas líneas): el lienzo se parte ENTRE LÍNEAS y se abre un hueco
+    // hasta el margen superior de la página siguiente (app.js empaqueta). this.cortes = [{ y, gap }] en px CSS del dibujo sin huecos.
+    aplicaCortes(W, H) {
+      const cv = this.canvas, dpr = this.dpr, tmp = document.createElement('canvas'); tmp.width = cv.width; tmp.height = cv.height; tmp.getContext('2d').drawImage(cv, 0, 0);
+      const cs = this.cortes.slice().sort((a, b) => a.y - b.y), tot = cs.reduce((p, c) => p + c.gap, 0), H2 = H + tot;
+      cv.height = Math.floor(H2 * dpr); cv.style.height = H2 + 'px'; const ctx = cv.getContext('2d'); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height);
+      let y0 = 0, dy = 0;
+      for (const c of cs.concat([{ y: H, gap: 0 }])) { const a = Math.round(y0 * dpr), b = Math.round(Math.min(c.y, H) * dpr); if (b > a) ctx.drawImage(tmp, 0, a, tmp.width, b - a, 0, a + Math.round(dy * dpr), tmp.width, b - a); y0 = c.y; dy += c.gap; }
+      this._H = H2; this._yInk += tot;
+    }
+    yNatural(py) { if (!this.cortes || !this.cortes.length) return py; let dy = 0; for (const c of this.cortes.slice().sort((a, b) => a.y - b.y)) { if (py >= c.y + dy + c.gap) dy += c.gap; else if (py >= c.y + dy) return c.y; else break; } return py - dy; }          // clic sobre el lienzo partido → coordenada del dibujo sin huecos
+    lineasLibres() {          // renglones del dibujo (sin huecos) donde se puede partir: sin tinta, salvo las barras verticales de los bloques for/if/función, que lo cruzan de arriba abajo
+      const cv = this.canvas, dpr = this.dpr, w = cv.width, h = cv.height; if (!w || !h) return [];
+      const d = cv.getContext('2d').getImageData(0, 0, w, h).data, run = Math.max(3, Math.round(this.tam * 1.15 * dpr)), op = (x, y) => d[(y * w + x) * 4 + 3] > 30;
+      const arriba = new Int32Array(w * h), abajo = new Int32Array(w * h);          // largo de la racha vertical de tinta que pasa por cada píxel
+      for (let x = 0; x < w; x++) { for (let y = 0; y < h; y++) arriba[y * w + x] = op(x, y) ? (y ? arriba[(y - 1) * w + x] : 0) + 1 : 0; for (let y = h - 1; y >= 0; y--) abajo[y * w + x] = op(x, y) ? (y < h - 1 ? abajo[(y + 1) * w + x] : 0) + 1 : 0; }
+      const libre = []; for (let y = 0; y < h; y++) { let ok = true; for (let x = 0; x < w && ok; x++) if (op(x, y) && (arriba[y * w + x] < run || abajo[y * w + x] < run)) ok = false; libre.push(ok); }
+      const out = []; let i0 = -1;          // tramos libres de al menos 2 px CSS: se corta justo bajo la tinta del renglón de arriba
+      for (let y = 0; y <= h; y++) { const l = y < h && libre[y]; if (l && i0 < 0) i0 = y; if (!l && i0 >= 0) { if (y - i0 >= 2 * dpr && i0 > 0 && y < h) out.push((i0 + 1) / dpr); i0 = -1; } }
+      return out;
     }
     lugar() { return this.reg.find((s) => s.fila === this.cur.fila && s.i === this.cur.i) || this.reg[this.reg.length - 1]; }
     dibujaCursor(ctx) {
@@ -722,6 +744,7 @@
     }
     // ----- ratón: clic, arrastre para seleccionar, doble clic
     puntoMasCercano(px, py) {
+      py = this.yNatural(py);
       let mejor = null, md = 1e9;
       for (const s of this.reg) { const cy = s.y - (s.a - s.d) / 2, dd = Math.abs(s.x - px) + 2 * Math.abs(cy - py); if (dd < md) { md = dd; mejor = s; } }
       return mejor;
