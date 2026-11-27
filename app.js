@@ -313,32 +313,54 @@
     if (!cortes.length) return 0;
     r.ed.cortes = cortes; r.ed.dibuja(); return S;
   }
-  function empaqueta() {
+  function empaqueta() { if (pase(true)) pase(false); }          // 1.er pase: decide si un dibujo flotante se achica para caber; si se achicó alguno, 2.º pase con esa escala ya puesta
+  function pase(primero) {          // devuelve true si achicó algún dibujo flotante (hay que repetir)
     const hoja = $('hoja'), papel = $('papel'), hijos = [...hoja.children];
     hijos.forEach((c) => { c.style.marginTop = ''; c.style.paddingTop = ''; c.classList.remove('ini-pag', 'pag-ini'); });
+    if (primero) hoja.querySelectorAll('[data-pag-w]').forEach((g) => { g.style.width = g.dataset.pagW; delete g.dataset.pagW; });          // el dibujo flotante vuelve a su tamaño
     H().reg.forEach((r) => { if (r.ed && r.ed.cortes) { r.ed.cortes = null; r.ed.dibuja(); } });
     hoja.querySelectorAll('.pag-hueco').forEach((c) => c.remove()); hoja.querySelectorAll('.pag-fin').forEach((c) => c.classList.remove('pag-fin'));          // los saltos de página dentro de una ecuación se recalculan desde el dibujo entero
     const vista = document.body.getAttribute('data-vista');
-    if (document.body.classList.contains('sinpag') || vista === 'web' || vista === 'borrador' || vista === 'esquema') return;
-    const cs = getComputedStyle(papel), mt = parseFloat(cs.paddingTop) || 96, mb = parseFloat(cs.paddingBottom) || 96, util = PGH - mt - mb;
+    if (document.body.classList.contains('sinpag') || vista === 'web' || vista === 'borrador' || vista === 'esquema') return false;
+    const cs = getComputedStyle(papel), mt = parseFloat(cs.paddingTop) || 96, mb = parseFloat(cs.paddingBottom) || 96, util = PGH - mt - mb, escP = (papel.getBoundingClientRect().height / (papel.offsetHeight || 1)) || 1;
     const nat = hijos.map((c) => ({ c, top: c.offsetTop, h: c.offsetHeight, m0: parseFloat(getComputedStyle(c).marginTop) || 0 }));
-    let extra = 0, gFin = -1, kPrev = 0;          // kPrev: página donde terminó lo anterior → lo que empieza en una página nueva lleva .pag-ini (al IMPRIMIR: salto de página ahí, estilo.css)          // gFin: lo que está AL LADO de un dibujo flotante («lado = derecha») se mueve con él, no por separado
+    const alto = (x) => x.c.classList.contains('dib-der') ? x.c.getBoundingClientRect().height / escP : x.h;          // el flotante, con su escala
+    let extra = 0, gFin = -1, kPrev = 0, achico = false;          // kPrev: página donde terminó lo anterior → lo que empieza en una página nueva lleva .pag-ini (al IMPRIMIR: salto de página ahí, estilo.css)          // gFin: lo que está AL LADO de un dibujo flotante («lado = derecha») se mueve con él, no por separado
     const cierra = (x) => x.c.classList.contains('dib-der') || x.c.classList.contains('debajo') || !!x.c.querySelector(':scope > .txt.titulo');
+    const partible = (c) => !!([...c.children].find((q) => q.classList.contains('grupo') && q.children.length > 2));          // un programa (for/end…): se puede partir entre renglones
+    const achica = (x, cabe) => {          // el DIBUJO del flotante se achica (≥ 55 %) para caber en lo que queda de la página: así no queda más de 1/3 de página en blanco
+      const g = primero && x.c.querySelector('.raw svg, svg.hk-dib-svg, img'); /* solo dibujos vectoriales o imágenes (un lienzo de gráfica no se reescala: su cursor/valor dejaría de coincidir) */ if (!g) return false; const b = g.getBoundingClientRect(), hg = b.height / escP, s = (cabe - 4 - (alto(x) - hg)) / hg; if (!(s < 1 && s >= 0.55)) return false;
+      g.dataset.pagW = g.style.width || ''; g.style.width = (b.width / escP * s).toFixed(1) + 'px'; achico = true; return true;
+    };
     for (let i = 0; i < nat.length; i++) {
       const n = nat[i]; if (!n.h || i < gFin) continue;
-      const pe = n.c.children.length === 1 ? n.c.firstElementChild : null, esTit = pe && (pe.classList.contains('titulo') || /^\s*Figura(?![A-Za-z])/.test(pe.textContent)) && nat[i + 1];          // título o leyenda «Figura…»: va con lo que sigue          // un título va siempre con lo que sigue (como el WPF): nunca queda solo al pie de la página
+      const pe = n.c.children.length === 1 ? n.c.firstElementChild : null, esTit = pe && (pe.classList.contains('titulo') || /^\s*Figura(?![A-Za-z])/.test(pe.textContent)) && nat[i + 1];          // título o leyenda «Figura…»: va con lo que sigue (como el WPF): nunca queda solo al pie de la página
       let jG = -1;          // dibujo flotante: el bloque es el dibujo + todo lo que tiene al lado (hasta el próximo título u otro dibujo, que van debajo)
       if (n.c.classList.contains('dib-der')) { jG = i + 1; while (jG < nat.length && !cierra(nat[jG])) jG++; gFin = jG; }
-      const y0 = n.top + extra, y1 = jG > 0 ? Math.max(n.top + n.h, jG - 1 > i ? nat[jG - 1].top + nat[jG - 1].h : 0) + extra : esTit ? nat[i + 1].top + extra + nat[i + 1].h : y0 + n.h, k = Math.max(0, Math.floor(y0 / PGH)), ini = k * PGH + mt, fin = (k + 1) * PGH - mb;
-      let d = 0;
+      const y0 = n.top + extra, k = Math.max(0, Math.floor(y0 / PGH)), ini = k * PGH + mt, fin = (k + 1) * PGH - mb, libre = fin - y0, sig = (k + 1) * PGH + mt - y0;
+      let y1;
+      if (jG > 0) y1 = Math.max(n.top + alto(n), jG - 1 > i ? nat[jG - 1].top + nat[jG - 1].h : 0) + extra;
+      else if (esTit) {          // el título necesita a su lado el PRIMER TRAMO de lo que sigue: el dibujo flotante entero, el primer renglón de un programa, o la línea entera
+        const nx = nat[i + 1]; let pieza = nx.c.classList.contains('dib-der') ? alto(nx) : (partible(nx.c) || nx.h > util) ? Math.min(nx.h, 90) : nx.h;
+        if (nx.c.classList.contains('dib-der') && y0 + n.h + pieza > fin + 0.5 && libre > util / 3 && achica(nx, libre - n.h - (nx.top - n.top - n.h))) pieza = alto(nx);
+        y1 = nx.top + extra + pieza;
+      } else y1 = y0 + n.h;
+      let d = 0, parte = false;
       if (y0 < ini) d = ini - y0;                                                    // cae en el margen superior: baja al comienzo de la página
-      else if (y0 >= fin || (y1 > fin + 0.5 && y1 - y0 <= util)) d = (k + 1) * PGH + mt - y0;          // cae en el margen inferior o no cabe: pasa entera a la página siguiente
+      else if (y0 >= fin) d = sig;                                                   // cae en el margen inferior
+      else if (y1 > fin + 0.5) {          // no cabe entera en lo que queda de la página
+        if (jG > 0) {          // dibujo flotante + datos al lado
+          if (y0 + alto(n) <= fin + 0.5 || (libre > util / 3 && achica(n, libre))) gFin = -1;          // el dibujo cabe (o cabe achicado): se queda; los datos de al lado se reparten solos entre esta página y la siguiente
+          else { d = sig; if (y1 - y0 > util) gFin = -1; }          // pasa entero a la página siguiente (su título ya lo vio venir y se fue con él); si el bloque es más alto que una página, ahí los datos se reparten solos
+        } else if (y1 - y0 <= util) { if (!esTit && libre > util / 3 && partible(n.c)) parte = true; else if (!esTit && libre > util / 3 && achica(n, libre)) { /* el dibujo cabe achicado: se queda */ } else d = sig; }          // un programa se parte para no dejar más de 1/3 de página en blanco; lo demás (texto, gráfica, título) pasa entero
+      }
       if (d > 0.5 && n.c.classList.contains('dib-der') && nat[i + 1]) nat[i + 1].c.style.marginTop = (nat[i + 1].m0 + d) + 'px';          // dibujo «lado = derecha» que no cabe: su margen NO mueve el texto de al lado (flota) → el texto baja con él a la página siguiente (antes quedaba angosto y se salía de la página)
       { const kN = Math.floor((y0 + d) / PGH); if (kN > kPrev) n.c.classList.add('pag-ini'); kPrev = Math.max(kPrev, kN); }
       if (d > 0.5 && getComputedStyle(n.c).clear !== 'none') { n.c.style.paddingTop = ((parseFloat(getComputedStyle(n.c).paddingTop) || 0) + d) + 'px'; extra += d; continue; }          // va debajo de un dibujo flotante (clear): el margen se lo come el espacio bajo el dibujo y NO lo mueve → se empuja con relleno
       if (d > 0.5) { n.c.style.paddingTop = ((parseFloat(getComputedStyle(n.c).paddingTop) || 0) + d) + 'px'; extra += d;          /* RELLENO, no margen: al imprimir, el navegador TRUNCA el margen que cae en un salto de página (la línea subía a y≈0, dentro del margen superior) */ const t0 = n.c.firstElementChild; if (t0 && t0.classList.contains('titulo')) { const a0 = parseFloat(getComputedStyle(t0).marginTop) || 0; n.c.classList.add('ini-pag'); extra += (parseFloat(getComputedStyle(t0).marginTop) || 0) - a0; } }          // un título al comienzo de página pierde su aire de arriba: lo que sigue sube lo mismo
-      if (jG < 0 && !esTit && y1 - y0 > util) { const S = parteGrupo(n.c, y0 + d, PGH, mt, mb) || parteEq(n.c, y0 + d, PGH, mt, mb); extra += S; kPrev = Math.max(kPrev, Math.floor((y0 + d + n.h + S - 1) / PGH)); }          // más alta que una página: un programa (for/end…) se parte ENTRE LÍNEAS en cada salto; nada sale del margen
+      if (jG < 0 && !esTit && (parte || y1 - y0 > util)) { const S = parteGrupo(n.c, y0 + d, PGH, mt, mb) || (y1 - y0 > util ? parteEq(n.c, y0 + d, PGH, mt, mb) : 0); extra += S; kPrev = Math.max(kPrev, Math.floor((y0 + d + n.h + S - 1) / PGH)); if (parte && !S) { /* no se pudo partir: se queda (no cruza: parteGrupo siempre deja al menos un renglón) */ } }          // más alta que una página (o un programa que llenaría el hueco): se parte ENTRE LÍNEAS en cada salto; nada sale del margen
     }
+    return achico;
   }
   function pagina() {
     if (enPag) return; enPag = true;
@@ -347,17 +369,40 @@
     const papel = $('papel'), hoja = $('hoja'); papel.querySelectorAll('.pg,.corte,.marco').forEach((x) => x.remove());
     const alto = hoja.offsetHeight + 192, n = Math.max(1, Math.ceil(alto / PGH)); papel.style.minHeight = (n * PGH) + 'px';
     { const c0 = getComputedStyle(papel), t = parseFloat(c0.paddingTop) || 96, b = parseFloat(c0.paddingBottom) || 96; let st = $('pag-print'); if (!st) { st = document.createElement('style'); st.id = 'pag-print'; document.head.appendChild(st); }          // IMPRIMIR / PDF: el navegador corta las páginas con los mismos márgenes y en los mismos sitios (.pag-ini, .pag-hueco) que la vista Página; los márgenes en el salto no se pierden
-      st.textContent = '@media print { @page { size: ' + PGW + 'px ' + PGH + 'px; margin: ' + t + 'px 0 ' + b + 'px 0; @top-right { content: counter(page); font: 11px Segoe UI, sans-serif; color: #666; margin-right: ' + (parseFloat(c0.paddingRight) || 96) + 'px; }' + (encab ? ' @top-center { content: ' + JSON.stringify(encab) + '; font: 11px Segoe UI, sans-serif; color: #555; }' : '') + (pie ? ' @bottom-center { content: ' + JSON.stringify(pie) + '; font: 11px Segoe UI, sans-serif; color: #555; }' : '') + ' } }'; }
+      st.textContent = '@media print { @page { size: ' + PGW + 'px ' + PGH + 'px; margin: ' + t + 'px 0 ' + b + 'px 0; @top-right { content: "Página " counter(page) " de " counter(pages); font: 11px Segoe UI, sans-serif; color: #666; margin-right: ' + (parseFloat(c0.paddingRight) || 96) + 'px; }' + (encab ? ' @top-center { content: ' + JSON.stringify(encab) + '; font: 11px Segoe UI, sans-serif; color: #555; }' : '') + (pie ? ' @bottom-center { content: ' + JSON.stringify(pie) + '; font: 11px Segoe UI, sans-serif; color: #555; }' : '') + ' } }'; }
     const cs = getComputedStyle(papel), mt = parseFloat(cs.paddingTop) || 96, mb = parseFloat(cs.paddingBottom) || 96, ml = parseFloat(cs.paddingLeft) || 96, mr = parseFloat(cs.paddingRight) || 96;
     for (let k = 0; k < n; k++) {
       const m = document.createElement('div'); m.className = 'marco'; m.style.cssText = 'left:' + ml + 'px;top:' + (k * PGH + mt) + 'px;width:' + (papel.clientWidth - ml - mr) + 'px;height:' + (PGH - mt - mb) + 'px'; papel.appendChild(m);
-      const p = document.createElement('div'); p.className = 'pg'; p.style.top = (k * PGH + 49) + 'px'; p.textContent = k + 1; papel.appendChild(p);
+      const p = document.createElement('div'); p.className = 'pg'; p.style.top = (k * PGH + 49) + 'px'; p.textContent = 'Página ' + (k + 1) + ' de ' + n; papel.appendChild(p);
       if (encab) { const e = document.createElement('div'); e.className = 'pg encab'; e.style.top = (k * PGH + 40) + 'px'; e.textContent = encab; papel.appendChild(e); }
       if (pie) { const e = document.createElement('div'); e.className = 'pg pie'; e.style.top = ((k + 1) * PGH - 56) + 'px'; e.textContent = pie; papel.appendChild(e); }
       if (k) { const c = document.createElement('div'); c.className = 'corte'; c.style.top = (k * PGH) + 'px'; papel.appendChild(c); }
     }
   }
   new ResizeObserver(pagina).observe($('hoja'));
+  // ---------------------------------------------------------------- IR A UNA PÁGINA (barra de estado): ⏮ ◀ [ n ] / N ▶ ⏭ §  ·  AvPág / RePág saltan de página, Ctrl+Inicio / Ctrl+Fin a la primera / última
+  const nPags = () => Math.max(1, $('papel').querySelectorAll(':scope > .marco').length);
+  const escPapel = () => { const p = $('papel'); return (p.getBoundingClientRect().height / (p.offsetHeight || 1)) || 1; };
+  function pagActual() { const a = $('area'), p = $('papel'), y = (a.getBoundingClientRect().top + 60 - p.getBoundingClientRect().top) / escPapel(); return Math.min(nPags(), Math.max(1, Math.floor(y / PGH) + 1)); }
+  function irPagina(k) { const n = nPags(); k = Math.min(n, Math.max(1, Math.round(k) || 1)); const a = $('area'), p = $('papel'), base = p.getBoundingClientRect().top - a.getBoundingClientRect().top + a.scrollTop; a.scrollTop = base + (k - 1) * PGH * escPapel() - 8; marcaPag(); estado('Página ' + k + ' de ' + n); }
+  function marcaPag() { const c = $('pagnav'); if (!c) return; const n = nPags(), k = pagActual(); const i = c.querySelector('input'); if (document.activeElement !== i) i.value = k; c.querySelector('.tot').textContent = n; }
+  (function () {
+    const c = document.createElement('span'); c.id = 'pagnav'; c.title = 'Ir a una página (Enter) · AvPág / RePág: página siguiente / anterior · Ctrl+Inicio / Ctrl+Fin: primera / última';
+    c.innerHTML = '<button data-p="ini" title="Primera página (Ctrl+Inicio)">⏮</button><button data-p="ant" title="Página anterior (RePág)">◀</button><span>Página</span><input inputmode="numeric" aria-label="Página"><span>de <b class="tot">1</b></span><button data-p="sig" title="Página siguiente (AvPág)">▶</button><button data-p="fin" title="Última página (Ctrl+Fin)">⏭</button><button data-p="sec" title="Ir a un título (panel de navegación)">§</button>';
+    $('msg').after(c);
+    c.addEventListener('mousedown', (e) => { if (e.target.tagName === 'BUTTON') e.preventDefault(); });
+    c.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; const k = pagActual(), q = b.dataset.p; if (q === 'sec') { panelNav(); return; } irPagina(q === 'ini' ? 1 : q === 'fin' ? nPags() : q === 'ant' ? k - 1 : k + 1); });
+    const i = c.querySelector('input'); i.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); irPagina(parseInt(i.value, 10)); i.blur(); } else if (e.key === 'Escape') { i.blur(); marcaPag(); } });
+    i.addEventListener('focus', () => i.select()); i.addEventListener('blur', marcaPag);
+    $('area').addEventListener('scroll', marcaPag, { passive: true }); new ResizeObserver(marcaPag).observe($('papel'));
+    document.addEventListener('keydown', (e) => {          // solo si no se está escribiendo (ecuación activa, texto, campo): ahí AvPág / Ctrl+Inicio son del editor
+      const vista = document.body.getAttribute('data-vista'); if (vista === 'web' || document.body.classList.contains('sinpag')) return;
+      const t = document.activeElement; if (H().hayActivo() || (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)))) return;
+      if (e.key === 'PageDown' && !e.ctrlKey) { e.preventDefault(); irPagina(pagActual() + 1); } else if (e.key === 'PageUp' && !e.ctrlKey) { e.preventDefault(); irPagina(pagActual() - 1); }
+      else if (e.ctrlKey && e.key === 'Home') { e.preventDefault(); irPagina(1); } else if (e.ctrlKey && e.key === 'End') { e.preventDefault(); irPagina(nPags()); }
+    });
+    setTimeout(marcaPag, 0);
+  })();
 
   // ---------------------------------------------------------------- zoom: Ctrl + rueda (queda bajo el ratón lo que ves), Ctrl + «+» «−» «0»
   let zoom = 1;
@@ -760,5 +805,5 @@
     try { abreTxt(new TextDecoder('utf-8').decode(deB64url(m[1]))); } catch (e) { estado('No se pudo abrir el script de la dirección: ' + e.message); }
   }
   setTimeout(abreDeHash, 0); window.addEventListener('hashchange', abreDeHash);
-  HK.app = { setTxt, setEq, getTxt: () => txtPt, getEq: () => eqPt, ponZoom, getZoom: () => zoom, estado, pagina, setTxt, setEq, abreEjemplo, nuevo, pintaCinta };
+  HK.app = { irPagina, pagActual, nPags, setTxt, setEq, getTxt: () => txtPt, getEq: () => eqPt, ponZoom, getZoom: () => zoom, estado, pagina, setTxt, setEq, abreEjemplo, nuevo, pintaCinta };
 })(window);
