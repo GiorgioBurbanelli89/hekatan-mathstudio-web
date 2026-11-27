@@ -17,7 +17,7 @@
   },
   {
    "t": "texto",
-   "text": "Modelo: placa de Reissner-Mindlin con cortante transversal interpolado tipo MITC4 (en un rectángulo γxz es lineal en η y γyz lineal en ξ), flexión con integración de Gauss 2 × 2, κ = 5/6. El suelo son resortes verticales en cada nudo: kz = ks · (área tributaria). El peso propio γ·h va dentro de la carga muerta (SAFE lo incluye en DEAD). Las cargas P y My se aplican en el nudo central.",
+   "text": "Modelo: placa de Reissner-Mindlin con cortante transversal interpolado tipo MITC4 (en un rectángulo γxz es lineal en η y γyz lineal en ξ), flexión con integración de Gauss 2 × 2, κ = 5/6. El suelo son resortes verticales en cada nudo: kz = ks · (área tributaria). El peso propio γ·h va dentro de la carga muerta (SAFE lo incluye en DEAD). Las cargas P y My se aplican en el centro de la columna (x_c, y_c); centrada, es el nudo central.",
    "titulo": false
   },
   {
@@ -28,7 +28,7 @@
   },
   {
    "t": "raw",
-   "text": "#dibujo(\"Zapata de Guerra: planta (arriba) y elevación por y = 0 (abajo)\", ud = m, escala = auto, cotas = m, alto = 170, lado = derecha)\n#  rect(-L/2, (L/4 + L/2 + 2.8) + -L/2, L, L, \"gruesa tenue\")\n#  polilinea([-L/2, L/2, L/2, -L/2, -L/2, L/2, L/2, -L/2, -L/2, L/2, L/2, -L/2, -L/2, L/2, L/2, -L/2, -L/2, L/2, L/2, -L/2, -L/2, L/2], [(L/4 + L/2 + 2.8) - L/2 + 0*L/10, (L/4 + L/2 + 2.8) - L/2 + 0*L/10, (L/4 + L/2 + 2.8) - L/2 + 1*L/10, (L/4 + L/2 + 2.8) - L/2 + 1*L/10, (L/4 + L/2 + 2.8) - L/2 + 2*L/10, (L/4 + L/2 + 2.8) - L/2 + 2*L/10, (L/4 + L/2 + 2.8) - L/2 + 3*L/10, (L/4 + L/2 + 2.8) - L/2 + 3*L/10, (L/4 + L/2 + 2.8) - L/2 + 4*L/10, (L/4 + L/2 + 2.8) - L/2 + 4*L/10, (L/4 + L/2 + 2.8) - L/2 + 5*L/10, (L/4 + L/2 + 2.8) - L/2 + 5*L/10, (L/4 + L/2 + 2.8) - L/2 + 6*L/10, (L/4 + L/2 + 2.8) - L/2 + 6*L/10, (L/4 + L/2 + 2.8) - L/2 + 7*L/10, (L/4 + L/2 + 2.8) - L/2 + 7*L/10, (L/4 + L/2 + 2.8) - L/2 + 8*L/10, (L/4 + L/2 + 2.8) - L/2 + 8*L/10, (L/4 + L/2 + 2.8) - L/2 + 9*L/10, (L/4 + L/2 + 2.8) - L/2 + 9*L/10, (L/4 + L/2 + 2.8) - L/2 + 10*L/10, (L/4 + L/2 + 2.8) - L/2 + 10*L/10], \"fina gris puntos\")\n#  polilinea([-L/2 + 0*L/10, -L/2 + 0*L/10, -L/2 + 1*L/10, -L/2 + 1*L/10, -L/2 + 2*L/10, -L/2 + 2*L/10, -L/2 + 3*L/10, -L/2 + 3*L/10, -L/2 + 4*L/10, -L/2 + 4*L/10, -L/2 + 5*L/10, -L/2 + 5*L/10, -L/2 + 6*L/10, -L/2 + 6*L/10, -L/2 + 7*L/10, -L/2 + 7*L/10, -L/2 + 8*L/10, -L/2 + 8*L/10, -L/2 + 9*L/10, -L/2 + 9*L/10, -L/2 + 10*L/10, -L/2 + 10*L/10], [(L/4 + L/2 + 2.8) - L/2, (L/4 + L/2 + 2.8) + L/2, (L/4 + L/2 + 2.8) + L/2, (L/4 + L/2 + 2.8) - L/2, (L/4 + L/2 + 2.8) - L/2, (L/4 + L/2 + 2.8) + L/2, (L/4 + L/2 + 2.8) + L/2, (L/4 + L/2 + 2.8) - L/2, (L/4 + L/2 + 2.8) - L/2, (L/4 + L/2 + 2.8) + L/2, (L/4 + L/2 + 2.8) + L/2, (L/4 + L/2 + 2.8) - L/2, (L/4 + L/2 + 2.8) - L/2, (L/4 + L/2 + 2.8) + L/2, (L/4 + L/2 + 2.8) + L/2, (L/4 + L/2 + 2.8) - L/2, (L/4 + L/2 + 2.8) - L/2, (L/4 + L/2 + 2.8) + L/2, (L/4 + L/2 + 2.8) + L/2, (L/4 + L/2 + 2.8) - L/2, (L/4 + L/2 + 2.8) - L/2, (L/4 + L/2 + 2.8) + L/2], \"fina gris puntos\")\n#  rect(-b_c/2, (L/4 + L/2 + 2.8) + -b_c/2, b_c, b_c, \"gruesa denso\")\n#  linea(-L/2 - 0.35, (L/4 + L/2 + 2.8), L/2 + 0.35, (L/4 + L/2 + 2.8), \"eje\")\n#  linea(0, (L/4 + L/2 + 2.8) + -L/2 - 0.35, 0, (L/4 + L/2 + 2.8) + L/2 + 0.35, \"eje\")\n#  flecha(L/2 + 0.2, (L/4 + L/2 + 2.8), L/2 + 0.55, (L/4 + L/2 + 2.8), \"media\")\n#  texto(L/2 + 0.62, (L/4 + L/2 + 2.8), \"x\", 3, \"i\")\n#  flecha(0, (L/4 + L/2 + 2.8) + L/2 + 0.2, 0, (L/4 + L/2 + 2.8) + L/2 + 0.55, \"media\")\n#  texto(0, (L/4 + L/2 + 2.8) + L/2 + 0.72, \"y\", 3, \"c\")\n#  cota(-L/2, (L/4 + L/2 + 2.8) + -L/2, L/2, (L/4 + L/2 + 2.8) + -L/2, -0.55, \"L = {L:2} m\")\n#  cota(-L/2, (L/4 + L/2 + 2.8) + -L/2, -L/2, (L/4 + L/2 + 2.8) + L/2, 0.55, \"L = {L:2} m\")\n#  cota(-b_c/2, (L/4 + L/2 + 2.8) + b_c/2, b_c/2, (L/4 + L/2 + 2.8) + b_c/2, 0.3, \"b_{c} = {b_c:2} m\")\n#  texto(-L/2 - 0.3, (L/4 + L/2 + 2.8) + L/2 + 0.72, \"PLANTA\", 3, \"i\", estilo = \"gris\")\n#  hover([0, -L/2, L/2, L/2, -L/2], [(L/4 + L/2 + 2.8), (L/4 + L/2 + 2.8) + -L/2, (L/4 + L/2 + 2.8) + -L/2, (L/4 + L/2 + 2.8) + L/2, (L/4 + L/2 + 2.8) + L/2], \"x = {#1:3} m, y = {#2:3} m\", [0, -L/2, L/2, L/2, -L/2], [0, -L/2, -L/2, L/2, L/2])\n#  hover([0], [(L/4 + L/2 + 2.8)], \"columna {#1:2} × {#1:2} m\\nP = {#2:1} t · M_y = {#3:1} t·m\", b_c, P_D + P_L, M_yD + M_yL, radio = 30)\n#  texto(0, (L/4 + L/2 + 2.8) - L/2 - 1.05, \"elemento {L/10:3} × {L/10:3} m (malla 10 × 10)\", 2.8, \"c\", estilo = \"gris\")\n#  achurado(-L/2 - 0.3, -t_z - 0.8, L + 0.6, 0.35, \"diagonal\")\n#  linea(-L/2 - 0.3, -t_z - 0.45, L/2 + 0.3, -t_z - 0.45, \"media\")\n#  seccion(-L/2, -t_z, L, t_z)\n#  seccion(-b_c/2, 0, b_c, L/4)\n#  polilinea(-L/2 + 0*L/10 + [0, 0, 1, -1, 1, -1, 1, 0, 0]*L/90, -t_z - [0, 0.06, 0.1, 0.16, 0.22, 0.28, 0.34, 0.39, 0.45], \"fina azul\")\n#  polilinea(-L/2 + 1*L/10 + [0, 0, 1, -1, 1, -1, 1, 0, 0]*L/90, -t_z - [0, 0.06, 0.1, 0.16, 0.22, 0.28, 0.34, 0.39, 0.45], \"fina azul\")\n#  polilinea(-L/2 + 2*L/10 + [0, 0, 1, -1, 1, -1, 1, 0, 0]*L/90, -t_z - [0, 0.06, 0.1, 0.16, 0.22, 0.28, 0.34, 0.39, 0.45], \"fina azul\")\n#  polilinea(-L/2 + 3*L/10 + [0, 0, 1, -1, 1, -1, 1, 0, 0]*L/90, -t_z - [0, 0.06, 0.1, 0.16, 0.22, 0.28, 0.34, 0.39, 0.45], \"fina azul\")\n#  polilinea(-L/2 + 4*L/10 + [0, 0, 1, -1, 1, -1, 1, 0, 0]*L/90, -t_z - [0, 0.06, 0.1, 0.16, 0.22, 0.28, 0.34, 0.39, 0.45], \"fina azul\")\n#  polilinea(-L/2 + 5*L/10 + [0, 0, 1, -1, 1, -1, 1, 0, 0]*L/90, -t_z - [0, 0.06, 0.1, 0.16, 0.22, 0.28, 0.34, 0.39, 0.45], \"fina azul\")\n#  polilinea(-L/2 + 6*L/10 + [0, 0, 1, -1, 1, -1, 1, 0, 0]*L/90, -t_z - [0, 0.06, 0.1, 0.16, 0.22, 0.28, 0.34, 0.39, 0.45], \"fina azul\")\n#  polilinea(-L/2 + 7*L/10 + [0, 0, 1, -1, 1, -1, 1, 0, 0]*L/90, -t_z - [0, 0.06, 0.1, 0.16, 0.22, 0.28, 0.34, 0.39, 0.45], \"fina azul\")\n#  polilinea(-L/2 + 8*L/10 + [0, 0, 1, -1, 1, -1, 1, 0, 0]*L/90, -t_z - [0, 0.06, 0.1, 0.16, 0.22, 0.28, 0.34, 0.39, 0.45], \"fina azul\")\n#  polilinea(-L/2 + 9*L/10 + [0, 0, 1, -1, 1, -1, 1, 0, 0]*L/90, -t_z - [0, 0.06, 0.1, 0.16, 0.22, 0.28, 0.34, 0.39, 0.45], \"fina azul\")\n#  polilinea(-L/2 + 10*L/10 + [0, 0, 1, -1, 1, -1, 1, 0, 0]*L/90, -t_z - [0, 0.06, 0.1, 0.16, 0.22, 0.28, 0.34, 0.39, 0.45], \"fina azul\")\n#  flecha(0, L/4 + 0.95, 0, L/4 + 0.04, \"gruesa rojo\")\n#  texto(0.12, L/4 + 0.85, \"P = P_{D} + P_{L} = {P_D + P_L:1} t\", 3.2, \"i\", estilo = \"rojo\")\n#  flechamomento(0, L/4 + 0.1, 0.42, 160, 20, \"media azul\")\n#  texto(-0.5, L/4 + 0.45, \"M_{y} = {M_yD + M_yL:1} t·m\", 3.2, \"d\", estilo = \"azul\")\n#  texto(-L/2 - 0.3, L/4 + 0.95, \"ELEVACIÓN\", 3, \"i\", estilo = \"gris\")\n#  linea(-L/2 - 0.3, 0, L/2 + 0.3, 0, \"eje\")\n#  cota(-L/2, -t_z, -L/2, 0, 0.4, \"t_{z} = {t_z:2} m\")\n#  cota(-L/2, -t_z - 0.8, L/2, -t_z - 0.8, -0.35, \"L = {L:2} m\")\n#  texto(0, -t_z - 1.55, \"resortes Winkler k_{S} = {k_S:0} t/m³\", 2.8, \"c\", estilo = \"azul\")\n#  hover([0, L/2, -L/2], [-t_z/2, -t_z - 0.45, -t_z - 0.45], \"zapata: t_z = {#1:2} m, L = {#2:2} m\\nk_S = {#3:0} t/m³\", t_z, L, k_S, radio = 40)\n#  hover([0], [L/4 + 0.5], \"P = {#1:1} t (P_D + P_L)\\nM_y = {#2:1} t·m (M_yD + M_yL)\", P_D + P_L, M_yD + M_yL, radio = 30)\n#fin"
+   "text": "#dibujo(\"Zapata de Guerra: planta (arriba) y elevación por y = y_c (abajo)\", ud = m, escala = auto, cotas = m, alto = 170, lado = derecha)\n#  rect(-L/2, (L/4 + L/2 + 2.8) + -L/2, L, L, \"gruesa tenue\")\n#  polilinea([-L/2, L/2, L/2, -L/2, -L/2, L/2, L/2, -L/2, -L/2, L/2, L/2, -L/2, -L/2, L/2, L/2, -L/2, -L/2, L/2, L/2, -L/2, -L/2, L/2], [(L/4 + L/2 + 2.8) - L/2 + 0*L/10, (L/4 + L/2 + 2.8) - L/2 + 0*L/10, (L/4 + L/2 + 2.8) - L/2 + 1*L/10, (L/4 + L/2 + 2.8) - L/2 + 1*L/10, (L/4 + L/2 + 2.8) - L/2 + 2*L/10, (L/4 + L/2 + 2.8) - L/2 + 2*L/10, (L/4 + L/2 + 2.8) - L/2 + 3*L/10, (L/4 + L/2 + 2.8) - L/2 + 3*L/10, (L/4 + L/2 + 2.8) - L/2 + 4*L/10, (L/4 + L/2 + 2.8) - L/2 + 4*L/10, (L/4 + L/2 + 2.8) - L/2 + 5*L/10, (L/4 + L/2 + 2.8) - L/2 + 5*L/10, (L/4 + L/2 + 2.8) - L/2 + 6*L/10, (L/4 + L/2 + 2.8) - L/2 + 6*L/10, (L/4 + L/2 + 2.8) - L/2 + 7*L/10, (L/4 + L/2 + 2.8) - L/2 + 7*L/10, (L/4 + L/2 + 2.8) - L/2 + 8*L/10, (L/4 + L/2 + 2.8) - L/2 + 8*L/10, (L/4 + L/2 + 2.8) - L/2 + 9*L/10, (L/4 + L/2 + 2.8) - L/2 + 9*L/10, (L/4 + L/2 + 2.8) - L/2 + 10*L/10, (L/4 + L/2 + 2.8) - L/2 + 10*L/10], \"fina gris puntos\")\n#  polilinea([-L/2 + 0*L/10, -L/2 + 0*L/10, -L/2 + 1*L/10, -L/2 + 1*L/10, -L/2 + 2*L/10, -L/2 + 2*L/10, -L/2 + 3*L/10, -L/2 + 3*L/10, -L/2 + 4*L/10, -L/2 + 4*L/10, -L/2 + 5*L/10, -L/2 + 5*L/10, -L/2 + 6*L/10, -L/2 + 6*L/10, -L/2 + 7*L/10, -L/2 + 7*L/10, -L/2 + 8*L/10, -L/2 + 8*L/10, -L/2 + 9*L/10, -L/2 + 9*L/10, -L/2 + 10*L/10, -L/2 + 10*L/10], [(L/4 + L/2 + 2.8) - L/2, (L/4 + L/2 + 2.8) + L/2, (L/4 + L/2 + 2.8) + L/2, (L/4 + L/2 + 2.8) - L/2, (L/4 + L/2 + 2.8) - L/2, (L/4 + L/2 + 2.8) + L/2, (L/4 + L/2 + 2.8) + L/2, (L/4 + L/2 + 2.8) - L/2, (L/4 + L/2 + 2.8) - L/2, (L/4 + L/2 + 2.8) + L/2, (L/4 + L/2 + 2.8) + L/2, (L/4 + L/2 + 2.8) - L/2, (L/4 + L/2 + 2.8) - L/2, (L/4 + L/2 + 2.8) + L/2, (L/4 + L/2 + 2.8) + L/2, (L/4 + L/2 + 2.8) - L/2, (L/4 + L/2 + 2.8) - L/2, (L/4 + L/2 + 2.8) + L/2, (L/4 + L/2 + 2.8) + L/2, (L/4 + L/2 + 2.8) - L/2, (L/4 + L/2 + 2.8) - L/2, (L/4 + L/2 + 2.8) + L/2], \"fina gris puntos\")\n#  rect(x_c - c_x/2, (L/4 + L/2 + 2.8) + y_c - c_y/2, c_x, c_y, \"gruesa denso\")\n#  circulo(x_c, (L/4 + L/2 + 2.8) + y_c, 0.04, \"rojo relleno\")\n#  linea(-L/2 - 0.35, (L/4 + L/2 + 2.8), L/2 + 0.35, (L/4 + L/2 + 2.8), \"eje\")\n#  linea(0, (L/4 + L/2 + 2.8) + -L/2 - 0.35, 0, (L/4 + L/2 + 2.8) + L/2 + 0.35, \"eje\")\n#  flecha(L/2 + 0.2, (L/4 + L/2 + 2.8), L/2 + 0.55, (L/4 + L/2 + 2.8), \"media\")\n#  texto(L/2 + 0.62, (L/4 + L/2 + 2.8), \"x\", 3, \"i\")\n#  flecha(0, (L/4 + L/2 + 2.8) + L/2 + 0.2, 0, (L/4 + L/2 + 2.8) + L/2 + 0.55, \"media\")\n#  texto(0, (L/4 + L/2 + 2.8) + L/2 + 0.72, \"y\", 3, \"c\")\n#  cota(-L/2, (L/4 + L/2 + 2.8) + -L/2, L/2, (L/4 + L/2 + 2.8) + -L/2, -0.55, \"L = {L:2} m\")\n#  cota(-L/2, (L/4 + L/2 + 2.8) + -L/2, -L/2, (L/4 + L/2 + 2.8) + L/2, 0.55, \"L = {L:2} m\")\n#  cota(x_c - c_x/2, (L/4 + L/2 + 2.8) + y_c + c_y/2, x_c + c_x/2, (L/4 + L/2 + 2.8) + y_c + c_y/2, 0.3, \"c_{x} = {c_x:2}\")\n#  cota(x_c + c_x/2, (L/4 + L/2 + 2.8) + y_c - c_y/2, x_c + c_x/2, (L/4 + L/2 + 2.8) + y_c + c_y/2, -0.3, \"c_{y} = {c_y:2}\")\n#  cota(0, (L/4 + L/2 + 2.8) + L/2, x_c, (L/4 + L/2 + 2.8) + L/2, 0.3, \"x_{c} = {x_c:2}\")\n#  cota(L/2, (L/4 + L/2 + 2.8), L/2, (L/4 + L/2 + 2.8) + y_c, -1.0, \"y_{c} = {y_c:2}\")\n#  texto(-L/2 - 0.3, (L/4 + L/2 + 2.8) + L/2 + 0.72, \"PLANTA\", 3, \"i\", estilo = \"gris\")\n#  texto(0, (L/4 + L/2 + 2.8) - L/2 - 1.05, \"elemento {L/10:3} × {L/10:3} m (malla 10 × 10)\", 2.8, \"c\", estilo = \"gris\")\n#  hover([0, -L/2, L/2, L/2, -L/2], [(L/4 + L/2 + 2.8), (L/4 + L/2 + 2.8) + -L/2, (L/4 + L/2 + 2.8) + -L/2, (L/4 + L/2 + 2.8) + L/2, (L/4 + L/2 + 2.8) + L/2], \"x = {#1:3} m, y = {#2:3} m\", [0, -L/2, L/2, L/2, -L/2], [0, -L/2, -L/2, L/2, L/2])\n#  hover([x_c], [(L/4 + L/2 + 2.8) + y_c], \"columna {#1:2} × {#2:2} m en x_c = {#3:2}, y_c = {#4:2} m\\nP = {#5:1} t · M_y = {#6:1} t·m\", c_x, c_y, x_c, y_c, P_D + P_L, M_yD + M_yL, radio = 30)\n#  achurado(-L/2 - 0.3, -t_z - 0.8, L + 0.6, 0.35, \"diagonal\")\n#  linea(-L/2 - 0.3, -t_z - 0.45, L/2 + 0.3, -t_z - 0.45, \"media\")\n#  seccion(-L/2, -t_z, L, t_z)\n#  seccion(x_c - c_x/2, 0, c_x, L/4)\n#  polilinea(-L/2 + 0*L/10 + [0, 0, 1, -1, 1, -1, 1, 0, 0]*L/90, -t_z - [0, 0.06, 0.1, 0.16, 0.22, 0.28, 0.34, 0.39, 0.45], \"fina azul\")\n#  polilinea(-L/2 + 1*L/10 + [0, 0, 1, -1, 1, -1, 1, 0, 0]*L/90, -t_z - [0, 0.06, 0.1, 0.16, 0.22, 0.28, 0.34, 0.39, 0.45], \"fina azul\")\n#  polilinea(-L/2 + 2*L/10 + [0, 0, 1, -1, 1, -1, 1, 0, 0]*L/90, -t_z - [0, 0.06, 0.1, 0.16, 0.22, 0.28, 0.34, 0.39, 0.45], \"fina azul\")\n#  polilinea(-L/2 + 3*L/10 + [0, 0, 1, -1, 1, -1, 1, 0, 0]*L/90, -t_z - [0, 0.06, 0.1, 0.16, 0.22, 0.28, 0.34, 0.39, 0.45], \"fina azul\")\n#  polilinea(-L/2 + 4*L/10 + [0, 0, 1, -1, 1, -1, 1, 0, 0]*L/90, -t_z - [0, 0.06, 0.1, 0.16, 0.22, 0.28, 0.34, 0.39, 0.45], \"fina azul\")\n#  polilinea(-L/2 + 5*L/10 + [0, 0, 1, -1, 1, -1, 1, 0, 0]*L/90, -t_z - [0, 0.06, 0.1, 0.16, 0.22, 0.28, 0.34, 0.39, 0.45], \"fina azul\")\n#  polilinea(-L/2 + 6*L/10 + [0, 0, 1, -1, 1, -1, 1, 0, 0]*L/90, -t_z - [0, 0.06, 0.1, 0.16, 0.22, 0.28, 0.34, 0.39, 0.45], \"fina azul\")\n#  polilinea(-L/2 + 7*L/10 + [0, 0, 1, -1, 1, -1, 1, 0, 0]*L/90, -t_z - [0, 0.06, 0.1, 0.16, 0.22, 0.28, 0.34, 0.39, 0.45], \"fina azul\")\n#  polilinea(-L/2 + 8*L/10 + [0, 0, 1, -1, 1, -1, 1, 0, 0]*L/90, -t_z - [0, 0.06, 0.1, 0.16, 0.22, 0.28, 0.34, 0.39, 0.45], \"fina azul\")\n#  polilinea(-L/2 + 9*L/10 + [0, 0, 1, -1, 1, -1, 1, 0, 0]*L/90, -t_z - [0, 0.06, 0.1, 0.16, 0.22, 0.28, 0.34, 0.39, 0.45], \"fina azul\")\n#  polilinea(-L/2 + 10*L/10 + [0, 0, 1, -1, 1, -1, 1, 0, 0]*L/90, -t_z - [0, 0.06, 0.1, 0.16, 0.22, 0.28, 0.34, 0.39, 0.45], \"fina azul\")\n#  flecha(x_c, L/4 + 0.95, x_c, L/4 + 0.04, \"gruesa rojo\")\n#  texto(x_c + 0.12, L/4 + 0.85, \"P = P_{D} + P_{L} = {P_D + P_L:1} t\", 3.2, \"i\", estilo = \"rojo\")\n#  flechamomento(x_c, L/4 + 0.1, 0.42, 160, 20, \"media azul\")\n#  texto(x_c - 0.5, L/4 + 0.45, \"M_{y} = {M_yD + M_yL:1} t·m\", 3.2, \"d\", estilo = \"azul\")\n#  texto(-L/2 - 0.3, L/4 + 0.95, \"ELEVACIÓN\", 3, \"i\", estilo = \"gris\")\n#  linea(-L/2 - 0.3, 0, L/2 + 0.3, 0, \"eje\")\n#  linea(0, -t_z - 0.1, 0, L/4 + 0.2, \"eje\")\n#  cota(-L/2, -t_z, -L/2, 0, 0.4, \"t_{z} = {t_z:2} m\")\n#  cota(-L/2, -t_z - 0.8, L/2, -t_z - 0.8, -0.35, \"L = {L:2} m\")\n#  texto(0, -t_z - 1.55, \"resortes Winkler k_{S} = {k_S:0} t/m³\", 2.8, \"c\", estilo = \"azul\")\n#  hover([0, L/2, -L/2], [-t_z/2, -t_z - 0.45, -t_z - 0.45], \"zapata: t_z = {#1:2} m, L = {#2:2} m\\nk_S = {#3:0} t/m³\", t_z, L, k_S, radio = 40)\n#  hover([x_c], [L/4 + 0.5], \"P = {#1:1} t (P_D + P_L)\\nM_y = {#2:1} t·m (M_yD + M_yL)\\nen x_c = {#3:2} m\", P_D + P_L, M_yD + M_yL, x_c, radio = 30)\n#fin"
   },
   {
    "t": "eq",
@@ -43,6 +43,26 @@
   {
    "t": "eq",
    "codigo": "b_c=0.45 % lado de la columna [m] (Load Size)",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "c_x=b_c % columna en x [m]",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "c_y=b_c % columna en y [m]",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "x_c=0 % posición en x [m]",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "y_c=0 % posición en y [m]",
    "modo": 0
   },
   {
@@ -87,7 +107,42 @@
   },
   {
    "t": "texto",
-   "text": "Dibujo de referencia (paramétrico, a la derecha de los datos): planta arriba y elevación abajo salen de las variables L, t_z, b_c, k_S, P_D, P_L, M_yD y M_yL. Si cambia un dato, el dibujo cambia de tamaño y las cotas muestran el valor nuevo. Pase el cursor por la columna o las esquinas para ver los valores. M_y > 0 (sentido horario en la elevación, y entra al papel) carga el borde x > 0.",
+   "text": "Columna: c_x, c_y son sus lados y (x_c, y_c) su centro medido desde el centro de la zapata (0, 0 = centrada; por defecto c_x = c_y = b_c). ¿Cabe? Debe cumplir |x_c| ≤ (L − c_x)/2 y |y_c| ≤ (L − c_y)/2; las holguras deben ser ≥ 0 (0 = toca el borde: zapata de lindero):",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "codigo": "holg_x=(L-c_x)/2-abs(x_c) % [m]",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "holg_x=",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "holg_y=(L-c_y)/2-abs(y_c) % [m]",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "holg_y=",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "cabe=(holg_x>=0)*(holg_y>=0) % 1 = cabe; 0 = se sale",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "cabe=",
+   "modo": 0
+  },
+  {
+   "t": "texto",
+   "text": "Dibujo de referencia (paramétrico, a la derecha de los datos): planta arriba y elevación abajo salen de L, t_z, c_x, c_y, x_c, y_c, k_S, P_D, P_L, M_yD y M_yL. Si cambia un dato, el dibujo cambia (tamaño, posición de la columna, cotas). El punto rojo es el centro de la columna, donde se aplican P y M_y. Pase el cursor por la columna o las esquinas para ver los valores. M_y > 0 (sentido horario en la elevación, y entra al papel) carga el borde x > 0.",
    "titulo": false,
    "debajo": true
   },
@@ -235,7 +290,7 @@
   },
   {
    "t": "texto",
-   "text": "El nudo j = iy·(nel+1) + ix + 1 (ix recorre x, iy recorre y). El elemento (ex, ey) tiene los nudos n1, n1+1, n1+nel+2, n1+nel+1 con n1 = (ey−1)(nel+1) + ex. La columna carga el nudo central 61.",
+   "text": "El nudo j = iy·(nel+1) + ix + 1 (ix recorre x, iy recorre y). El elemento (ex, ey) tiene los nudos n1, n1+1, n1+nel+2, n1+nel+1 con n1 = (ey−1)(nel+1) + ex. La columna carga el punto (x_c, y_c); centrada, es el nudo central 61.",
    "titulo": false
   },
   {
@@ -341,8 +396,23 @@
    "modo": 0
   },
   {
+   "t": "texto",
+   "text": "Cargas de la columna en la malla. P y M_y se aplican en el centro de la columna (x_c, y_c) con las FUERZAS NODALES CONSISTENTES de una carga puntual: el punto cae en el elemento (ex, ey) en (ξ, η) y cada uno de sus 4 nudos recibe N_k(ξ, η)·P en w y N_k(ξ, η)·M_y en el giro θy (en Mindlin w y los giros se interpolan con las mismas N_k: es exacto y no hace falta un par adicional). Con la columna centrada el punto ES el nudo 61 y el resultado es idéntico al de antes (13.2498 t/m²). Fh reparte P y M_y como presión uniforme sobre la huella c_x × c_y (F_k = ∫N_k dA · P/(c_x·c_y), trozo de huella por elemento; I1 integra (1 + s·ξ)/2 entre ξ = a y ξ = b): es lo que hace SAFE con su «Load Size».",
+   "titulo": false
+  },
+  {
    "t": "eq",
-   "codigo": "Fc(fD,fL) = prog\n  M=zeros(nd,1)\n  for j = 1:nn\n    ix=mod(j-1,nel+1)\n    iy=floor((j-1)/(nel+1)+0.001)\n    g=3*(j-1)+1\n    M_g=M_g-fD*gam*t_z*hh*hh*fr(ix)*fr(iy)\n  end\n  c=(nel/2)*(nel+1)+nel/2+1\n  g=3*(c-1)+1\n  g2=g+2\n  M_g=M_g-(fD*P_D+fL*P_L)\n  M_g2=M_g2+(fD*M_yD+fL*M_yL)\n  return M\nend",
+   "codigo": "Fc(fD,fL) = prog\n  M=zeros(nd,1)\n  for j = 1:nn\n    ix=mod(j-1,nel+1)\n    iy=floor((j-1)/(nel+1)+0.001)\n    g=3*(j-1)+1\n    M_g=M_g-fD*gam*t_z*hh*hh*fr(ix)*fr(iy)\n  end\n  pc=fD*P_D+fL*P_L\n  mc=fD*M_yD+fL*M_yL\n  ux=(x_c+L/2)/hh\n  vy=(y_c+L/2)/hh\n  ex=min(nel,floor(ux+0.000001)+1)\n  ey=min(nel,floor(vy+0.000001)+1)\n  ξ=2*(ux-ex+1)-1\n  η=2*(vy-ey+1)-1\n  n1=(ey-1)*(nel+1)+ex\n  for k = 1:4\n    g=gdof(n1,3*k-2)\n    g3=g+2\n    M_g=M_g-NN(k,ξ,η)*pc\n    M_g3=M_g3+NN(k,ξ,η)*mc\n  end\n  return M\nend",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "I1(s,a,b)=((b-a)/2+s*(b^2-a^2)/4)*ha % ∫ de (1 + s·ξ)/2 entre ξ = a y ξ = b, por el semilado",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "Fh(fD,fL) = prog\n  M=zeros(nd,1)\n  for j = 1:nn\n    ix=mod(j-1,nel+1)\n    iy=floor((j-1)/(nel+1)+0.001)\n    g=3*(j-1)+1\n    M_g=M_g-fD*gam*t_z*hh*hh*fr(ix)*fr(iy)\n  end\n  pc=fD*P_D+fL*P_L\n  mc=fD*M_yD+fL*M_yL\n  qa=c_x*c_y\n  xi0=x_c-c_x/2\n  xi1=x_c+c_x/2\n  yi0=y_c-c_y/2\n  yi1=y_c+c_y/2\n  for ey = 1:nel\n    for ex = 1:nel\n      e0=-L/2+(ex-1)*hh\n      f0=-L/2+(ey-1)*hh\n      xa=max(xi0,e0)\n      xb=min(xi1,e0+hh)\n      ya=max(yi0,f0)\n      yb=min(yi1,f0+hh)\n      ok=(xb>xa)*(yb>ya)\n      sa=2*(xa-e0)/hh-1\n      sb=2*(xb-e0)/hh-1\n      ta=2*(ya-f0)/hh-1\n      tb=2*(yb-f0)/hh-1\n      n1=(ey-1)*(nel+1)+ex\n      for k = 1:4\n        wk=ok*I1(xn(k),sa,sb)*I1(yn(k),ta,tb)/qa\n        g=gdof(n1,3*k-2)\n        g3=g+2\n        M_g=M_g-wk*pc\n        M_g3=M_g3+wk*mc\n      end\n    end\n  end\n  return M\nend",
    "modo": 0
   },
   {
@@ -586,6 +656,36 @@
    "modo": 0
   },
   {
+   "t": "texto",
+   "text": "Con P y M_y repartidos en la huella c_x × c_y (Fh, servicio), como el «Load Size» de SAFE:",
+   "titulo": false
+  },
+  {
+   "t": "eq",
+   "codigo": "Z_h=lsolve(Kg,Fh(1,1))",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "σ_maxH=max(-k_S*cada(Z_h,3,1)) % presión máxima con la carga en la huella [t/m²]",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "σ_maxH=",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "Δ_H=(σ_maxH/σ_SAFE-1)*100 % diferencia con SAFE [%]",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "Δ_H=",
+   "modo": 0
+  },
+  {
    "t": "eq",
    "codigo": "Δ_numpy=σ_maxS-13.249780 % contra numpy: debe ser ~0",
    "modo": 0
@@ -690,7 +790,7 @@
   },
   {
    "t": "eq",
-   "codigo": "e_res=(M_yD+M_yL)/(P_D+P_L+W_S) % excentricidad de la resultante [m]",
+   "codigo": "e_res=(M_yD+M_yL+(P_D+P_L)*x_c)/(P_D+P_L+W_S) % excentricidad de la resultante en x [m]: M_y y la columna desplazada x_c",
    "modo": 0
   },
   {
@@ -716,6 +816,26 @@
   {
    "t": "eq",
    "codigo": "r_E=",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "e_resy=(P_D+P_L)*y_c/(P_D+P_L+W_S) % excentricidad en y [m] (columna desplazada y_c)",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "e_resy=",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "r_Ey=e_resy/e_nuc",
+   "modo": 0
+  },
+  {
+   "t": "eq",
+   "codigo": "r_Ey=",
    "modo": 0
   },
   {
