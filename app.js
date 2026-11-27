@@ -186,7 +186,7 @@
 
   // ---------------------------------------------------------------- menú
   function cierra() { document.querySelectorAll('.mi.abierto').forEach((m) => m.classList.remove('abierto')); }
-  document.querySelectorAll('.mi:not(.sola) > span').forEach((s) => { s.onclick = (e) => { const m = s.parentElement, ya = m.classList.contains('abierto'); cierra(); pintaRecientes(); if (!ya) m.classList.add('abierto'); e.stopPropagation(); }; });
+  document.querySelectorAll('.mi:not(.sola) > span').forEach((s) => { s.onclick = (e) => { const m = s.parentElement, ya = m.classList.contains('abierto'); cierra(); pintaRecientes(); if (!ya) { m.classList.add('abierto'); if (document.body.classList.contains('movil')) { const sb = m.querySelector('.sub'); if (sb) sb.style.top = Math.round($('menu').getBoundingClientRect().bottom) + 'px'; } } e.stopPropagation(); }; });          // CELULAR: #menu se desliza de lado (overflow-x) y recortaba el submenú; ahí el submenú es FIJO bajo la barra (estilo.css body.movil .mi .sub)
   document.addEventListener('click', cierra);
   // Abrir reciente (como el WPF): las últimas hojas abiertas o guardadas, con su contenido, en el navegador de la persona
   const RECI = 'hk_recientes';
@@ -237,7 +237,9 @@
   $('m-compartir').onclick = () => {
     enlaceHoja().then((url) => {
       const ok = () => { aviso('✓ Enlace copiado'); estado('Enlace copiado (' + url.length + ' caracteres): al abrirlo se carga esta hoja'); };
-      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(ok, () => dialogoEnlace(url)); else dialogoEnlace(url);
+      const copia = () => { if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(ok, () => dialogoEnlace(url)); else dialogoEnlace(url); };
+      if (document.body.classList.contains('movil') && navigator.share) navigator.share({ title: document.title, url }).then(() => estado('Enlace compartido: al abrirlo se carga esta hoja'), (e) => { if (!e || e.name !== 'AbortError') copia(); });          // CELULAR: el menú «Compartir» del teléfono (WhatsApp, Telegram, correo…)
+      else copia();
     }, (e) => estado('No se pudo armar el enlace: ' + e.message));
   };
   HK.enlaceHoja = enlaceHoja;
@@ -368,6 +370,7 @@
     const fija = () => { if (k && k.e.isConnected) a.scrollTop += k.e.getBoundingClientRect().top - a.getBoundingClientRect().top - k.d; };
     const suelta = () => { if (ro) ro.disconnect(); ro = null; quieto = false; k = null; anchoVisto = G.innerWidth; };
     G.addEventListener('resize', () => {          // el celular reacomoda en varios pasos (ancho, páginas, gráficas perezosas): durante 2 s, cada cambio de tamaño vuelve a poner la fila en su sitio
+      if (G.innerWidth === anchoVisto && !k) return;          // solo cambió el ALTO (sube/baja el teclado del teléfono, barra del navegador): no es un giro; anclar aquí peleaba con el desplazamiento hasta lo que se edita
       if (!k) { k = anc; if (!k) return; } quieto = true; fija();
       if (!ro && G.ResizeObserver) { ro = new ResizeObserver(fija); ro.observe($('hoja')); ro.observe(a); }
       clearTimeout(fin); fin = setTimeout(() => { fija(); suelta(); toma(); }, 2000);

@@ -52,6 +52,7 @@
     }
     return nuevaEq('', false, modo);
   }
+  const esTeclado = (el) => !!(el && el.dataset && el.dataset.hkTeclado);          // campo invisible del teclado del celular (tactil.js)
   let multi = null;          // selección que cruza varias ecuaciones de la misma fila: { eds: [...] } (cada una guarda su propia selección)
   function limpiaMulti() { if (multi) { multi.eds.forEach((e) => e.quitaSel()); multi = null; } }
   function edsDeFila(cv) { const f = cv.closest('.fila'); return reg.filter((r) => r.t === 'eq' && !r.enTexto && f && f.contains(r.el)).sort((a, b) => a.ed.canvas.getBoundingClientRect().left - b.ed.canvas.getBoundingClientRect().left).map((r) => r.ed); }
@@ -64,7 +65,8 @@
     cv.addEventListener('mousedown', (e) => {
       if (e.button !== 0) return;
       if (HK.sug) HK.sug.oculta(); limpiaHuecos(r); const q = ptr(e, cv); activo = ed; ed.clic(q.x, q.y, e.shiftKey); redibuja(); e.preventDefault();
-      if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+      if (document.activeElement && document.activeElement.blur && !esTeclado(document.activeElement)) document.activeElement.blur();          // el campo del teclado del CELULAR (tactil.js) no se suelta: el teclado sigue abierto al pasar a otra ecuación
+      if (HK.tactil && HK.tactil.reciente()) HK.tactil.abre(ed);          // CELULAR: el teclado se abre YA, dentro del toque (no se espera al click, que a veces no llega si la ecuación cambia de ancho al activarse)
       limpiaMulti(); let cur = ed; const ancEd = ed, ancla0 = ed.ancla ? { fila: ed.ancla.fila, i: ed.ancla.i } : null;          // arrastrar de una ecuación a la vecina de la MISMA línea selecciona de una a otra (como el WPF); el cursor sigue al ratón
       const mueve = (ev) => {
         const o = eqEnFila(cv, ev.clientX), dest = o ? o.ed : ancEd;
@@ -362,6 +364,10 @@
       r.gel.addEventListener('wheel', (e) => { if (!(r.graf && (r.graf.tipo === 'sup' || r.graf.tipo === 'esc3')) || e.ctrlKey) return; e.preventDefault(); const ob = r.orb || (r.orb = { az: 0, el: 0, z: 1 }); ob.z = Math.max(0.3, Math.min(8, ob.z * (e.deltaY < 0 ? 1.12 : 1 / 1.12))); dibujaGraf(r); }, { passive: false });
       r.gel.addEventListener('dblclick', () => { r.orb = null; activo = r.ed; redibuja(); });          // doble clic en la gráfica: aparece su código para editarlo (fuera de edición solo se ve la gráfica, como Hekatan LISP)
       r.gel.addEventListener('mousemove', (e) => { if (!arr) hover(r, e); });          // hover como el WPF
+      let dedo = null;          // CELULAR: girar la 3D con un dedo (estilo.css: canvas.g3d sin desplazamiento táctil)
+      r.gel.addEventListener('touchstart', (e) => { if (!(r.graf && (r.graf.tipo === 'sup' || r.graf.tipo === 'esc3')) || e.touches.length !== 1) { dedo = null; return; } dedo = { x: e.touches[0].clientX, y: e.touches[0].clientY }; }, { passive: true });
+      r.gel.addEventListener('touchmove', (e) => { if (!dedo || e.touches.length !== 1) return; const t = e.touches[0], ob = r.orb || (r.orb = { az: 0, el: 0, z: 1 }); ob.az += (t.clientX - dedo.x) * 0.5; ob.el = Math.max(-89, Math.min(89, ob.el + (t.clientY - dedo.y) * 0.5)); dedo = { x: t.clientX, y: t.clientY }; if (e.cancelable) e.preventDefault(); dibujaGraf(r); }, { passive: false });
+      r.gel.addEventListener('touchend', () => { dedo = null; });
       r.gel.addEventListener('mouseleave', () => limpiaHover(r));
     }
     r.gel.classList.toggle('g3d', !!(r.graf && (r.graf.tipo === 'sup' || r.graf.tipo === 'esc3')));
@@ -852,9 +858,10 @@
       const t = e.target.closest ? e.target.closest('.txt') : null, fl = t && t.closest('.fila');
       if (!t || !fl || fl.parentElement !== hoja || [...fl.children].some((c) => !c.classList.contains('txt'))) return;
       const rg0 = document.createRange(); rg0.selectNodeContents(t);
-      if ([...rg0.getClientRects()].some((q) => q.width > 0 && e.clientY >= q.top - 2 && e.clientY <= q.bottom + 2 && e.clientX <= q.right + 20)) return;
+      const tol = HK.tactil && HK.tactil.reciente() ? 12 : 2;          // con el DEDO (celular) se toca entre dos renglones del párrafo: eso es el texto, no un hueco para una ecuación nueva
+      if ([...rg0.getClientRects()].some((q) => q.width > 0 && e.clientY >= q.top - tol && e.clientY <= q.bottom + tol && e.clientX <= q.right + 20)) return;
     }
-    e.preventDefault(); if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    e.preventDefault(); if (document.activeElement && document.activeElement.blur && !esTeclado(document.activeElement)) document.activeElement.blur();
     const H0 = hoja.getBoundingClientRect(), Z0 = (H0.width / (hoja.offsetWidth || 1)) || 1;          // la hoja ANTES de crear nada: al aparecer el nodo puede salir la barra de desplazamiento y mover todo
     limpiaHuecos();          // el indicador anterior (ecuación vacía) se quita primero: así ocupa lo mismo que nada y no tapa las celdas de al lado
     let f = e.target.classList && e.target.classList.contains('fila') ? e.target : filaEnY(e.clientY); if (f && !f.isConnected) f = null;          // clic en la franja de una línea (hueco, margen izq./der., entre filas): el cursor se queda EN ESA LÍNEA, no baja a otra

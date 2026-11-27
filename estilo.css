@@ -298,3 +298,24 @@ body.movil #nav { display:none; }
 .fila.debajo { clear:both; }          /* texto «debajo» (.hmath): bajo el dibujo «lado = derecha», no a su lado */
 body.movil .fila.dib-der { float:none; width:auto; margin-left:0; }          /* celular: el dibujo va debajo de sus datos (hoja.js apilaDibDer) */
 .slider.anim button { background:#3a62d9; color:#fff; border-color:#2b4fb8; min-width:28px; }
+/* CELULAR: editar con el teclado del teléfono (tactil.js): campo invisible enfocado + barra de botones sobre el teclado */
+#hk-teclado { position:fixed; left:0; top:0; width:40px; height:24px; opacity:0; border:0; padding:0; margin:0; background:transparent; color:transparent; caret-color:transparent; font-size:16px; pointer-events:none; z-index:1; }
+#hk-barra-tactil { position:fixed; left:0; right:0; bottom:0; z-index:80; display:none; gap:4px; padding:5px 6px; background:#eef2f8; border-top:1px solid #b9c3d3; box-shadow:0 -2px 8px #0002; box-sizing:border-box; }
+#hk-barra-tactil.on { display:flex; }
+#hk-barra-tactil button { flex:1 1 0; min-width:0; max-width:56px; height:38px; font:16px "Segoe UI",sans-serif; border:1px solid #b9c3d3; border-radius:6px; background:#fff; color:#1b1b1b; touch-action:manipulation; }
+#hk-barra-tactil button.no { color:#b3261e; }
+#hk-barra-tactil button.si { background:#2D7DD2; color:#fff; border-color:#2D7DD2; font-weight:600; padding:0 12px; flex:none; max-width:none; margin-left:auto; }
+body.tactil-editando #area { padding-bottom:55vh; }
+body.movil .mi .sub, body.movil .sub.larga { position:fixed; left:4px; right:4px; min-width:0; max-height:70vh; overflow-y:auto; z-index:60; }          /* CELULAR: el submenú no se recorta dentro del menú deslizable (app.js le pone el top) */
+body.movil .sub button { padding:9px 14px; min-height:40px; align-items:center; }
+body.movil #pestanas button { min-height:34px; }
+canvas.g3d { touch-action:none; }          /* 3D: un dedo la gira (hoja.js), no desplaza la hoja */
+body.movil #cinta .bt, body.movil #cinta .grupo-t button, body.movil #cinta select { min-height:40px; }
+body.movil #cinta { height:auto; min-height:66px; }
+body.tactil-compacto #titulo, body.tactil-compacto #menu, body.tactil-compacto #pestanas, body.tactil-compacto #cinta, body.tactil-compacto #estado { display:none; }          /* teclado arriba con poca altura (horizontal): solo la hoja y la barra táctil */
+@media (max-height: 500px) {          /* celular HORIZONTAL: la cabecera no puede comerse la mitad de la pantalla (los 40 px táctiles caben en una cinta de 46 px) */
+  body.movil #cinta { height:46px; min-height:0; padding:2px 4px; }
+  body.movil #cinta .bt, body.movil #cinta .grupo-t button, body.movil #cinta select { min-height:40px; }
+  body.movil #cinta .grupo-t > span { display:none; }
+  body.movil #pestanas button { min-height:0; padding:3px 8px; }
+}

@@ -393,7 +393,7 @@
     let tip = null, mk = null;
     const T = () => { if (!tip) { tip = document.createElement('div'); tip.style.cssText = 'position:fixed;z-index:9999;display:none;pointer-events:none;background:#fffffff2;border:1px solid #888;border-radius:4px;padding:3px 6px;font:12px/1.35 Consolas,monospace;color:#111;box-shadow:0 2px 6px rgba(0,0,0,.25);white-space:pre'; document.body.appendChild(tip); } return tip; };
     const off = () => { if (tip) tip.style.display = 'none'; if (mk && mk.parentNode) mk.parentNode.removeChild(mk); mk = null; };
-    document.addEventListener('pointermove', (e) => {
+    const mueve = (e) => {
       const s = e.target && e.target.closest ? e.target.closest('svg.hk-dib-svg') : null;
       if (!s) { off(); return; }
       const gs = s.querySelectorAll('g.hk-hv'); if (!gs.length) return;
@@ -410,10 +410,12 @@
       const w = t.offsetWidth, h2 = t.offsetHeight; let L = e.clientX + 14, Tp = e.clientY + 14;
       if (L + w > window.innerWidth - 4) L = Math.max(2, e.clientX - w - 14); if (Tp + h2 > window.innerHeight - 4) Tp = Math.max(2, e.clientY - h2 - 14);
       t.style.left = L + 'px'; t.style.top = Tp + 'px';
-      if (!mk || mk.parentNode !== s) { off(); mk = document.createElementNS('http://www.w3.org/2000/svg', 'circle'); mk.setAttribute('style', 'fill:none;stroke:#c00;pointer-events:none'); s.appendChild(mk); }
-      mk.setAttribute('cx', best[0]); mk.setAttribute('cy', best[1]); mk.setAttribute('r', 4 / sc); mk.style.strokeWidth = (1.6 / sc) + 'px';
-    });
-    document.documentElement.addEventListener('mouseleave', off);
+      if (!mk || mk.parentNode !== s) { if (mk && mk.parentNode) mk.parentNode.removeChild(mk); mk = document.createElementNS('http://www.w3.org/2000/svg', 'circle'); mk.setAttribute('style', 'fill:none;stroke:#c00;pointer-events:none'); s.appendChild(mk); }
+      mk.setAttribute('cx', best[0]); mk.setAttribute('cy', best[1]); mk.setAttribute('r', 4 / sc); mk.style.strokeWidth = (1.6 / sc) + 'px';          // (antes aquí un off() escondía el valor recién puesto: con el ratón lo reponía el siguiente pointermove, con un TOQUE no hay siguiente)
+    };
+    document.addEventListener('pointermove', mueve);
+    document.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'mouse') mueve(e); });          // CELULAR: un toque sobre el dibujo muestra el valor (el dedo no genera pointermove si no se arrastra)
+    document.documentElement.addEventListener('mouseleave', () => { if (window.HK && HK.tactil && HK.tactil.reciente()) return; off(); });          // tras un toque el navegador manda un «mouseleave» falso: no borra el valor recién tocado
   })();
 
   function Draw(c, p) {

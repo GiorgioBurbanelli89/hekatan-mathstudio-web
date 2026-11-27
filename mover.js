@@ -121,6 +121,7 @@
   // ---------------------------------------------------------------- arrastrar (con el ratón real)
   papel.addEventListener('mousedown', (e) => {
     if (e.button !== 0 || e._mv) return;
+    if (HK.tactil && HK.tactil.reciente()) return;          // CELULAR: el mousedown que fabrica el navegador tras un TOQUE no arrastra ni selecciona (antes se comía el toque: preventDefault → el texto no tomaba el foco y la ecuación no abría el teclado)
     const u = unidadEn(e);
     if (u && !u.classList.contains('oculto') && zona(u, e)) {
       e.preventDefault(); e.stopPropagation(); if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
