@@ -1811,7 +1811,10 @@
     '.hkcad-ord input{flex:1;font:13px Consolas,monospace;border:none;border-bottom:1px solid var(--sep,#bbb);border-radius:0;outline:none;background:transparent}' +
     '.hkcad-est{display:flex;flex-wrap:wrap;align-items:center;gap:4px;padding:4px 10px;border-top:1px solid var(--sep,#ccc);color:var(--mut,#777)}' +
     '.hkcad-est .hkcad-xy{font:12px Consolas,monospace;min-width:230px;color:var(--fg,#222)}.hkcad-est label{margin-right:6px;white-space:nowrap}' +
-    '.hkcad-copia{position:absolute;left:10%;right:10%;top:20%;height:50%;z-index:3;font:12px Consolas,monospace}';
+    '.hkcad-copia{position:absolute;left:10%;right:10%;top:20%;height:50%;z-index:3;font:12px Consolas,monospace}' +
+    // pantalla angosta (celular): la cabecera y los grupos de herramientas se parten en filas (antes «✕ Cerrar» quedaba fuera de la pantalla)
+    '.hkcad-cab{flex-wrap:wrap;row-gap:4px}.hkcad-g{flex-wrap:wrap;max-width:100%}' +
+    '@media (max-width:700px),(max-height:500px){.hkcad{inset:0;border-radius:0}.hkcad-cab .hkcad-sp{display:none}.hkcad-hist{height:36px}.hkcad-est .hkcad-xy{min-width:0}.hkcad button{min-height:32px}}';
   var HERR = [['LINEA', 'Línea', 'L'], ['POLILINEA', 'Polilínea', 'PL'], ['RECTANGULO', 'Rectángulo', 'REC'], ['CIRCULO', 'Círculo', 'C'], ['ARCO', 'Arco', 'A'],
     ['PUNTO', 'Punto', 'PO'], ['TEXTO', 'Texto', 'T'], ['COTA', 'Cota', 'DIM'], ['COTAANG', 'Cota ∠', 'DAN'], ['COTARAD', 'Radio', 'DRA'], ['COTADIA', 'Diámetro', 'DDI'], ['|'],
     ['MOVER', 'Mover', 'M'], ['COPIAR', 'Copiar', 'CO'], ['GIRAR', 'Girar', 'RO'], ['ESCALA', 'Escala', 'SC'], ['SIMETRIA', 'Simetría', 'MI'], ['DESFASE', 'Desfase', 'O'],

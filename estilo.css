@@ -332,3 +332,24 @@ body.tactil-compacto #titulo, body.tactil-compacto #menu, body.tactil-compacto #
 #pagnav input { width:38px; height:20px; text-align:center; font:12px "Segoe UI",sans-serif; border:1px solid #9aa3b2; border-radius:3px; }
 body[data-vista=web] #pagnav, body.sinpag #pagnav, body[data-vista=borrador] #pagnav, body[data-vista=esquema] #pagnav { display:none; }          /* sin páginas (celular, Diseño web, Borrador): no hay a qué página ir */
 #papel .pg:not(.encab):not(.pie) { z-index:4; background:var(--papel); padding:0 2px; }          /* «Página n de N» siempre a la vista en el margen superior */
+/* CELULAR (27-nov-2026, Jorge: «que quepa todo adentro y valga cada botón»): menú, pestañas y cinta en VARIAS FILAS en vez de
+   deslizarse de lado (en el teléfono no se ve la barra de desplazamiento: 27-54 botones por pestaña quedaban fuera sin aviso);
+   la cinta toma la altura que necesita (en horizontal medía 46 px fijos y en «Símbolos» la hoja tapaba 13 botones).
+   Prueba: hekatan-mathstudio-android/prueba/ui_movil.mjs (412x915 y 915x412, cada pestaña y cada menú). */
+body.movil #menu, body.movil #pestanas, body.movil #cinta { flex-wrap:wrap; overflow-x:visible; }
+body.movil #cinta { height:auto !important; min-height:0; row-gap:2px; }
+body.movil #cinta > * { flex:none; }
+@media (max-height: 500px) {
+  body.movil #cinta { height:auto !important; }
+  body.movil #menu .mi > span { padding:3px 8px; }
+}
+body.movil #cinta > * { max-width:100%; flex-wrap:wrap; }          /* un grupo largo (letras griegas de «Símbolos») también se parte en filas */
+@media (max-height: 500px) { body.movil #pestanas button { min-height:28px; } }
+body.movil #cinta .grupo-t .fil { width:auto !important; max-width:100% !important; }          /* la fila de letras griegas venía con 520 px fijos (app.js) */
+#coment .coment-x { float:right; border:0; background:transparent; font-size:16px; cursor:pointer; color:#7a5c00; min-width:32px; min-height:32px; }
+body.movil #coment { top:auto !important; left:0; right:0; width:auto; bottom:0; max-height:40vh; border-left:0; border-top:2px solid #d9c98a; z-index:60; }          /* celular: hoja desde abajo (antes 240 px a la derecha con «top» fijo: tapaba la cinta en varias filas) */
+body.movil:has(#coment) #area { margin-right:0; }
+body.movil #cinta .bt:disabled { display:none; }          /* celular: lo que solo existe en la app de escritorio no se muestra (antes se veía y el toque no hacía nada) */
+#salir-enfoque { display:none; position:fixed; top:8px; right:8px; z-index:200; padding:8px 12px; min-height:40px; border:1px solid #9aa3b2; border-radius:20px; background:rgba(255,255,255,.92); font:13px "Segoe UI",sans-serif; cursor:pointer; box-shadow:0 1px 4px rgba(0,0,0,.25); }
+body[data-vista=enfoque] #salir-enfoque { display:block; }
+@media print { #salir-enfoque { display:none !important; } }

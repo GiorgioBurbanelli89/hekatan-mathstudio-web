@@ -37,7 +37,7 @@
     marco = document.createElement('iframe'); marco.className = 'hkcad-marco'; marco.setAttribute('sandbox', 'allow-scripts allow-modals allow-popups allow-downloads');
     marco.setAttribute('style', 'position:fixed;inset:0;width:100%;height:100%;border:0;z-index:100000;background:transparent');
     marco.srcdoc = '<!doctype html><meta charset="utf-8"><style>' + css + '</style><body><script type="application/json" id="' + id + '-cad">' + dat + '<\/script>' +
-      '<script src="' + new URL('LispCad.js', document.baseURI).href + '"><\/script><script>hkCadAbrir("' + id + '")<\/script></body>';
+      '<script src="' + new URL('LispCad.js?v=9b341c9993', document.baseURI).href + '"><\/script><script>hkCadAbrir("' + id + '")<\/script></body>';
     marco.onload = () => { try { marco.contentWindow.focus(); } catch (x) { } };
     document.body.appendChild(marco); addEventListener('message', alMensaje);
   }

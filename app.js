@@ -436,6 +436,7 @@
     setTimeout(pagina, 0);
   }
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.body.dataset.vista === 'enfoque') ponVista('impresion'); });
+  { const x = document.createElement('button'); x.id = 'salir-enfoque'; x.type = 'button'; x.textContent = '✕ Salir del enfoque'; x.title = 'Volver a ver menús y cinta (Esc)'; x.onclick = () => ponVista(document.body.classList.contains('movil') ? 'web' : 'impresion'); document.body.appendChild(x); }          // en el celular no hay Esc: sin este botón el Enfoque dejaba atrapado (sin menú, pestañas ni cinta)
   // CELULAR: pantalla angosta → «Diseño web» (sin papel carta, a todo el ancho) y cinta compacta (estilo.css, body.movil). El papel de 816 px encogido al ancho del celular dejaba la letra ilegible
   const esMovil = G.matchMedia && (G.matchMedia('(max-width: 760px)').matches || (G.matchMedia('(pointer: coarse)').matches && Math.min(G.screen.width, G.screen.height) <= 600));          // celular aunque se abra en HORIZONTAL (≈ 890 px de ancho): pantalla táctil cuyo lado corto es de celular
   if (esMovil) { document.body.classList.add('movil'); ponVista('web'); }
@@ -768,7 +769,7 @@
     e.replaceWith(document.createTextNode(e.textContent)); estado('Comentario eliminado'); llenaComentarios();
   }
   function llenaComentarios() {
-    const p = $('coment'); if (!p) return; p.innerHTML = '<b>Comentarios</b>' + (comentarios().length ? '' : '<p>(ninguno)</p>');
+    const p = $('coment'); if (!p) return; p.innerHTML = '<button type="button" class="coment-x" title="Cerrar el panel de comentarios">✕</button><b>Comentarios</b>' + (comentarios().length ? '' : '<p>(ninguno)</p>'); p.querySelector('.coment-x').onclick = () => panelComentarios();          // ✕: en el celular el panel tapa media pantalla
     comentarios().forEach((e, i) => { const a = document.createElement('a'); const it = document.createElement('i'); it.textContent = (i + 1) + '. «' + e.textContent.slice(0, 40) + '»'; a.append(it, document.createElement('br'), document.createTextNode(e.title || '')); a.onclick = () => e.scrollIntoView({ block: 'center', behavior: 'smooth' }); p.appendChild(a); });
   }
   function panelComentarios() {
